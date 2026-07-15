@@ -4,6 +4,8 @@ import androidx.compose.animation.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -34,6 +36,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.platform.LocalContext
+import android.app.DatePickerDialog
+import java.util.Calendar
 import com.example.data.Transaction
 import com.example.ui.viewmodel.ExpenseViewModel
 import java.text.SimpleDateFormat
@@ -50,6 +55,11 @@ fun DashboardScreen(
     val transactions by viewModel.transactions.collectAsState()
     val monthlySummary by viewModel.monthlySummary.collectAsState()
     val monthlyBudget by viewModel.monthlyBudget.collectAsState()
+    val recurringTransactions by viewModel.recurringTransactions.collectAsState()
+
+    val primaryColorHex by viewModel.primaryColor.collectAsState()
+    val secondaryColorHex by viewModel.secondaryColor.collectAsState()
+    val accentColorHex by viewModel.accentColor.collectAsState()
 
     val promptInput by viewModel.promptInput.collectAsState()
     val isParsing by viewModel.isParsing.collectAsState()
@@ -58,6 +68,7 @@ fun DashboardScreen(
 
     var showBudgetDialog by remember { mutableStateOf(false) }
     var showManualAddForm by remember { mutableStateOf(false) }
+    var selectedTab by remember { mutableStateOf(0) } // 0 = Transactions, 1 = Recurring
 
     val focusManager = LocalFocusManager.current
 
@@ -149,6 +160,7 @@ fun DashboardScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(horizontal = 16.dp)
+                    .verticalScroll(rememberScrollState())
             ) {
 
                 // --- 1. AI CHAT INPUT BOX AT THE TOP ---
@@ -415,7 +427,7 @@ fun DashboardScreen(
                 // Bento Card 1: Remaining Budget Panel (Span 2)
                 Card(
                     colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer
+                        containerColor = MaterialTheme.colorScheme.primary
                     ),
                     shape = RoundedCornerShape(32.dp),
                     modifier = Modifier
@@ -431,7 +443,7 @@ fun DashboardScreen(
                         Icon(
                             imageVector = Icons.Default.AccountBalanceWallet,
                             contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.05f),
+                            tint = Color(0xFF121214).copy(alpha = 0.05f),
                             modifier = Modifier
                                 .size(130.dp)
                                 .align(Alignment.BottomEnd)
@@ -446,14 +458,14 @@ fun DashboardScreen(
                                 text = "Monthly Budget",
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary
+                                color = Color(0xFF121214).copy(alpha = 0.7f)
                             )
 
                             Text(
                                 text = "$${String.format("%,.2f", remainingBudget)}",
                                 style = MaterialTheme.typography.headlineLarge.copy(fontSize = 38.sp),
                                 fontWeight = FontWeight.Black,
-                                color = if (remainingBudget >= 0) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.error,
+                                color = if (remainingBudget >= 0) Color(0xFF121214) else Color(0xFFD32F2F),
                                 modifier = Modifier
                                     .padding(vertical = 6.dp)
                                     .testTag("remaining_budget_text")
@@ -463,7 +475,7 @@ fun DashboardScreen(
                                 text = "Remaining of $${String.format("%,.2f", monthlyBudget + monthlySummary.totalIncome)}",
                                 style = MaterialTheme.typography.labelMedium,
                                 fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f)
+                                color = Color(0xFF121214).copy(alpha = 0.8f)
                             )
 
                             Spacer(modifier = Modifier.height(16.dp))
@@ -475,8 +487,8 @@ fun DashboardScreen(
                                     .fillMaxWidth()
                                     .height(8.dp)
                                     .clip(CircleShape),
-                                color = if (isBudgetAlert) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
-                                trackColor = MaterialTheme.colorScheme.background.copy(alpha = 0.5f)
+                                color = if (isBudgetAlert) Color(0xFFD32F2F) else Color(0xFF121214),
+                                trackColor = Color(0xFF121214).copy(alpha = 0.15f)
                             )
                             Spacer(modifier = Modifier.height(6.dp))
                             Row(
@@ -487,13 +499,13 @@ fun DashboardScreen(
                                     text = "${(progress * 100).toInt()}% utilized",
                                     style = MaterialTheme.typography.labelSmall,
                                     fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.primary
+                                    color = Color(0xFF121214).copy(alpha = 0.8f)
                                 )
                                 Text(
                                     text = "Limit: $${String.format("%,.0f", monthlyBudget)}",
                                     style = MaterialTheme.typography.labelSmall,
                                     fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.primary
+                                    color = Color(0xFF121214).copy(alpha = 0.8f)
                                 )
                             }
                         }
@@ -507,13 +519,12 @@ fun DashboardScreen(
                         .padding(vertical = 8.dp),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    // Card 2: Today's Expenses (White, border, rounded-28)
+                    // Card 2: Today's Expenses (Using Secondary/Purple Background)
                     Card(
                         modifier = Modifier.weight(1f),
                         colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.surface
+                            containerColor = MaterialTheme.colorScheme.secondary
                         ),
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
                         shape = RoundedCornerShape(28.dp)
                     ) {
                         Column(
@@ -526,7 +537,7 @@ fun DashboardScreen(
                                 modifier = Modifier
                                     .size(40.dp)
                                     .background(
-                                        MaterialTheme.colorScheme.background,
+                                        Color(0xFF121214).copy(alpha = 0.08f),
                                         RoundedCornerShape(12.dp)
                                     ),
                                 contentAlignment = Alignment.Center
@@ -534,7 +545,7 @@ fun DashboardScreen(
                                 Icon(
                                     imageVector = Icons.Default.Payments,
                                     contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.primary,
+                                    tint = Color(0xFF121214),
                                     modifier = Modifier.size(20.dp)
                                 )
                             }
@@ -544,13 +555,13 @@ fun DashboardScreen(
                                     text = "EXPENSES",
                                     style = MaterialTheme.typography.labelSmall,
                                     fontWeight = FontWeight.ExtraBold,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
+                                    color = Color(0xFF121214).copy(alpha = 0.7f)
                                 )
                                 Text(
                                     text = "$${String.format("%,.2f", monthlySummary.totalExpense)}",
                                     style = MaterialTheme.typography.titleLarge,
                                     fontWeight = FontWeight.Black,
-                                    color = MaterialTheme.colorScheme.onSurface,
+                                    color = Color(0xFF121214),
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis
                                 )
@@ -558,11 +569,11 @@ fun DashboardScreen(
                         }
                     }
 
-                    // Card 3: Income (Sage Gray Container, rounded-28)
+                    // Card 3: Income (Using Accent/Lime Green Background)
                     Card(
                         modifier = Modifier.weight(1f),
                         colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.secondaryContainer
+                            containerColor = MaterialTheme.colorScheme.tertiary
                         ),
                         shape = RoundedCornerShape(28.dp)
                     ) {
@@ -576,7 +587,7 @@ fun DashboardScreen(
                                 modifier = Modifier
                                     .size(40.dp)
                                     .background(
-                                        MaterialTheme.colorScheme.background.copy(alpha = 0.6f),
+                                        Color(0xFF121214).copy(alpha = 0.08f),
                                         RoundedCornerShape(12.dp)
                                     ),
                                 contentAlignment = Alignment.Center
@@ -584,7 +595,7 @@ fun DashboardScreen(
                                 Icon(
                                     imageVector = Icons.Default.TrendingUp,
                                     contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.primary,
+                                    tint = Color(0xFF121214),
                                     modifier = Modifier.size(20.dp)
                                 )
                             }
@@ -594,13 +605,13 @@ fun DashboardScreen(
                                     text = "INCOME",
                                     style = MaterialTheme.typography.labelSmall,
                                     fontWeight = FontWeight.ExtraBold,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
+                                    color = Color(0xFF121214).copy(alpha = 0.7f)
                                 )
                                 Text(
                                     text = "$${String.format("%,.2f", monthlySummary.totalIncome)}",
                                     style = MaterialTheme.typography.titleLarge,
                                     fontWeight = FontWeight.Black,
-                                    color = MaterialTheme.colorScheme.primary,
+                                    color = Color(0xFF121214),
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis
                                 )
@@ -616,14 +627,18 @@ fun DashboardScreen(
                     exit = shrinkVertically() + fadeOut()
                 ) {
                     ManualAddForm(
-                        onSubmit = { amount, category, type, description ->
-                            viewModel.addTransaction(amount, category, type, description)
+                        onSubmit = { amount, category, type, description, isRecurring, frequency, selectedDate ->
+                            if (isRecurring) {
+                                viewModel.addRecurringTransaction(amount, category, type, description, frequency, selectedDate)
+                            } else {
+                                viewModel.addTransaction(amount, category, type, description, selectedDate)
+                            }
                             showManualAddForm = false
                         }
                     )
                 }
 
-                // --- 4. TRANSACTION HISTORY HEADER ---
+                // --- 4. TRANSACTION / RECURRING SWITCH HEADER ---
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -631,68 +646,130 @@ fun DashboardScreen(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        text = "Recent Transactions",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = MaterialTheme.colorScheme.onBackground
-                    )
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        FilterChip(
+                            selected = selectedTab == 0,
+                            onClick = { selectedTab = 0 },
+                            label = { Text("Recent Ledger", fontWeight = FontWeight.ExtraBold) },
+                            modifier = Modifier.testTag("tab_transactions")
+                        )
+                        FilterChip(
+                            selected = selectedTab == 1,
+                            onClick = { selectedTab = 1 },
+                            label = { Text("Recurring Rules", fontWeight = FontWeight.ExtraBold) },
+                            modifier = Modifier.testTag("tab_recurring")
+                        )
+                    }
 
                     Text(
-                        text = "${monthlySummary.currentMonthList.size} items",
+                        text = if (selectedTab == 0) "${monthlySummary.currentMonthList.size} items" else "${recurringTransactions.size} rules",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
                     )
                 }
 
-                // --- 5. TRANSACTION HISTORY LIST ---
-                if (monthlySummary.currentMonthList.isEmpty()) {
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .fillMaxWidth(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            modifier = Modifier.padding(24.dp)
+                // --- 5. CONDITIONALLY RENDER SELECTED TAB LIST ---
+                if (selectedTab == 0) {
+                    if (monthlySummary.currentMonthList.isEmpty()) {
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxWidth(),
+                            contentAlignment = Alignment.Center
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.Category,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
-                                modifier = Modifier.size(72.dp)
-                            )
-                            Spacer(modifier = Modifier.height(16.dp))
-                            Text(
-                                text = "No Transactions This Month",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.8f)
-                            )
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text(
-                                text = "Try typing 'Spent $15 on pizza' at the top and let Gemini AI parse it automatically!",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
-                                textAlign = TextAlign.Center
-                            )
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                modifier = Modifier.padding(24.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Category,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
+                                    modifier = Modifier.size(72.dp)
+                                )
+                                Spacer(modifier = Modifier.height(16.dp))
+                                Text(
+                                    text = "No Transactions This Month",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.8f)
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    text = "Try typing 'Spent $15 on pizza' at the top and let Gemini AI parse it automatically!",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
+                                    textAlign = TextAlign.Center
+                                )
+                            }
+                        }
+                    } else {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = 80.dp)
+                                .testTag("transactions_list"),
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            monthlySummary.currentMonthList.forEach { tx ->
+                                TransactionRowItem(
+                                    transaction = tx,
+                                    onDelete = { viewModel.deleteTransaction(tx.id) }
+                                )
+                            }
                         }
                     }
                 } else {
-                    LazyColumn(
-                        modifier = Modifier
-                            .weight(1f)
-                            .fillMaxWidth()
-                            .testTag("transactions_list"),
-                        verticalArrangement = Arrangement.spacedBy(10.dp),
-                        contentPadding = PaddingValues(bottom = 80.dp)
-                    ) {
-                        items(monthlySummary.currentMonthList, key = { it.id }) { tx ->
-                            TransactionRowItem(
-                                transaction = tx,
-                                onDelete = { viewModel.deleteTransaction(tx.id) }
-                            )
+                    if (recurringTransactions.isEmpty()) {
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxWidth(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                modifier = Modifier.padding(24.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Autorenew,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
+                                    modifier = Modifier.size(72.dp)
+                                )
+                                Spacer(modifier = Modifier.height(16.dp))
+                                Text(
+                                    text = "No Recurring Schedules",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.8f)
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    text = "Tap the '+' button below, toggle 'Repeat transaction', and set up a rule that logs automatically!",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
+                                    textAlign = TextAlign.Center
+                                )
+                            }
+                        }
+                    } else {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = 80.dp)
+                                .testTag("recurring_list"),
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            recurringTransactions.forEach { rec ->
+                                RecurringRowItem(
+                                    recurring = rec,
+                                    onDelete = { viewModel.deleteRecurringTransaction(rec.id) }
+                                )
+                            }
                         }
                     }
                 }
@@ -700,49 +777,143 @@ fun DashboardScreen(
         }
     }
 
-    // --- BUDGET CONFIGURATION DIALOG ---
+    // --- BUDGET CONFIGURATION DIALOG & THEME CUSTOMIZATION ---
     if (showBudgetDialog) {
         var budgetText by remember { mutableStateOf(monthlyBudget.toInt().toString()) }
+        var tempPrimaryHex by remember { mutableStateOf(primaryColorHex) }
+        var tempSecondaryHex by remember { mutableStateOf(secondaryColorHex) }
+        var tempAccentHex by remember { mutableStateOf(accentColorHex) }
+
+        val primaryPresets = listOf("#FFD97D", "#FF8A80", "#80D8FF", "#FF80DF", "#FFD54F")
+        val secondaryPresets = listOf("#A78BFA", "#BA68C8", "#82B1FF", "#FF8A80", "#B2DFDB")
+        val accentPresets = listOf("#D9F99D", "#A7F3D0", "#FFE082", "#80DEEA", "#E6C2FF")
 
         AlertDialog(
             onDismissRequest = { showBudgetDialog = false },
             title = {
-                Text(
-                    "Configure Monthly Limit",
-                    fontWeight = FontWeight.Bold,
-                    style = MaterialTheme.typography.titleLarge
-                )
-            },
-            text = {
-                Column {
-                    Text(
-                        "Set your core monthly expense limit. We use this to calculate remaining balances dynamically.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(bottom = 16.dp)
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Palette,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary
                     )
-                    OutlinedTextField(
-                        value = budgetText,
-                        onValueChange = { budgetText = it },
-                        label = { Text("Monthly Limit ($)") },
-                        singleLine = true,
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .testTag("monthly_budget_input")
+                    Text(
+                        "Settings & Customization",
+                        fontWeight = FontWeight.Black,
+                        style = MaterialTheme.typography.titleLarge
                     )
                 }
             },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        val parsed = budgetText.toDoubleOrNull() ?: 2000.0
-                        viewModel.updateMonthlyBudget(parsed)
-                        showBudgetDialog = false
-                    },
-                    modifier = Modifier.testTag("save_budget_button")
+            text = {
+                LazyColumn(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    Text("Save")
+                    item {
+                        Text(
+                            "Monthly Budget Limit",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.padding(bottom = 6.dp)
+                        )
+                        OutlinedTextField(
+                            value = budgetText,
+                            onValueChange = { budgetText = it },
+                            label = { Text("Monthly Limit ($)") },
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                unfocusedBorderColor = MaterialTheme.colorScheme.outline
+                            ),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .testTag("monthly_budget_input")
+                        )
+                    }
+
+                    item {
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f))
+                    }
+
+                    item {
+                        ColorPresetRow(
+                            selectedColorHex = tempPrimaryHex,
+                            presets = primaryPresets,
+                            onColorSelected = { hex ->
+                                tempPrimaryHex = hex
+                                viewModel.updatePrimaryColor(hex)
+                            },
+                            customHexValue = tempPrimaryHex,
+                            onCustomHexChanged = { hex ->
+                                tempPrimaryHex = hex
+                            },
+                            label = "Primary Color (Budget Card)"
+                        )
+                    }
+
+                    item {
+                        ColorPresetRow(
+                            selectedColorHex = tempSecondaryHex,
+                            presets = secondaryPresets,
+                            onColorSelected = { hex ->
+                                tempSecondaryHex = hex
+                                viewModel.updateSecondaryColor(hex)
+                            },
+                            customHexValue = tempSecondaryHex,
+                            onCustomHexChanged = { hex ->
+                                tempSecondaryHex = hex
+                            },
+                            label = "Secondary Color (Expenses Card)"
+                        )
+                    }
+
+                    item {
+                        ColorPresetRow(
+                            selectedColorHex = tempAccentHex,
+                            presets = accentPresets,
+                            onColorSelected = { hex ->
+                                tempAccentHex = hex
+                                viewModel.updateAccentColor(hex)
+                            },
+                            customHexValue = tempAccentHex,
+                            onCustomHexChanged = { hex ->
+                                tempAccentHex = hex
+                            },
+                            label = "Accent Color (Income Card)"
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    TextButton(
+                        onClick = {
+                            viewModel.resetThemeToDefault()
+                            tempPrimaryHex = "#FFD97D"
+                            tempSecondaryHex = "#A78BFA"
+                            tempAccentHex = "#D9F99D"
+                        }
+                    ) {
+                        Text("Reset Theme", color = MaterialTheme.colorScheme.error)
+                    }
+                    Button(
+                        onClick = {
+                            val parsed = budgetText.toDoubleOrNull() ?: 2000.0
+                            viewModel.updateMonthlyBudget(parsed)
+                            showBudgetDialog = false
+                        },
+                        modifier = Modifier.testTag("save_budget_button")
+                    ) {
+                        Text("Done")
+                    }
                 }
             },
             dismissButton = {
@@ -756,13 +927,35 @@ fun DashboardScreen(
 
 @Composable
 fun ManualAddForm(
-    onSubmit: (Double, String, String, String) -> Unit,
+    onSubmit: (Double, String, String, String, Boolean, String, Long) -> Unit,
     modifier: Modifier = Modifier
 ) {
     var amountText by remember { mutableStateOf("") }
     var category by remember { mutableStateOf("Food") }
     var type by remember { mutableStateOf("EXPENSE") }
     var description by remember { mutableStateOf("") }
+    var isRecurring by remember { mutableStateOf(false) }
+    var frequency by remember { mutableStateOf("MONTHLY") }
+
+    val context = LocalContext.current
+    val calendar = remember { Calendar.getInstance() }
+    var selectedDate by remember { mutableStateOf(calendar.timeInMillis) }
+    val dateFormatter = remember { SimpleDateFormat("MMM dd, yyyy", Locale.getDefault()) }
+
+    val datePickerDialog = remember {
+        DatePickerDialog(
+            context,
+            { _, year, month, dayOfMonth ->
+                calendar.set(Calendar.YEAR, year)
+                calendar.set(Calendar.MONTH, month)
+                calendar.set(Calendar.DAY_OF_MONTH, dayOfMonth)
+                selectedDate = calendar.timeInMillis
+            },
+            calendar.get(Calendar.YEAR),
+            calendar.get(Calendar.MONTH),
+            calendar.get(Calendar.DAY_OF_MONTH)
+        )
+    }
 
     val categories = listOf("Food", "Transport", "Utilities", "Entertainment", "Shopping", "Salary", "Investment", "Housing", "Others")
 
@@ -875,17 +1068,133 @@ fun ManualAddForm(
                 }
             }
 
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Date Selector Row/Field
+            OutlinedTextField(
+                value = dateFormatter.format(Date(selectedDate)),
+                onValueChange = {},
+                readOnly = true,
+                label = { Text("Transaction Date") },
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Default.DateRange,
+                        contentDescription = "Select Date"
+                    )
+                },
+                trailingIcon = {
+                    IconButton(onClick = { datePickerDialog.show() }) {
+                        Icon(
+                            imageVector = Icons.Default.CalendarToday,
+                            contentDescription = "Change Date"
+                        )
+                    }
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { datePickerDialog.show() }
+                    .testTag("manual_date_input")
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Recurring Switch Row
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { isRecurring = !isRecurring }
+                    .padding(vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.Autorenew,
+                        contentDescription = null,
+                        tint = if (isRecurring) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Repeat transaction (Recurring)",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = if (isRecurring) FontWeight.Bold else FontWeight.Normal,
+                        color = if (isRecurring) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                    )
+                }
+                Switch(
+                    checked = isRecurring,
+                    onCheckedChange = { isRecurring = it },
+                    modifier = Modifier.testTag("recurring_switch")
+                )
+            }
+
+            if (isRecurring) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Text(
+                        text = "Frequency:",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.weight(1f)
+                    )
+
+                    val frequencies = listOf("DAILY", "WEEKLY", "MONTHLY", "YEARLY")
+                    var freqExpanded by remember { mutableStateOf(false) }
+
+                    Box(modifier = Modifier.weight(2f)) {
+                        OutlinedTextField(
+                            value = frequency,
+                            onValueChange = {},
+                            readOnly = true,
+                            shape = RoundedCornerShape(8.dp),
+                            trailingIcon = {
+                                IconButton(onClick = { freqExpanded = !freqExpanded }) {
+                                    Icon(Icons.Default.ArrowDropDown, "Show Frequencies")
+                                }
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { freqExpanded = !freqExpanded }
+                                .testTag("recurring_freq_trigger")
+                        )
+                        DropdownMenu(
+                            expanded = freqExpanded,
+                            onDismissRequest = { freqExpanded = false }
+                        ) {
+                            frequencies.forEach { freq ->
+                                DropdownMenuItem(
+                                    text = { Text(freq) },
+                                    onClick = {
+                                        frequency = freq
+                                        freqExpanded = false
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
             Spacer(modifier = Modifier.height(16.dp))
 
             Button(
                 onClick = {
                     val amount = amountText.toDoubleOrNull() ?: 0.0
                     if (amount > 0 && description.isNotBlank()) {
-                        onSubmit(amount, category, type, description)
+                        onSubmit(amount, category, type, description, isRecurring, frequency, selectedDate)
                         amountText = ""
                         description = ""
                         type = "EXPENSE"
                         category = "Food"
+                        isRecurring = false
+                        frequency = "MONTHLY"
+                        selectedDate = System.currentTimeMillis()
                     }
                 },
                 enabled = amountText.isNotBlank() && description.isNotBlank(),
@@ -986,7 +1295,7 @@ fun TransactionRowItem(
 
             // Value Amount Text
             val valSign = if (isExpense) "-" else "+"
-            val valColor = if (isExpense) MaterialTheme.colorScheme.error else Color(0xFF2E7D32)
+            val valColor = if (isExpense) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.tertiary
 
             Column(
                 horizontalAlignment = Alignment.End,
@@ -1035,3 +1344,208 @@ fun getCategoryStyle(category: String): CategoryStyle {
         else -> CategoryStyle(Icons.Default.Category, Color(0xFF37474F))
     }
 }
+
+@Composable
+fun ColorPresetRow(
+    selectedColorHex: String,
+    presets: List<String>,
+    onColorSelected: (String) -> Unit,
+    customHexValue: String,
+    onCustomHexChanged: (String) -> Unit,
+    label: String
+) {
+    Column(modifier = Modifier.padding(vertical = 8.dp)) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.padding(bottom = 6.dp)
+        )
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            presets.forEach { hex ->
+                val color = remember(hex) {
+                    try { Color(android.graphics.Color.parseColor(hex)) } catch (e: Exception) { Color.Gray }
+                }
+                val isSelected = selectedColorHex.equals(hex, ignoreCase = true)
+                Box(
+                    modifier = Modifier
+                        .size(32.dp)
+                        .clip(CircleShape)
+                        .background(color)
+                        .border(
+                            width = if (isSelected) 3.dp else 1.dp,
+                            color = if (isSelected) MaterialTheme.colorScheme.onSurface else Color.Transparent,
+                            shape = CircleShape
+                        )
+                        .clickable { onColorSelected(hex) }
+                )
+            }
+            
+            Spacer(modifier = Modifier.width(4.dp))
+            
+            OutlinedTextField(
+                value = customHexValue,
+                onValueChange = { newValue ->
+                    onCustomHexChanged(newValue)
+                    if (newValue.length == 7 && newValue.startsWith("#")) {
+                        onColorSelected(newValue)
+                    } else if (newValue.length == 6) {
+                        onColorSelected("#$newValue")
+                    }
+                },
+                placeholder = { Text("#HEX", fontSize = 11.sp) },
+                singleLine = true,
+                maxLines = 1,
+                textStyle = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                    unfocusedBorderColor = MaterialTheme.colorScheme.outline
+                ),
+                modifier = Modifier
+                    .width(85.dp)
+                    .height(44.dp)
+            )
+        }
+    }
+}
+
+@Composable
+fun RecurringRowItem(
+    recurring: com.example.data.RecurringTransaction,
+    onDelete: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val categoryStyle = getCategoryStyle(recurring.category)
+    val isExpense = recurring.type == "EXPENSE"
+    val formatter = remember { SimpleDateFormat("MMM d, yyyy", Locale.getDefault()) }
+
+    Card(
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.8f)),
+        shape = RoundedCornerShape(20.dp),
+        modifier = modifier
+            .fillMaxWidth()
+            .testTag("recurring_item_${recurring.id}")
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Category Visual Icon Box
+            Box(
+                modifier = Modifier
+                    .size(44.dp)
+                    .background(
+                        categoryStyle.color.copy(alpha = 0.15f),
+                        CircleShape
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = categoryStyle.icon,
+                    contentDescription = recurring.category,
+                    tint = categoryStyle.color,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.width(14.dp))
+
+            // Text Metadata Column
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = recurring.description,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(top = 2.dp)
+                ) {
+                    Text(
+                        text = recurring.category,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = categoryStyle.color,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Box(
+                        modifier = Modifier
+                            .size(3.dp)
+                            .background(
+                                MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                                CircleShape
+                            )
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    
+                    // Frequency Chip Style Tag
+                    Text(
+                        text = recurring.frequency.uppercase(Locale.getDefault()),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.ExtraBold
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Box(
+                        modifier = Modifier
+                            .size(3.dp)
+                            .background(
+                                MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                                CircleShape
+                            )
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = "Starts ${formatter.format(Date(recurring.startDate))}",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.width(8.dp))
+
+            // Value Amount Text
+            val valSign = if (isExpense) "-" else "+"
+            val valColor = if (isExpense) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.tertiary
+
+            Column(
+                horizontalAlignment = Alignment.End,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Text(
+                    text = "$valSign$${String.format("%.2f", recurring.amount)}",
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = valColor
+                )
+
+                IconButton(
+                    onClick = onDelete,
+                    modifier = Modifier
+                        .size(28.dp)
+                        .testTag("delete_recurring_${recurring.id}")
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.DeleteOutline,
+                        contentDescription = "Delete recurring rule",
+                        tint = MaterialTheme.colorScheme.error.copy(alpha = 0.8f),
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+            }
+        }
+    }
+}
+

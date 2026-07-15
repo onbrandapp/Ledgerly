@@ -15,6 +15,10 @@ interface TransactionRepository {
     fun getTransactions(userEmail: String): Flow<List<Transaction>>
     suspend fun addTransaction(userEmail: String, transaction: Transaction): Result<Unit>
     suspend fun deleteTransaction(userEmail: String, id: String): Result<Unit>
+
+    fun getRecurringTransactions(userEmail: String): Flow<List<RecurringTransaction>>
+    suspend fun addRecurringTransaction(userEmail: String, recurring: RecurringTransaction): Result<Unit>
+    suspend fun deleteRecurringTransaction(userEmail: String, id: String): Result<Unit>
 }
 
 class FirebaseTransactionRepository : TransactionRepository {
@@ -71,13 +75,64 @@ class FirebaseTransactionRepository : TransactionRepository {
                 if (continuation.isActive) continuation.resume(Result.failure(exception))
             }
     }
+
+    override fun getRecurringTransactions(userEmail: String): Flow<List<RecurringTransaction>> = callbackFlow {
+        val query = firestore.collection("users")
+            .document(userEmail)
+            .collection("recurring_transactions")
+            .orderBy("startDate", Query.Direction.DESCENDING)
+
+        val registration = query.addSnapshotListener { snapshot, error ->
+            if (error != null) {
+                close(error)
+                return@addSnapshotListener
+            }
+            if (snapshot != null) {
+                val recurrings = snapshot.documents.mapNotNull { doc ->
+                    doc.toObject(RecurringTransaction::class.java)?.copy(id = doc.id)
+                }
+                trySend(recurrings)
+            }
+        }
+        awaitClose { registration.remove() }
+    }
+
+    override suspend fun addRecurringTransaction(userEmail: String, recurring: RecurringTransaction): Result<Unit> = suspendCancellableCoroutine { continuation ->
+        val collection = firestore.collection("users")
+            .document(userEmail)
+            .collection("recurring_transactions")
+
+        val docRef = if (recurring.id.isEmpty()) collection.document() else collection.document(recurring.id)
+        val finalRecurring = recurring.copy(id = docRef.id)
+
+        docRef.set(finalRecurring)
+            .addOnSuccessListener {
+                if (continuation.isActive) continuation.resume(Result.success(Unit))
+            }
+            .addOnFailureListener { exception ->
+                if (continuation.isActive) continuation.resume(Result.failure(exception))
+            }
+    }
+
+    override suspend fun deleteRecurringTransaction(userEmail: String, id: String): Result<Unit> = suspendCancellableCoroutine { continuation ->
+        firestore.collection("users")
+            .document(userEmail)
+            .collection("recurring_transactions")
+            .document(id)
+            .delete()
+            .addOnSuccessListener {
+                if (continuation.isActive) continuation.resume(Result.success(Unit))
+            }
+            .addOnFailureListener { exception ->
+                if (continuation.isActive) continuation.resume(Result.failure(exception))
+            }
+    }
 }
 
 class RoomTransactionRepository(context: Context) : TransactionRepository {
     private val dao = AppDatabase.getDatabase(context).transactionDao()
 
     override fun getTransactions(userEmail: String): Flow<List<Transaction>> {
-        // In local mode, we ignore userEmail or filter by it. Let's just return all local transactions.
         return dao.getAllTransactions().map { list ->
             list.map { it.toDomain() }
         }
@@ -96,6 +151,31 @@ class RoomTransactionRepository(context: Context) : TransactionRepository {
     override suspend fun deleteTransaction(userEmail: String, id: String): Result<Unit> {
         return try {
             dao.deleteTransactionById(id)
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    override fun getRecurringTransactions(userEmail: String): Flow<List<RecurringTransaction>> {
+        return dao.getAllRecurringTransactions().map { list ->
+            list.map { it.toDomain() }
+        }
+    }
+
+    override suspend fun addRecurringTransaction(userEmail: String, recurring: RecurringTransaction): Result<Unit> {
+        return try {
+            val localRec = LocalRecurringTransaction.fromDomain(recurring)
+            dao.insertRecurringTransaction(localRec)
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun deleteRecurringTransaction(userEmail: String, id: String): Result<Unit> {
+        return try {
+            dao.deleteRecurringTransactionById(id)
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)

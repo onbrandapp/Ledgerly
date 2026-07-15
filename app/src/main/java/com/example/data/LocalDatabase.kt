@@ -43,6 +43,42 @@ data class LocalTransaction(
     }
 }
 
+@Entity(tableName = "local_recurring_transactions")
+data class LocalRecurringTransaction(
+    @PrimaryKey val id: String,
+    val amount: Double,
+    val category: String,
+    val type: String,
+    val description: String,
+    val frequency: String,
+    val startDate: Long,
+    val lastLoggedDate: Long
+) {
+    fun toDomain(): RecurringTransaction = RecurringTransaction(
+        id = id,
+        amount = amount,
+        category = category,
+        type = type,
+        description = description,
+        frequency = frequency,
+        startDate = startDate,
+        lastLoggedDate = lastLoggedDate
+    )
+
+    companion object {
+        fun fromDomain(r: RecurringTransaction): LocalRecurringTransaction = LocalRecurringTransaction(
+            id = r.id.ifEmpty { java.util.UUID.randomUUID().toString() },
+            amount = r.amount,
+            category = r.category,
+            type = r.type,
+            description = r.description,
+            frequency = r.frequency,
+            startDate = r.startDate,
+            lastLoggedDate = r.lastLoggedDate
+        )
+    }
+}
+
 @Dao
 interface TransactionDao {
     @Query("SELECT * FROM local_transactions ORDER BY date DESC")
@@ -53,9 +89,18 @@ interface TransactionDao {
 
     @Query("DELETE FROM local_transactions WHERE id = :id")
     suspend fun deleteTransactionById(id: String)
+
+    @Query("SELECT * FROM local_recurring_transactions ORDER BY startDate DESC")
+    fun getAllRecurringTransactions(): Flow<List<LocalRecurringTransaction>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertRecurringTransaction(recurring: LocalRecurringTransaction)
+
+    @Query("DELETE FROM local_recurring_transactions WHERE id = :id")
+    suspend fun deleteRecurringTransactionById(id: String)
 }
 
-@Database(entities = [LocalTransaction::class], version = 1, exportSchema = false)
+@Database(entities = [LocalTransaction::class, LocalRecurringTransaction::class], version = 2, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun transactionDao(): TransactionDao
 
@@ -69,7 +114,9 @@ abstract class AppDatabase : RoomDatabase() {
                     context.applicationContext,
                     AppDatabase::class.java,
                     "expense_tracker_db"
-                ).build()
+                )
+                .fallbackToDestructiveMigration(true)
+                .build()
                 INSTANCE = instance
                 instance
             }

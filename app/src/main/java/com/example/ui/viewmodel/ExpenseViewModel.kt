@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.util.Calendar
 
+@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
 class ExpenseViewModel(application: Application) : AndroidViewModel(application) {
 
     private val authRepository = AuthRepositoryFactory.create(application)
@@ -33,6 +34,16 @@ class ExpenseViewModel(application: Application) : AndroidViewModel(application)
     private val budgetPrefs = application.getSharedPreferences("budget_prefs", Context.MODE_PRIVATE)
     private val _monthlyBudget = MutableStateFlow(budgetPrefs.getFloat("limit", 2000f).toDouble())
     val monthlyBudget = _monthlyBudget.asStateFlow()
+
+    // Custom Theme Colors State (Polysure Theme defaults: Primary = Light Orange, Secondary = Purple, Accent = Lime Green)
+    private val _primaryColor = MutableStateFlow(budgetPrefs.getString("primary_color", "#FFD97D") ?: "#FFD97D")
+    val primaryColor = _primaryColor.asStateFlow()
+
+    private val _secondaryColor = MutableStateFlow(budgetPrefs.getString("secondary_color", "#A78BFA") ?: "#A78BFA")
+    val secondaryColor = _secondaryColor.asStateFlow()
+
+    private val _accentColor = MutableStateFlow(budgetPrefs.getString("accent_color", "#D9F99D") ?: "#D9F99D")
+    val accentColor = _accentColor.asStateFlow()
 
     // Transactions State
     private val _isTransactionsLoading = MutableStateFlow(false)
@@ -86,6 +97,30 @@ class ExpenseViewModel(application: Application) : AndroidViewModel(application)
             currentMonthList = currentMonthList
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), MonthlySummary(0.0, 0.0, emptyList()))
+
+    // Recurring Transactions State Flow
+    val recurringTransactions: StateFlow<List<RecurringTransaction>> = currentUserEmail
+        .flatMapLatest { email ->
+            if (email != null) {
+                transactionRepository.getRecurringTransactions(email)
+                    .catch { emit(emptyList()) }
+            } else {
+                flowOf(emptyList())
+            }
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    init {
+        viewModelScope.launch {
+            combine(currentUserEmail, recurringTransactions) { email, templates ->
+                Pair(email, templates)
+            }.collect { (email, templates) ->
+                if (email != null && templates.isNotEmpty()) {
+                    processRecurringTransactions(email, templates)
+                }
+            }
+        }
+    }
 
     // AI Natural Language Parsing State
     private val _promptInput = MutableStateFlow("")
@@ -176,7 +211,7 @@ class ExpenseViewModel(application: Application) : AndroidViewModel(application)
     }
 
     // Transaction Operations
-    fun addTransaction(amount: Double, category: String, type: String, description: String) {
+    fun addTransaction(amount: Double, category: String, type: String, description: String, date: Long = System.currentTimeMillis()) {
         val email = currentUserEmail.value ?: return
         val newTx = Transaction(
             id = "",
@@ -184,7 +219,7 @@ class ExpenseViewModel(application: Application) : AndroidViewModel(application)
             category = category.trim(),
             type = type,
             description = description.trim(),
-            date = System.currentTimeMillis()
+            date = date
         )
         viewModelScope.launch {
             transactionRepository.addTransaction(email, newTx)
@@ -204,9 +239,144 @@ class ExpenseViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
+    fun addRecurringTransaction(
+        amount: Double,
+        category: String,
+        type: String,
+        description: String,
+        frequency: String,
+        startDate: Long
+    ) {
+        val email = currentUserEmail.value ?: return
+        viewModelScope.launch {
+            val recurring = RecurringTransaction(
+                id = java.util.UUID.randomUUID().toString(),
+                amount = amount,
+                category = category.trim(),
+                type = type,
+                description = description.trim(),
+                frequency = frequency,
+                startDate = startDate,
+                lastLoggedDate = 0L
+            )
+            transactionRepository.addRecurringTransaction(email, recurring)
+        }
+    }
+
+    fun deleteRecurringTransaction(id: String) {
+        val email = currentUserEmail.value ?: return
+        viewModelScope.launch {
+            transactionRepository.deleteRecurringTransaction(email, id)
+                .onFailure { error ->
+                    _transactionsError.value = "Failed to delete recurring transaction: ${error.message}"
+                }
+        }
+    }
+
+    private var isProcessingRecurring = false
+
+    private fun processRecurringTransactions(userEmail: String, templates: List<RecurringTransaction>) {
+        if (isProcessingRecurring) return
+        isProcessingRecurring = true
+        viewModelScope.launch {
+            try {
+                val now = System.currentTimeMillis()
+                for (template in templates) {
+                    var lastLogged = template.lastLoggedDate
+                    val startDate = template.startDate
+                    
+                    var checkTime = if (lastLogged == 0L) startDate else lastLogged
+                    if (checkTime > now) continue
+
+                    val cal = Calendar.getInstance()
+                    cal.timeInMillis = checkTime
+
+                    var updatedLastLogged = lastLogged
+                    var anyLogged = false
+
+                    if (lastLogged == 0L) {
+                        val firstTx = Transaction(
+                            id = java.util.UUID.randomUUID().toString(),
+                            amount = template.amount,
+                            category = template.category,
+                            type = template.type,
+                            description = template.description + " (Recurring)",
+                            date = startDate
+                        )
+                        transactionRepository.addTransaction(userEmail, firstTx)
+                        updatedLastLogged = startDate
+                        anyLogged = true
+                    }
+
+                    while (true) {
+                        when (template.frequency.uppercase()) {
+                            "DAILY" -> cal.add(Calendar.DAY_OF_YEAR, 1)
+                            "WEEKLY" -> cal.add(Calendar.WEEK_OF_YEAR, 1)
+                            "MONTHLY" -> cal.add(Calendar.MONTH, 1)
+                            "YEARLY" -> cal.add(Calendar.YEAR, 1)
+                            else -> cal.add(Calendar.MONTH, 1)
+                        }
+                        
+                        val nextTime = cal.timeInMillis
+                        if (nextTime <= now) {
+                            val nextTx = Transaction(
+                                id = java.util.UUID.randomUUID().toString(),
+                                amount = template.amount,
+                                category = template.category,
+                                type = template.type,
+                                description = template.description + " (Recurring)",
+                                date = nextTime
+                            )
+                            transactionRepository.addTransaction(userEmail, nextTx)
+                            updatedLastLogged = nextTime
+                            anyLogged = true
+                        } else {
+                            break
+                        }
+                    }
+
+                    if (anyLogged) {
+                        val updatedTemplate = template.copy(lastLoggedDate = updatedLastLogged)
+                        transactionRepository.addRecurringTransaction(userEmail, updatedTemplate)
+                    }
+                }
+            } catch (e: Exception) {
+                _transactionsError.value = "Failed processing recurring transactions: ${e.message}"
+            } finally {
+                isProcessingRecurring = false
+            }
+        }
+    }
+
     fun updateMonthlyBudget(newLimit: Double) {
         budgetPrefs.edit().putFloat("limit", newLimit.toFloat()).apply()
         _monthlyBudget.value = newLimit
+    }
+
+    fun updatePrimaryColor(hex: String) {
+        budgetPrefs.edit().putString("primary_color", hex).apply()
+        _primaryColor.value = hex
+    }
+
+    fun updateSecondaryColor(hex: String) {
+        budgetPrefs.edit().putString("secondary_color", hex).apply()
+        _secondaryColor.value = hex
+    }
+
+    fun updateAccentColor(hex: String) {
+        budgetPrefs.edit().putString("accent_color", hex).apply()
+        _accentColor.value = hex
+    }
+
+    fun resetThemeToDefault() {
+        budgetPrefs.edit()
+            .putString("primary_color", "#FFD97D")
+            .putString("secondary_color", "#A78BFA")
+            .putString("accent_color", "#D9F99D")
+            .apply()
+        _primaryColor.value = "#FFD97D"
+        _secondaryColor.value = "#A78BFA"
+        _accentColor.value = "#D9F99D"
     }
 
     // Parse with Gemini
