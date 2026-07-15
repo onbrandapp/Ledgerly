@@ -211,10 +211,10 @@ class ExpenseViewModel(application: Application) : AndroidViewModel(application)
     }
 
     // Transaction Operations
-    fun addTransaction(amount: Double, category: String, type: String, description: String, date: Long = System.currentTimeMillis()) {
+    fun addTransaction(amount: Double, category: String, type: String, description: String, date: Long = System.currentTimeMillis(), id: String = "") {
         val email = currentUserEmail.value ?: return
         val newTx = Transaction(
-            id = "",
+            id = id,
             amount = amount,
             category = category.trim(),
             type = type,
@@ -245,19 +245,21 @@ class ExpenseViewModel(application: Application) : AndroidViewModel(application)
         type: String,
         description: String,
         frequency: String,
-        startDate: Long
+        startDate: Long,
+        id: String = "",
+        lastLoggedDate: Long = 0L
     ) {
         val email = currentUserEmail.value ?: return
         viewModelScope.launch {
             val recurring = RecurringTransaction(
-                id = java.util.UUID.randomUUID().toString(),
+                id = id.ifEmpty { java.util.UUID.randomUUID().toString() },
                 amount = amount,
                 category = category.trim(),
                 type = type,
                 description = description.trim(),
                 frequency = frequency,
                 startDate = startDate,
-                lastLoggedDate = 0L
+                lastLoggedDate = lastLoggedDate
             )
             transactionRepository.addRecurringTransaction(email, recurring)
         }

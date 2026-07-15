@@ -68,6 +68,8 @@ fun DashboardScreen(
 
     var showBudgetDialog by remember { mutableStateOf(false) }
     var showManualAddForm by remember { mutableStateOf(false) }
+    var editingTransaction by remember { mutableStateOf<Transaction?>(null) }
+    var editingRecurringTransaction by remember { mutableStateOf<com.example.data.RecurringTransaction?>(null) }
     var selectedTab by remember { mutableStateOf(0) } // 0 = Transactions, 1 = Recurring
 
     val focusManager = LocalFocusManager.current
@@ -137,7 +139,13 @@ fun DashboardScreen(
         },
         floatingActionButton = {
             FloatingActionButton(
-                onClick = { showManualAddForm = !showManualAddForm },
+                onClick = {
+                    if (!showManualAddForm) {
+                        editingTransaction = null
+                        editingRecurringTransaction = null
+                    }
+                    showManualAddForm = !showManualAddForm
+                },
                 containerColor = MaterialTheme.colorScheme.primary,
                 contentColor = MaterialTheme.colorScheme.onPrimary,
                 modifier = Modifier.testTag("fab_add_transaction")
@@ -701,6 +709,11 @@ fun DashboardScreen(
                             monthlySummary.currentMonthList.forEach { tx ->
                                 TransactionRowItem(
                                     transaction = tx,
+                                    onEdit = {
+                                        editingTransaction = tx
+                                        editingRecurringTransaction = null
+                                        showManualAddForm = true
+                                    },
                                     onDelete = { viewModel.deleteTransaction(tx.id) }
                                 )
                             }
@@ -751,6 +764,11 @@ fun DashboardScreen(
                             recurringTransactions.forEach { rec ->
                                 RecurringRowItem(
                                     recurring = rec,
+                                    onEdit = {
+                                        editingRecurringTransaction = rec
+                                        editingTransaction = null
+                                        showManualAddForm = true
+                                    },
                                     onDelete = { viewModel.deleteRecurringTransaction(rec.id) }
                                 )
                             }
@@ -923,7 +941,11 @@ fun DashboardScreen(
     if (showManualAddForm) {
         val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
         ModalBottomSheet(
-            onDismissRequest = { showManualAddForm = false },
+            onDismissRequest = {
+                showManualAddForm = false
+                editingTransaction = null
+                editingRecurringTransaction = null
+            },
             sheetState = sheetState,
             containerColor = MaterialTheme.colorScheme.surface,
             tonalElevation = 8.dp,
@@ -939,13 +961,45 @@ fun DashboardScreen(
                     .verticalScroll(rememberScrollState())
             ) {
                 ManualAddForm(
-                    onSubmit = { amount, category, type, description, isRecurring, frequency, selectedDate ->
-                        if (isRecurring) {
-                            viewModel.addRecurringTransaction(amount, category, type, description, frequency, selectedDate)
+                    initialTransaction = editingTransaction,
+                    initialRecurringTransaction = editingRecurringTransaction,
+                    onSubmit = { id, amount, category, type, description, isRecurring, frequency, selectedDate ->
+                        if (editingTransaction != null) {
+                            if (isRecurring) {
+                                // Toggled from non-recurring to recurring
+                                viewModel.addRecurringTransaction(amount, category, type, description, frequency, selectedDate)
+                                viewModel.deleteTransaction(editingTransaction!!.id)
+                            } else {
+                                viewModel.addTransaction(amount, category, type, description, selectedDate, id)
+                            }
+                        } else if (editingRecurringTransaction != null) {
+                            if (!isRecurring) {
+                                // Toggled from recurring to non-recurring
+                                viewModel.addTransaction(amount, category, type, description, selectedDate)
+                                viewModel.deleteRecurringTransaction(editingRecurringTransaction!!.id)
+                            } else {
+                                viewModel.addRecurringTransaction(
+                                    amount = amount,
+                                    category = category,
+                                    type = type,
+                                    description = description,
+                                    frequency = frequency,
+                                    startDate = selectedDate,
+                                    id = id,
+                                    lastLoggedDate = editingRecurringTransaction!!.lastLoggedDate
+                                )
+                            }
                         } else {
-                            viewModel.addTransaction(amount, category, type, description, selectedDate)
+                            // New entry
+                            if (isRecurring) {
+                                viewModel.addRecurringTransaction(amount, category, type, description, frequency, selectedDate)
+                            } else {
+                                viewModel.addTransaction(amount, category, type, description, selectedDate)
+                            }
                         }
                         showManualAddForm = false
+                        editingTransaction = null
+                        editingRecurringTransaction = null
                     }
                 )
             }
@@ -955,19 +1009,45 @@ fun DashboardScreen(
 
 @Composable
 fun ManualAddForm(
-    onSubmit: (Double, String, String, String, Boolean, String, Long) -> Unit,
+    onSubmit: (id: String, Double, String, String, String, Boolean, String, Long) -> Unit,
+    initialTransaction: Transaction? = null,
+    initialRecurringTransaction: com.example.data.RecurringTransaction? = null,
     modifier: Modifier = Modifier
 ) {
-    var amountText by remember { mutableStateOf("") }
-    var category by remember { mutableStateOf("Food") }
-    var type by remember { mutableStateOf("EXPENSE") }
-    var description by remember { mutableStateOf("") }
-    var isRecurring by remember { mutableStateOf(false) }
-    var frequency by remember { mutableStateOf("MONTHLY") }
+    var amountText by remember(initialTransaction, initialRecurringTransaction) {
+        mutableStateOf(
+            if (initialTransaction != null) {
+                if (initialTransaction.amount == 0.0) "" else initialTransaction.amount.toString()
+            } else if (initialRecurringTransaction != null) {
+                if (initialRecurringTransaction.amount == 0.0) "" else initialRecurringTransaction.amount.toString()
+            } else {
+                ""
+            }
+        )
+    }
+    var category by remember(initialTransaction, initialRecurringTransaction) {
+        mutableStateOf(initialTransaction?.category ?: initialRecurringTransaction?.category ?: "Food")
+    }
+    var type by remember(initialTransaction, initialRecurringTransaction) {
+        mutableStateOf(initialTransaction?.type ?: initialRecurringTransaction?.type ?: "EXPENSE")
+    }
+    var description by remember(initialTransaction, initialRecurringTransaction) {
+        mutableStateOf(initialTransaction?.description ?: initialRecurringTransaction?.description ?: "")
+    }
+    var isRecurring by remember(initialTransaction, initialRecurringTransaction) {
+        mutableStateOf(initialRecurringTransaction != null)
+    }
+    var frequency by remember(initialTransaction, initialRecurringTransaction) {
+        mutableStateOf(initialRecurringTransaction?.frequency ?: "MONTHLY")
+    }
 
     val context = LocalContext.current
-    val calendar = remember { Calendar.getInstance() }
-    var selectedDate by remember { mutableStateOf(calendar.timeInMillis) }
+    val calendar = remember(initialTransaction, initialRecurringTransaction) {
+        Calendar.getInstance().apply {
+            timeInMillis = initialTransaction?.date ?: initialRecurringTransaction?.startDate ?: System.currentTimeMillis()
+        }
+    }
+    var selectedDate by remember(initialTransaction, initialRecurringTransaction) { mutableStateOf(calendar.timeInMillis) }
     val dateFormatter = remember { SimpleDateFormat("MMM dd, yyyy", Locale.getDefault()) }
 
     val datePickerDialog = remember {
@@ -1002,7 +1082,7 @@ fun ManualAddForm(
                 .padding(16.dp)
         ) {
             Text(
-                text = "Manual Ledger Entry",
+                text = if (initialTransaction != null || initialRecurringTransaction != null) "Edit Ledger Entry" else "Manual Ledger Entry",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary,
@@ -1043,54 +1123,87 @@ fun ManualAddForm(
                     .testTag("manual_desc_input")
             )
 
-            // Amount & Category Selector
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                OutlinedTextField(
-                    value = amountText,
-                    onValueChange = { amountText = it },
-                    label = { Text("Amount ($)") },
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    shape = RoundedCornerShape(8.dp),
-                    modifier = Modifier
-                        .weight(1f)
-                        .testTag("manual_amount_input")
-                )
+            // Amount Input
+            OutlinedTextField(
+                value = amountText,
+                onValueChange = { amountText = it },
+                label = { Text("Amount ($)") },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                shape = RoundedCornerShape(8.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 12.dp)
+                    .testTag("manual_amount_input")
+            )
 
-                // Simple Category Select Box (Uses a dropdown menu)
-                var expanded by remember { mutableStateOf(false) }
-                Box(modifier = Modifier.weight(1.2f)) {
-                    OutlinedTextField(
-                        value = category,
-                        onValueChange = {},
-                        label = { Text("Category") },
-                        readOnly = true,
-                        shape = RoundedCornerShape(8.dp),
-                        trailingIcon = {
-                            IconButton(onClick = { expanded = !expanded }) {
-                                Icon(Icons.Default.ArrowDropDown, "Show Categories")
-                            }
-                        },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { expanded = !expanded }
-                            .testTag("manual_category_trigger")
-                    )
-                    DropdownMenu(
-                        expanded = expanded,
-                        onDismissRequest = { expanded = false }
+            // Category Selection Header
+            Text(
+                text = "Select Category",
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
+
+            // Clean, non-scrollable grid of category chips
+            val rows = categories.chunked(3)
+            Column(
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 12.dp)
+            ) {
+                rows.forEach { rowItems ->
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.fillMaxWidth()
                     ) {
-                        categories.forEach { cat ->
-                            DropdownMenuItem(
-                                text = { Text(cat) },
-                                onClick = {
-                                    category = cat
-                                    expanded = false
+                        rowItems.forEach { cat ->
+                            val isSelected = category == cat
+                            val style = getCategoryStyle(cat)
+                            
+                            Surface(
+                                onClick = { category = cat },
+                                shape = RoundedCornerShape(12.dp),
+                                color = if (isSelected) {
+                                    style.color.copy(alpha = 0.15f)
+                                } else {
+                                    MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+                                },
+                                border = BorderStroke(
+                                    width = if (isSelected) 2.dp else 1.dp,
+                                    color = if (isSelected) style.color else MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
+                                ),
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(44.dp)
+                                    .testTag("manual_category_chip_$cat")
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.Center,
+                                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 6.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = style.icon,
+                                        contentDescription = cat,
+                                        tint = if (isSelected) style.color else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(
+                                        text = cat,
+                                        style = MaterialTheme.typography.labelSmall.copy(
+                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                            fontSize = 11.sp
+                                        ),
+                                        color = if (isSelected) style.color else MaterialTheme.colorScheme.onSurfaceVariant,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
                                 }
-                            )
+                            }
                         }
                     }
                 }
@@ -1173,36 +1286,42 @@ fun ManualAddForm(
                     )
 
                     val frequencies = listOf("DAILY", "WEEKLY", "MONTHLY", "YEARLY")
-                    var freqExpanded by remember { mutableStateOf(false) }
-
-                    Box(modifier = Modifier.weight(2f)) {
-                        OutlinedTextField(
-                            value = frequency,
-                            onValueChange = {},
-                            readOnly = true,
-                            shape = RoundedCornerShape(8.dp),
-                            trailingIcon = {
-                                IconButton(onClick = { freqExpanded = !freqExpanded }) {
-                                    Icon(Icons.Default.ArrowDropDown, "Show Frequencies")
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        modifier = Modifier.weight(2.5f)
+                    ) {
+                        frequencies.forEach { freq ->
+                            val isSelected = frequency == freq
+                            Surface(
+                                onClick = { frequency = freq },
+                                shape = RoundedCornerShape(8.dp),
+                                color = if (isSelected) {
+                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+                                } else {
+                                    MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+                                },
+                                border = BorderStroke(
+                                    width = if (isSelected) 2.dp else 1.dp,
+                                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
+                                ),
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(36.dp)
+                                    .testTag("freq_chip_$freq")
+                            ) {
+                                Box(
+                                    contentAlignment = Alignment.Center,
+                                    modifier = Modifier.fillMaxSize()
+                                ) {
+                                    Text(
+                                        text = freq,
+                                        style = MaterialTheme.typography.labelSmall.copy(
+                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                            fontSize = 9.sp
+                                        ),
+                                        color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
                                 }
-                            },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { freqExpanded = !freqExpanded }
-                                .testTag("recurring_freq_trigger")
-                        )
-                        DropdownMenu(
-                            expanded = freqExpanded,
-                            onDismissRequest = { freqExpanded = false }
-                        ) {
-                            frequencies.forEach { freq ->
-                                DropdownMenuItem(
-                                    text = { Text(freq) },
-                                    onClick = {
-                                        frequency = freq
-                                        freqExpanded = false
-                                    }
-                                )
                             }
                         }
                     }
@@ -1215,7 +1334,8 @@ fun ManualAddForm(
                 onClick = {
                     val amount = amountText.toDoubleOrNull() ?: 0.0
                     if (amount > 0 && description.isNotBlank()) {
-                        onSubmit(amount, category, type, description, isRecurring, frequency, selectedDate)
+                        val id = initialTransaction?.id ?: initialRecurringTransaction?.id ?: ""
+                        onSubmit(id, amount, category, type, description, isRecurring, frequency, selectedDate)
                         amountText = ""
                         description = ""
                         type = "EXPENSE"
@@ -1231,7 +1351,7 @@ fun ManualAddForm(
                     .fillMaxWidth()
                     .testTag("manual_submit_button")
             ) {
-                Text("Post Entry")
+                Text(if (initialTransaction != null || initialRecurringTransaction != null) "Save Changes" else "Post Entry")
             }
         }
     }
@@ -1240,6 +1360,7 @@ fun ManualAddForm(
 @Composable
 fun TransactionRowItem(
     transaction: Transaction,
+    onEdit: () -> Unit,
     onDelete: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -1336,18 +1457,36 @@ fun TransactionRowItem(
                     color = valColor
                 )
                 
-                IconButton(
-                    onClick = onDelete,
-                    modifier = Modifier
-                        .size(28.dp)
-                        .testTag("delete_transaction_${transaction.id}")
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.DeleteOutline,
-                        contentDescription = "Delete entry",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
-                        modifier = Modifier.size(16.dp)
-                    )
+                    IconButton(
+                        onClick = onEdit,
+                        modifier = Modifier
+                            .size(28.dp)
+                            .testTag("edit_transaction_${transaction.id}")
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Edit,
+                            contentDescription = "Edit entry",
+                            tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                    IconButton(
+                        onClick = onDelete,
+                        modifier = Modifier
+                            .size(28.dp)
+                            .testTag("delete_transaction_${transaction.id}")
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.DeleteOutline,
+                            contentDescription = "Delete entry",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
                 }
             }
         }
@@ -1445,6 +1584,7 @@ fun ColorPresetRow(
 @Composable
 fun RecurringRowItem(
     recurring: com.example.data.RecurringTransaction,
+    onEdit: () -> Unit,
     onDelete: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -1552,18 +1692,36 @@ fun RecurringRowItem(
                     color = valColor
                 )
 
-                IconButton(
-                    onClick = onDelete,
-                    modifier = Modifier
-                        .size(28.dp)
-                        .testTag("delete_recurring_${recurring.id}")
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.DeleteOutline,
-                        contentDescription = "Delete recurring rule",
-                        tint = MaterialTheme.colorScheme.error.copy(alpha = 0.8f),
-                        modifier = Modifier.size(16.dp)
-                    )
+                    IconButton(
+                        onClick = onEdit,
+                        modifier = Modifier
+                            .size(28.dp)
+                            .testTag("edit_recurring_${recurring.id}")
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Edit,
+                            contentDescription = "Edit recurring rule",
+                            tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                    IconButton(
+                        onClick = onDelete,
+                        modifier = Modifier
+                            .size(28.dp)
+                            .testTag("delete_recurring_${recurring.id}")
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.DeleteOutline,
+                            contentDescription = "Delete recurring rule",
+                            tint = MaterialTheme.colorScheme.error.copy(alpha = 0.7f),
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
                 }
             }
         }
