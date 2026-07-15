@@ -221,8 +221,43 @@ class ExpenseViewModel(application: Application) : AndroidViewModel(application)
         _authError.value = null
     }
 
+    fun clearTransactionsError() {
+        _transactionsError.value = null
+    }
+
+    fun isDuplicateTransaction(newTx: Transaction): Boolean {
+        val list = transactions.value
+        val newCal = Calendar.getInstance().apply { timeInMillis = newTx.date }
+        return list.any { existing ->
+            if (existing.id == newTx.id) return@any false
+
+            val existCal = Calendar.getInstance().apply { timeInMillis = existing.date }
+            val sameDay = existCal.get(Calendar.YEAR) == newCal.get(Calendar.YEAR) &&
+                    existCal.get(Calendar.DAY_OF_YEAR) == newCal.get(Calendar.DAY_OF_YEAR)
+
+            val sameDetails = existing.amount == newTx.amount &&
+                    existing.category.trim().equals(newTx.category.trim(), ignoreCase = true) &&
+                    existing.type == newTx.type &&
+                    existing.description.trim().equals(newTx.description.trim(), ignoreCase = true)
+
+            val sameRecurringDay = newTx.recurringId.isNotEmpty() &&
+                    existing.recurringId == newTx.recurringId &&
+                    sameDay
+
+            sameRecurringDay || (sameDetails && sameDay)
+        }
+    }
+
     // Transaction Operations
-    fun addTransaction(amount: Double, category: String, type: String, description: String, date: Long = System.currentTimeMillis(), id: String = "") {
+    fun addTransaction(
+        amount: Double,
+        category: String,
+        type: String,
+        description: String,
+        date: Long = System.currentTimeMillis(),
+        id: String = "",
+        recurringId: String = ""
+    ) {
         val email = currentUserEmail.value ?: return
         val newTx = Transaction(
             id = id,
@@ -230,8 +265,13 @@ class ExpenseViewModel(application: Application) : AndroidViewModel(application)
             category = category.trim(),
             type = type,
             description = description.trim(),
-            date = date
+            date = date,
+            recurringId = recurringId
         )
+        if (isDuplicateTransaction(newTx)) {
+            _transactionsError.value = "This ledger item already exists. Please edit the existing ledger item from the series as necessary."
+            return
+        }
         viewModelScope.launch {
             transactionRepository.addTransaction(email, newTx)
                 .onFailure { error ->
@@ -258,12 +298,14 @@ class ExpenseViewModel(application: Application) : AndroidViewModel(application)
         frequency: String,
         startDate: Long,
         id: String = "",
-        lastLoggedDate: Long = 0L
+        lastLoggedDate: Long = 0L,
+        numInstances: Int = 12
     ) {
         val email = currentUserEmail.value ?: return
         viewModelScope.launch {
+            val ruleId = id.ifEmpty { java.util.UUID.randomUUID().toString() }
             val recurring = RecurringTransaction(
-                id = id.ifEmpty { java.util.UUID.randomUUID().toString() },
+                id = ruleId,
                 amount = amount,
                 category = category.trim(),
                 type = type,
@@ -273,6 +315,57 @@ class ExpenseViewModel(application: Application) : AndroidViewModel(application)
                 lastLoggedDate = lastLoggedDate
             )
             transactionRepository.addRecurringTransaction(email, recurring)
+
+            // If we are editing an existing series, remove old instances first
+            if (id.isNotEmpty()) {
+                val existingTxs = transactions.value.filter { it.recurringId == ruleId }
+                existingTxs.forEach { tx ->
+                    transactionRepository.deleteTransaction(email, tx.id)
+                }
+            }
+
+            // Generate transactions for the series
+            val cal = Calendar.getInstance()
+            cal.timeInMillis = startDate
+
+            var loggedCount = 0
+            var lastDateLogged = 0L
+
+            for (i in 0 until numInstances) {
+                if (i > 0) {
+                    when (frequency.uppercase()) {
+                        "DAILY" -> cal.add(Calendar.DAY_OF_YEAR, 1)
+                        "WEEKLY" -> cal.add(Calendar.WEEK_OF_YEAR, 1)
+                        "MONTHLY" -> cal.add(Calendar.MONTH, 1)
+                        "YEARLY" -> cal.add(Calendar.YEAR, 1)
+                        else -> cal.add(Calendar.MONTH, 1)
+                    }
+                }
+                val instanceDate = cal.timeInMillis
+                val txDesc = description.trim() + " (Recurring)"
+                val nextTx = Transaction(
+                    id = java.util.UUID.randomUUID().toString(),
+                    amount = amount,
+                    category = category.trim(),
+                    type = type,
+                    description = txDesc,
+                    date = instanceDate,
+                    recurringId = ruleId
+                )
+
+                if (!isDuplicateTransaction(nextTx)) {
+                    transactionRepository.addTransaction(email, nextTx)
+                    loggedCount++
+                    lastDateLogged = instanceDate
+                } else {
+                    _transactionsError.value = "This ledger item already exists. Please edit the existing ledger item from the series as necessary."
+                }
+            }
+
+            if (loggedCount > 0) {
+                val updatedRec = recurring.copy(lastLoggedDate = lastDateLogged)
+                transactionRepository.addRecurringTransaction(email, updatedRec)
+            }
         }
     }
 
@@ -283,6 +376,20 @@ class ExpenseViewModel(application: Application) : AndroidViewModel(application)
                 .onFailure { error ->
                     _transactionsError.value = "Failed to delete recurring transaction: ${error.message}"
                 }
+        }
+    }
+
+    fun deleteRecurringSeries(recurringId: String) {
+        val email = currentUserEmail.value ?: return
+        viewModelScope.launch {
+            transactionRepository.deleteRecurringTransaction(email, recurringId)
+                .onFailure { error ->
+                    _transactionsError.value = "Failed to delete recurring transaction: ${error.message}"
+                }
+            val seriesTxs = transactions.value.filter { it.recurringId == recurringId }
+            seriesTxs.forEach { tx ->
+                transactionRepository.deleteTransaction(email, tx.id)
+            }
         }
     }
 

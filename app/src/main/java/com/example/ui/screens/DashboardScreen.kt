@@ -68,12 +68,16 @@ fun DashboardScreen(
     val isParsing by viewModel.isParsing.collectAsState()
     val parseError by viewModel.parseError.collectAsState()
     val parseSuccessMessage by viewModel.parseSuccessMessage.collectAsState()
+    val transactionsError by viewModel.transactionsError.collectAsState()
 
     var showBudgetDialog by remember { mutableStateOf(false) }
     var showManualAddForm by remember { mutableStateOf(false) }
     var editingTransaction by remember { mutableStateOf<Transaction?>(null) }
     var editingRecurringTransaction by remember { mutableStateOf<com.example.data.RecurringTransaction?>(null) }
     var selectedTab by remember { mutableStateOf(0) } // 0 = Transactions, 1 = Recurring
+
+    var transactionToEditSeriesOption by remember { mutableStateOf<Transaction?>(null) }
+    var transactionToDeleteSeriesOption by remember { mutableStateOf<Transaction?>(null) }
 
     val focusManager = LocalFocusManager.current
 
@@ -719,11 +723,21 @@ fun DashboardScreen(
                                 TransactionRowItem(
                                     transaction = tx,
                                     onEdit = {
-                                        editingTransaction = tx
-                                        editingRecurringTransaction = null
-                                        showManualAddForm = true
+                                        if (tx.recurringId.isNotEmpty()) {
+                                            transactionToEditSeriesOption = tx
+                                        } else {
+                                            editingTransaction = tx
+                                            editingRecurringTransaction = null
+                                            showManualAddForm = true
+                                        }
                                     },
-                                    onDelete = { viewModel.deleteTransaction(tx.id) }
+                                    onDelete = {
+                                        if (tx.recurringId.isNotEmpty()) {
+                                            transactionToDeleteSeriesOption = tx
+                                        } else {
+                                            viewModel.deleteTransaction(tx.id)
+                                        }
+                                    }
                                 )
                             }
                         }
@@ -786,6 +800,93 @@ fun DashboardScreen(
                 }
             }
         }
+    }
+
+    // --- DIALOGS FOR ERRORS & SERIES OPTIONS ---
+    if (transactionsError != null) {
+        AlertDialog(
+            onDismissRequest = { viewModel.clearTransactionsError() },
+            title = { Text("Notice", fontWeight = FontWeight.Bold) },
+            text = { Text(transactionsError ?: "") },
+            confirmButton = {
+                TextButton(
+                    onClick = { viewModel.clearTransactionsError() },
+                    modifier = Modifier.testTag("dismiss_error_button")
+                ) {
+                    Text("OK")
+                }
+            }
+        )
+    }
+
+    if (transactionToEditSeriesOption != null) {
+        AlertDialog(
+            onDismissRequest = { transactionToEditSeriesOption = null },
+            title = { Text("Edit Series or One-Off?", fontWeight = FontWeight.Bold) },
+            text = { Text("Do you want to edit just this single transaction instance, or the entire recurring series?") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        val matchingRecurring = recurringTransactions.find { it.id == transactionToEditSeriesOption!!.recurringId }
+                        if (matchingRecurring != null) {
+                            editingRecurringTransaction = matchingRecurring
+                            editingTransaction = null
+                        } else {
+                            editingTransaction = transactionToEditSeriesOption
+                            editingRecurringTransaction = null
+                        }
+                        transactionToEditSeriesOption = null
+                        showManualAddForm = true
+                    },
+                    modifier = Modifier.testTag("edit_series_button")
+                ) {
+                    Text("Entire Series")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        editingTransaction = transactionToEditSeriesOption
+                        editingRecurringTransaction = null
+                        transactionToEditSeriesOption = null
+                        showManualAddForm = true
+                    },
+                    modifier = Modifier.testTag("edit_instance_button")
+                ) {
+                    Text("Only This Instance")
+                }
+            }
+        )
+    }
+
+    if (transactionToDeleteSeriesOption != null) {
+        AlertDialog(
+            onDismissRequest = { transactionToDeleteSeriesOption = null },
+            title = { Text("Delete Series or One-Off?", fontWeight = FontWeight.Bold) },
+            text = { Text("Do you want to delete just this single transaction instance, or the entire recurring series including all its generated instances?") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.deleteRecurringSeries(transactionToDeleteSeriesOption!!.recurringId)
+                        transactionToDeleteSeriesOption = null
+                    },
+                    modifier = Modifier.testTag("delete_series_button")
+                ) {
+                    Text("Entire Series")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.deleteTransaction(transactionToDeleteSeriesOption!!.id)
+                        transactionToDeleteSeriesOption = null
+                    },
+                    modifier = Modifier.testTag("delete_instance_button")
+                ) {
+                    Text("Only This Instance")
+                }
+            }
+        )
     }
 
     // --- SETTINGS & BUDGET CONFIGURATION BOTTOM DRAWER ---
@@ -973,14 +1074,14 @@ fun DashboardScreen(
                     viewModel = viewModel,
                     initialTransaction = editingTransaction,
                     initialRecurringTransaction = editingRecurringTransaction,
-                    onSubmit = { id, amount, category, type, description, isRecurring, frequency, selectedDate ->
+                    onSubmit = { id, amount, category, type, description, isRecurring, frequency, selectedDate, numInstances ->
                         if (editingTransaction != null) {
                             if (isRecurring) {
                                 // Toggled from non-recurring to recurring
-                                viewModel.addRecurringTransaction(amount, category, type, description, frequency, selectedDate)
+                                viewModel.addRecurringTransaction(amount, category, type, description, frequency, selectedDate, numInstances = numInstances)
                                 viewModel.deleteTransaction(editingTransaction!!.id)
                             } else {
-                                viewModel.addTransaction(amount, category, type, description, selectedDate, id)
+                                viewModel.addTransaction(amount, category, type, description, selectedDate, id, recurringId = editingTransaction!!.recurringId)
                             }
                         } else if (editingRecurringTransaction != null) {
                             if (!isRecurring) {
@@ -996,13 +1097,14 @@ fun DashboardScreen(
                                     frequency = frequency,
                                     startDate = selectedDate,
                                     id = id,
-                                    lastLoggedDate = editingRecurringTransaction!!.lastLoggedDate
+                                    lastLoggedDate = editingRecurringTransaction!!.lastLoggedDate,
+                                    numInstances = numInstances
                                 )
                             }
                         } else {
                             // New entry
                             if (isRecurring) {
-                                viewModel.addRecurringTransaction(amount, category, type, description, frequency, selectedDate)
+                                viewModel.addRecurringTransaction(amount, category, type, description, frequency, selectedDate, numInstances = numInstances)
                             } else {
                                 viewModel.addTransaction(amount, category, type, description, selectedDate)
                             }
@@ -1020,7 +1122,7 @@ fun DashboardScreen(
 @Composable
 fun ManualAddForm(
     viewModel: ExpenseViewModel,
-    onSubmit: (id: String, Double, String, String, String, Boolean, String, Long) -> Unit,
+    onSubmit: (id: String, Double, String, String, String, Boolean, String, Long, Int) -> Unit,
     initialTransaction: Transaction? = null,
     initialRecurringTransaction: com.example.data.RecurringTransaction? = null,
     modifier: Modifier = Modifier
@@ -1051,6 +1153,7 @@ fun ManualAddForm(
     var frequency by remember(initialTransaction, initialRecurringTransaction) {
         mutableStateOf(initialRecurringTransaction?.frequency ?: "MONTHLY")
     }
+    var numInstancesText by remember { mutableStateOf("12") }
 
     val context = LocalContext.current
     val calendar = remember(initialTransaction, initialRecurringTransaction) {
@@ -1513,6 +1616,22 @@ fun ManualAddForm(
                             }
                         }
                     }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    OutlinedTextField(
+                        value = numInstancesText,
+                        onValueChange = { input ->
+                            numInstancesText = input.filter { it.isDigit() }
+                        },
+                        label = { Text("Number of Instances to Add") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        singleLine = true,
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("num_instances_input")
+                    )
                 }
             }
 
@@ -1523,13 +1642,15 @@ fun ManualAddForm(
                     val amount = amountText.toDoubleOrNull() ?: 0.0
                     if (amount > 0 && description.isNotBlank()) {
                         val id = initialTransaction?.id ?: initialRecurringTransaction?.id ?: ""
-                        onSubmit(id, amount, category, type, description, isRecurring, frequency, selectedDate)
+                        val numInstances = numInstancesText.toIntOrNull() ?: 12
+                        onSubmit(id, amount, category, type, description, isRecurring, frequency, selectedDate, numInstances)
                         amountText = ""
                         description = ""
                         type = "EXPENSE"
                         category = "Food"
                         isRecurring = false
                         frequency = "MONTHLY"
+                        numInstancesText = "12"
                         selectedDate = System.currentTimeMillis()
                     }
                 },
