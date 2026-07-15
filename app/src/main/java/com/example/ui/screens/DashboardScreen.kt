@@ -21,6 +21,7 @@ import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import kotlinx.coroutines.delay
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -80,6 +81,30 @@ fun DashboardScreen(
     var transactionToDeleteSeriesOption by remember { mutableStateOf<Transaction?>(null) }
 
     val focusManager = LocalFocusManager.current
+
+    val suggestedPrompts = remember {
+        listOf(
+            "Spent $15 on coffee today",
+            "Salary of $2500 received",
+            "Spent $12 on lunch",
+            "Paid utility bill of $75",
+            "Bought groceries for $65",
+            "Earned $150 from freelancing",
+            "Spent $45 on gas yesterday",
+            "Subscribed to music for $10",
+            "Spent $35 on movie tickets",
+            "Bought book for $20"
+        )
+    }
+
+    var currentPromptIndex by remember { mutableStateOf(0) }
+    LaunchedEffect(suggestedPrompts) {
+        while (true) {
+            delay(4000) // Rotate every 4 seconds
+            currentPromptIndex = (currentPromptIndex + 1) % suggestedPrompts.size
+        }
+    }
+    val placeholderText = suggestedPrompts[currentPromptIndex]
 
     val currentMonthYear = remember {
         SimpleDateFormat("MMMM yyyy", Locale.getDefault()).format(Date())
@@ -234,7 +259,7 @@ fun DashboardScreen(
                                 onValueChange = { viewModel.updatePromptInput(it) },
                                 placeholder = {
                                     Text(
-                                        "Spent $15 on coffee today",
+                                        placeholderText,
                                         style = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f))
                                     )
                                 },
@@ -286,45 +311,8 @@ fun DashboardScreen(
                             }
                         }
 
-                        // Parse Suggestions Chips
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(top = 12.dp)
-                        ) {
-                            val prompt1 = "Spent $12 on lunch"
-                            val prompt2 = "Salary of $2500 received"
-
-                            SuggestionChip(
-                                onClick = {
-                                    viewModel.updatePromptInput(prompt1)
-                                },
-                                label = { Text(prompt1, fontSize = 11.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary) },
-                                shape = RoundedCornerShape(12.dp),
-                                colors = SuggestionChipDefaults.suggestionChipColors(
-                                    containerColor = MaterialTheme.colorScheme.surface,
-                                    labelColor = MaterialTheme.colorScheme.primary
-                                ),
-                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
-                            )
-
-                            SuggestionChip(
-                                onClick = {
-                                    viewModel.updatePromptInput(prompt2)
-                                },
-                                label = { Text(prompt2, fontSize = 11.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary) },
-                                shape = RoundedCornerShape(12.dp),
-                                colors = SuggestionChipDefaults.suggestionChipColors(
-                                    containerColor = MaterialTheme.colorScheme.surface,
-                                    labelColor = MaterialTheme.colorScheme.primary
-                                ),
-                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
-                            )
-                        }
-
-                // Progress/State Indicator
-                AnimatedVisibility(visible = isParsing) {
+                        // Progress/State Indicator
+                        AnimatedVisibility(visible = isParsing) {
                             Column(
                                 modifier = Modifier
                                     .fillMaxWidth()
