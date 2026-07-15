@@ -620,23 +620,7 @@ fun DashboardScreen(
                     }
                 }
 
-                // --- 3. QUICK MANUAL ADD FORM (COLLAPSED BY DEFAULT) ---
-                AnimatedVisibility(
-                    visible = showManualAddForm,
-                    enter = expandVertically() + fadeIn(),
-                    exit = shrinkVertically() + fadeOut()
-                ) {
-                    ManualAddForm(
-                        onSubmit = { amount, category, type, description, isRecurring, frequency, selectedDate ->
-                            if (isRecurring) {
-                                viewModel.addRecurringTransaction(amount, category, type, description, frequency, selectedDate)
-                            } else {
-                                viewModel.addTransaction(amount, category, type, description, selectedDate)
-                            }
-                            showManualAddForm = false
-                        }
-                    )
-                }
+
 
                 // --- 4. TRANSACTION / RECURRING SWITCH HEADER ---
                 Row(
@@ -777,23 +761,38 @@ fun DashboardScreen(
         }
     }
 
-    // --- BUDGET CONFIGURATION DIALOG & THEME CUSTOMIZATION ---
+    // --- SETTINGS & BUDGET CONFIGURATION BOTTOM DRAWER ---
     if (showBudgetDialog) {
-        var budgetText by remember { mutableStateOf(monthlyBudget.toInt().toString()) }
-        var tempPrimaryHex by remember { mutableStateOf(primaryColorHex) }
-        var tempSecondaryHex by remember { mutableStateOf(secondaryColorHex) }
-        var tempAccentHex by remember { mutableStateOf(accentColorHex) }
-
-        val primaryPresets = listOf("#FFD97D", "#FF8A80", "#80D8FF", "#FF80DF", "#FFD54F")
-        val secondaryPresets = listOf("#A78BFA", "#BA68C8", "#82B1FF", "#FF8A80", "#B2DFDB")
-        val accentPresets = listOf("#D9F99D", "#A7F3D0", "#FFE082", "#80DEEA", "#E6C2FF")
-
-        AlertDialog(
+        val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+        ModalBottomSheet(
             onDismissRequest = { showBudgetDialog = false },
-            title = {
+            sheetState = sheetState,
+            containerColor = MaterialTheme.colorScheme.surface,
+            tonalElevation = 8.dp,
+            dragHandle = { BottomSheetDefaults.DragHandle() },
+            modifier = Modifier.testTag("budget_bottom_sheet")
+        ) {
+            var budgetText by remember { mutableStateOf(monthlyBudget.toInt().toString()) }
+            var tempPrimaryHex by remember { mutableStateOf(primaryColorHex) }
+            var tempSecondaryHex by remember { mutableStateOf(secondaryColorHex) }
+            var tempAccentHex by remember { mutableStateOf(accentColorHex) }
+
+            val primaryPresets = listOf("#FFD97D", "#FF8A80", "#80D8FF", "#FF80DF", "#FFD54F")
+            val secondaryPresets = listOf("#A78BFA", "#BA68C8", "#82B1FF", "#FF8A80", "#B2DFDB")
+            val accentPresets = listOf("#D9F99D", "#A7F3D0", "#FFE082", "#80DEEA", "#E6C2FF")
+
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .navigationBarsPadding()
+                    .padding(horizontal = 24.dp)
+                    .padding(bottom = 24.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth()
                 ) {
                     Icon(
                         imageVector = Icons.Default.Palette,
@@ -806,92 +805,84 @@ fun DashboardScreen(
                         style = MaterialTheme.typography.titleLarge
                     )
                 }
-            },
-            text = {
-                LazyColumn(
-                    modifier = Modifier.fillMaxWidth(),
+
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f, fill = false)
+                        .verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    item {
-                        Text(
-                            "Monthly Budget Limit",
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            modifier = Modifier.padding(bottom = 6.dp)
-                        )
-                        OutlinedTextField(
-                            value = budgetText,
-                            onValueChange = { budgetText = it },
-                            label = { Text("Monthly Limit ($)") },
-                            singleLine = true,
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = MaterialTheme.colorScheme.primary,
-                                unfocusedBorderColor = MaterialTheme.colorScheme.outline
-                            ),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .testTag("monthly_budget_input")
-                        )
-                    }
+                    Text(
+                        "Monthly Budget Limit",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.padding(bottom = 6.dp)
+                    )
+                    OutlinedTextField(
+                        value = budgetText,
+                        onValueChange = { budgetText = it },
+                        label = { Text("Monthly Limit ($)") },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = MaterialTheme.colorScheme.primary,
+                            unfocusedBorderColor = MaterialTheme.colorScheme.outline
+                        ),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("monthly_budget_input")
+                    )
 
-                    item {
-                        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f))
-                    }
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f))
 
-                    item {
-                        ColorPresetRow(
-                            selectedColorHex = tempPrimaryHex,
-                            presets = primaryPresets,
-                            onColorSelected = { hex ->
-                                tempPrimaryHex = hex
-                                viewModel.updatePrimaryColor(hex)
-                            },
-                            customHexValue = tempPrimaryHex,
-                            onCustomHexChanged = { hex ->
-                                tempPrimaryHex = hex
-                            },
-                            label = "Primary Color (Budget Card)"
-                        )
-                    }
+                    ColorPresetRow(
+                        selectedColorHex = tempPrimaryHex,
+                        presets = primaryPresets,
+                        onColorSelected = { hex ->
+                            tempPrimaryHex = hex
+                            viewModel.updatePrimaryColor(hex)
+                        },
+                        customHexValue = tempPrimaryHex,
+                        onCustomHexChanged = { hex ->
+                            tempPrimaryHex = hex
+                        },
+                        label = "Primary Color (Budget Card)"
+                    )
 
-                    item {
-                        ColorPresetRow(
-                            selectedColorHex = tempSecondaryHex,
-                            presets = secondaryPresets,
-                            onColorSelected = { hex ->
-                                tempSecondaryHex = hex
-                                viewModel.updateSecondaryColor(hex)
-                            },
-                            customHexValue = tempSecondaryHex,
-                            onCustomHexChanged = { hex ->
-                                tempSecondaryHex = hex
-                            },
-                            label = "Secondary Color (Expenses Card)"
-                        )
-                    }
+                    ColorPresetRow(
+                        selectedColorHex = tempSecondaryHex,
+                        presets = secondaryPresets,
+                        onColorSelected = { hex ->
+                            tempSecondaryHex = hex
+                            viewModel.updateSecondaryColor(hex)
+                        },
+                        customHexValue = tempSecondaryHex,
+                        onCustomHexChanged = { hex ->
+                            tempSecondaryHex = hex
+                        },
+                        label = "Secondary Color (Expenses Card)"
+                    )
 
-                    item {
-                        ColorPresetRow(
-                            selectedColorHex = tempAccentHex,
-                            presets = accentPresets,
-                            onColorSelected = { hex ->
-                                tempAccentHex = hex
-                                viewModel.updateAccentColor(hex)
-                            },
-                            customHexValue = tempAccentHex,
-                            onCustomHexChanged = { hex ->
-                                tempAccentHex = hex
-                            },
-                            label = "Accent Color (Income Card)"
-                        )
-                    }
+                    ColorPresetRow(
+                        selectedColorHex = tempAccentHex,
+                        presets = accentPresets,
+                        onColorSelected = { hex ->
+                            tempAccentHex = hex
+                            viewModel.updateAccentColor(hex)
+                        },
+                        customHexValue = tempAccentHex,
+                        onCustomHexChanged = { hex ->
+                            tempAccentHex = hex
+                        },
+                        label = "Accent Color (Income Card)"
+                    )
                 }
-            },
-            confirmButton = {
+
                 Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     TextButton(
@@ -904,24 +895,61 @@ fun DashboardScreen(
                     ) {
                         Text("Reset Theme", color = MaterialTheme.colorScheme.error)
                     }
-                    Button(
-                        onClick = {
-                            val parsed = budgetText.toDoubleOrNull() ?: 2000.0
-                            viewModel.updateMonthlyBudget(parsed)
-                            showBudgetDialog = false
-                        },
-                        modifier = Modifier.testTag("save_budget_button")
+
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text("Done")
+                        TextButton(onClick = { showBudgetDialog = false }) {
+                            Text("Cancel")
+                        }
+                        Button(
+                            onClick = {
+                                val parsed = budgetText.toDoubleOrNull() ?: 2000.0
+                                viewModel.updateMonthlyBudget(parsed)
+                                showBudgetDialog = false
+                            },
+                            modifier = Modifier.testTag("save_budget_button")
+                        ) {
+                            Text("Done")
+                        }
                     }
                 }
-            },
-            dismissButton = {
-                TextButton(onClick = { showBudgetDialog = false }) {
-                    Text("Cancel")
-                }
             }
-        )
+        }
+    }
+
+    // --- MANUAL ENTRY BOTTOM DRAWER ---
+    if (showManualAddForm) {
+        val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+        ModalBottomSheet(
+            onDismissRequest = { showManualAddForm = false },
+            sheetState = sheetState,
+            containerColor = MaterialTheme.colorScheme.surface,
+            tonalElevation = 8.dp,
+            dragHandle = { BottomSheetDefaults.DragHandle() },
+            modifier = Modifier.testTag("manual_add_bottom_sheet")
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .navigationBarsPadding()
+                    .padding(horizontal = 24.dp)
+                    .padding(bottom = 24.dp)
+                    .verticalScroll(rememberScrollState())
+            ) {
+                ManualAddForm(
+                    onSubmit = { amount, category, type, description, isRecurring, frequency, selectedDate ->
+                        if (isRecurring) {
+                            viewModel.addRecurringTransaction(amount, category, type, description, frequency, selectedDate)
+                        } else {
+                            viewModel.addTransaction(amount, category, type, description, selectedDate)
+                        }
+                        showManualAddForm = false
+                    }
+                )
+            }
+        }
     }
 }
 
@@ -1496,22 +1524,15 @@ fun RecurringRowItem(
                         color = MaterialTheme.colorScheme.primary,
                         fontWeight = FontWeight.ExtraBold
                     )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Box(
-                        modifier = Modifier
-                            .size(3.dp)
-                            .background(
-                                MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
-                                CircleShape
-                            )
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(
-                        text = "Starts ${formatter.format(Date(recurring.startDate))}",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-                    )
                 }
+
+                Spacer(modifier = Modifier.height(2.dp))
+
+                Text(
+                    text = "Starts ${formatter.format(Date(recurring.startDate))}",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                )
             }
 
             Spacer(modifier = Modifier.width(8.dp))
