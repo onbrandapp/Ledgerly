@@ -19,6 +19,10 @@ interface TransactionRepository {
     fun getRecurringTransactions(userEmail: String): Flow<List<RecurringTransaction>>
     suspend fun addRecurringTransaction(userEmail: String, recurring: RecurringTransaction): Result<Unit>
     suspend fun deleteRecurringTransaction(userEmail: String, id: String): Result<Unit>
+
+    fun getCustomCategories(userEmail: String): Flow<List<CustomCategory>>
+    suspend fun addCustomCategory(userEmail: String, category: CustomCategory): Result<Unit>
+    suspend fun deleteCustomCategory(userEmail: String, id: String): Result<Unit>
 }
 
 class FirebaseTransactionRepository : TransactionRepository {
@@ -127,6 +131,58 @@ class FirebaseTransactionRepository : TransactionRepository {
                 if (continuation.isActive) continuation.resume(Result.failure(exception))
             }
     }
+
+    override fun getCustomCategories(userEmail: String): Flow<List<CustomCategory>> = callbackFlow {
+        val query = firestore.collection("users")
+            .document(userEmail)
+            .collection("categories")
+            .orderBy("name", Query.Direction.ASCENDING)
+
+        val registration = query.addSnapshotListener { snapshot, error ->
+            if (error != null) {
+                close(error)
+                return@addSnapshotListener
+            }
+            if (snapshot != null) {
+                val categories = snapshot.documents.mapNotNull { doc ->
+                    doc.toObject(CustomCategory::class.java)?.copy(id = doc.id)
+                }
+                trySend(categories)
+            }
+        }
+        awaitClose { registration.remove() }
+    }
+
+    override suspend fun addCustomCategory(userEmail: String, category: CustomCategory): Result<Unit> = suspendCancellableCoroutine { continuation ->
+        val collection = firestore.collection("users")
+            .document(userEmail)
+            .collection("categories")
+
+        val docRef = if (category.id.isEmpty()) collection.document() else collection.document(category.id)
+        val finalCategory = category.copy(id = docRef.id, userEmail = userEmail)
+
+        docRef.set(finalCategory)
+            .addOnSuccessListener {
+                if (continuation.isActive) continuation.resume(Result.success(Unit))
+            }
+            .addOnFailureListener { exception ->
+                if (continuation.isActive) continuation.resume(Result.failure(exception))
+            }
+    }
+
+    override suspend fun deleteCustomCategory(userEmail: String, id: String): Result<Unit> = suspendCancellableCoroutine { continuation ->
+        firestore.collection("users")
+            .document(userEmail)
+            .collection("categories")
+            .document(id)
+            .delete()
+            .addOnSuccessListener {
+                if (continuation.isActive) continuation.resume(Result.success(Unit))
+            }
+            .addOnFailureListener { exception ->
+                if (continuation.isActive) continuation.resume(Result.failure(exception))
+            }
+    }
 }
 
 class RoomTransactionRepository(context: Context) : TransactionRepository {
@@ -176,6 +232,31 @@ class RoomTransactionRepository(context: Context) : TransactionRepository {
     override suspend fun deleteRecurringTransaction(userEmail: String, id: String): Result<Unit> {
         return try {
             dao.deleteRecurringTransactionById(id)
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    override fun getCustomCategories(userEmail: String): Flow<List<CustomCategory>> {
+        return dao.getCustomCategories(userEmail).map { list ->
+            list.map { it.toDomain() }
+        }
+    }
+
+    override suspend fun addCustomCategory(userEmail: String, category: CustomCategory): Result<Unit> {
+        return try {
+            val localCat = LocalCategory.fromDomain(category.copy(userEmail = userEmail))
+            dao.insertCustomCategory(localCat)
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun deleteCustomCategory(userEmail: String, id: String): Result<Unit> {
+        return try {
+            dao.deleteCustomCategoryById(id)
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)

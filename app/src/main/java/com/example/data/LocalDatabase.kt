@@ -79,6 +79,27 @@ data class LocalRecurringTransaction(
     }
 }
 
+@Entity(tableName = "local_categories")
+data class LocalCategory(
+    @PrimaryKey val id: String,
+    val name: String,
+    val userEmail: String
+) {
+    fun toDomain(): CustomCategory = CustomCategory(
+        id = id,
+        name = name,
+        userEmail = userEmail
+    )
+
+    companion object {
+        fun fromDomain(c: CustomCategory): LocalCategory = LocalCategory(
+            id = c.id.ifEmpty { java.util.UUID.randomUUID().toString() },
+            name = c.name,
+            userEmail = c.userEmail
+        )
+    }
+}
+
 @Dao
 interface TransactionDao {
     @Query("SELECT * FROM local_transactions ORDER BY date DESC")
@@ -98,9 +119,18 @@ interface TransactionDao {
 
     @Query("DELETE FROM local_recurring_transactions WHERE id = :id")
     suspend fun deleteRecurringTransactionById(id: String)
+
+    @Query("SELECT * FROM local_categories WHERE userEmail = :userEmail ORDER BY name ASC")
+    fun getCustomCategories(userEmail: String): Flow<List<LocalCategory>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertCustomCategory(category: LocalCategory)
+
+    @Query("DELETE FROM local_categories WHERE id = :id")
+    suspend fun deleteCustomCategoryById(id: String)
 }
 
-@Database(entities = [LocalTransaction::class, LocalRecurringTransaction::class], version = 2, exportSchema = false)
+@Database(entities = [LocalTransaction::class, LocalRecurringTransaction::class, LocalCategory::class], version = 3, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun transactionDao(): TransactionDao
 

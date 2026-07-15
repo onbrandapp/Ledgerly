@@ -1,6 +1,8 @@
 package com.example.ui.screens
 
 import androidx.compose.animation.*
+import androidx.compose.foundation.Canvas
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -40,6 +42,7 @@ import androidx.compose.ui.platform.LocalContext
 import android.app.DatePickerDialog
 import java.util.Calendar
 import com.example.data.Transaction
+import com.example.data.CustomCategory
 import com.example.ui.viewmodel.ExpenseViewModel
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -628,17 +631,17 @@ fun DashboardScreen(
                     }
                 }
 
-
+                // --- 3. DATA VISUALIZATION SECTION ---
+                VisualAnalyticsSection(transactions = transactions)
 
                 // --- 4. TRANSACTION / RECURRING SWITCH HEADER ---
-                Row(
+                Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(top = 16.dp, bottom = 8.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                        .padding(top = 16.dp, bottom = 8.dp)
                 ) {
                     Row(
+                        modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -656,10 +659,16 @@ fun DashboardScreen(
                         )
                     }
 
+                    Spacer(modifier = Modifier.height(4.dp))
+
                     Text(
                         text = if (selectedTab == 0) "${monthlySummary.currentMonthList.size} items" else "${recurringTransactions.size} rules",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 4.dp)
                     )
                 }
 
@@ -961,6 +970,7 @@ fun DashboardScreen(
                     .verticalScroll(rememberScrollState())
             ) {
                 ManualAddForm(
+                    viewModel = viewModel,
                     initialTransaction = editingTransaction,
                     initialRecurringTransaction = editingRecurringTransaction,
                     onSubmit = { id, amount, category, type, description, isRecurring, frequency, selectedDate ->
@@ -1009,6 +1019,7 @@ fun DashboardScreen(
 
 @Composable
 fun ManualAddForm(
+    viewModel: ExpenseViewModel,
     onSubmit: (id: String, Double, String, String, String, Boolean, String, Long) -> Unit,
     initialTransaction: Transaction? = null,
     initialRecurringTransaction: com.example.data.RecurringTransaction? = null,
@@ -1065,7 +1076,166 @@ fun ManualAddForm(
         )
     }
 
-    val categories = listOf("Food", "Transport", "Utilities", "Entertainment", "Shopping", "Salary", "Investment", "Housing", "Others")
+    val defaultCategories = remember { listOf("Food", "Transport", "Utilities", "Entertainment", "Shopping", "Salary", "Investment", "Housing", "Others") }
+    val customCategoriesList by viewModel.customCategories.collectAsState()
+    val allCategories = remember(customCategoriesList) {
+        defaultCategories + customCategoriesList.map { it.name }
+    }
+    var showCategoryDialog by remember { mutableStateOf(false) }
+
+    if (showCategoryDialog) {
+        var newCategoryName by remember { mutableStateOf("") }
+        var editingCatId by remember { mutableStateOf<String?>(null) }
+
+        AlertDialog(
+            onDismissRequest = { showCategoryDialog = false },
+            title = {
+                Text(
+                    text = "Manage Custom Categories",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 350.dp)
+                ) {
+                    // Input to Add/Edit Category
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        OutlinedTextField(
+                            value = newCategoryName,
+                            onValueChange = { newCategoryName = it },
+                            label = { Text(if (editingCatId == null) "New Category" else "Edit Category") },
+                            singleLine = true,
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier
+                                .weight(1f)
+                                .testTag("category_input_field")
+                        )
+                        Button(
+                            onClick = {
+                                if (newCategoryName.isNotBlank()) {
+                                    val catId = editingCatId
+                                    if (catId == null) {
+                                        viewModel.addCustomCategory(newCategoryName)
+                                    } else {
+                                        viewModel.updateCustomCategory(catId, newCategoryName)
+                                        editingCatId = null
+                                    }
+                                    newCategoryName = ""
+                                }
+                            },
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier.testTag("save_category_button")
+                        ) {
+                            Text(if (editingCatId == null) "Add" else "Save")
+                        }
+                    }
+
+                    // Divider
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(1.dp)
+                            .background(MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
+                            .padding(vertical = 8.dp)
+                    )
+
+                    if (customCategoriesList.isEmpty()) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 24.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "No custom categories yet",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                            )
+                        }
+                    } else {
+                        LazyColumn(
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            items(customCategoriesList) { cat ->
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .background(
+                                            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                                            RoundedCornerShape(8.dp)
+                                        )
+                                        .padding(horizontal = 12.dp, vertical = 6.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text(
+                                        text = cat.name,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = FontWeight.Medium,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Row(
+                                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                    ) {
+                                        IconButton(
+                                            onClick = {
+                                                newCategoryName = cat.name
+                                                editingCatId = cat.id
+                                            },
+                                            modifier = Modifier.size(28.dp).testTag("edit_category_${cat.id}")
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Edit,
+                                                contentDescription = "Edit category",
+                                                tint = MaterialTheme.colorScheme.primary,
+                                                modifier = Modifier.size(16.dp)
+                                            )
+                                        }
+                                        IconButton(
+                                            onClick = {
+                                                viewModel.deleteCustomCategory(cat.id)
+                                                if (editingCatId == cat.id) {
+                                                    editingCatId = null
+                                                    newCategoryName = ""
+                                                }
+                                            },
+                                            modifier = Modifier.size(28.dp).testTag("delete_category_${cat.id}")
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.DeleteOutline,
+                                                contentDescription = "Delete category",
+                                                tint = MaterialTheme.colorScheme.error,
+                                                modifier = Modifier.size(16.dp)
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = { showCategoryDialog = false },
+                    modifier = Modifier.testTag("close_category_dialog_button")
+                ) {
+                    Text("Close")
+                }
+            }
+        )
+    }
 
     Card(
         colors = CardDefaults.cardColors(
@@ -1137,17 +1307,37 @@ fun ManualAddForm(
                     .testTag("manual_amount_input")
             )
 
-            // Category Selection Header
-            Text(
-                text = "Select Category",
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(bottom = 8.dp)
-            )
+            // Category Selection Header with Edit Button for Custom Category Management
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 8.dp)
+            ) {
+                Text(
+                    text = "Select Category",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                IconButton(
+                    onClick = { showCategoryDialog = true },
+                    modifier = Modifier
+                        .size(28.dp)
+                        .testTag("manage_categories_button")
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Edit,
+                        contentDescription = "Manage Custom Categories",
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+            }
 
             // Clean, non-scrollable grid of category chips
-            val rows = categories.chunked(3)
+            val rows = allCategories.chunked(3)
             Column(
                 verticalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier
@@ -1271,24 +1461,22 @@ fun ManualAddForm(
             }
 
             if (isRecurring) {
-                Spacer(modifier = Modifier.height(8.dp))
-                Row(
+                Spacer(modifier = Modifier.height(12.dp))
+                Column(
                     modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Text(
-                        text = "Frequency:",
-                        style = MaterialTheme.typography.bodyMedium,
+                        text = "Frequency",
+                        style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.weight(1f)
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
 
                     val frequencies = listOf("DAILY", "WEEKLY", "MONTHLY", "YEARLY")
                     Row(
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
-                        modifier = Modifier.weight(2.5f)
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.fillMaxWidth()
                     ) {
                         frequencies.forEach { freq ->
                             val isSelected = frequency == freq
@@ -1306,7 +1494,7 @@ fun ManualAddForm(
                                 ),
                                 modifier = Modifier
                                     .weight(1f)
-                                    .height(36.dp)
+                                    .height(40.dp)
                                     .testTag("freq_chip_$freq")
                             ) {
                                 Box(
@@ -1315,9 +1503,9 @@ fun ManualAddForm(
                                 ) {
                                     Text(
                                         text = freq,
-                                        style = MaterialTheme.typography.labelSmall.copy(
-                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                                            fontSize = 9.sp
+                                        style = MaterialTheme.typography.labelMedium.copy(
+                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                            fontSize = 11.sp
                                         ),
                                         color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                                     )
@@ -1499,7 +1687,8 @@ data class CategoryStyle(
 )
 
 fun getCategoryStyle(category: String): CategoryStyle {
-    return when (category.lowercase(Locale.getDefault())) {
+    val clean = category.trim().lowercase(Locale.getDefault())
+    return when (clean) {
         "food" -> CategoryStyle(Icons.Default.Restaurant, Color(0xFFE65100))
         "transport" -> CategoryStyle(Icons.Default.DirectionsCar, Color(0xFF1565C0))
         "utilities" -> CategoryStyle(Icons.Default.Lightbulb, Color(0xFFF57F17))
@@ -1508,7 +1697,21 @@ fun getCategoryStyle(category: String): CategoryStyle {
         "salary" -> CategoryStyle(Icons.Default.AttachMoney, Color(0xFF2E7D32))
         "investment" -> CategoryStyle(Icons.Default.ShowChart, Color(0xFF00695C))
         "housing" -> CategoryStyle(Icons.Default.Home, Color(0xFF0277BD))
-        else -> CategoryStyle(Icons.Default.Category, Color(0xFF37474F))
+        else -> {
+            val colors = listOf(
+                Color(0xFF8D6E63), // Brown
+                Color(0xFF78909C), // Blue Grey
+                Color(0xFFEC407A), // Pink
+                Color(0xFFAB47BC), // Purple
+                Color(0xFF7E57C2), // Deep Purple
+                Color(0xFF5C6BC0), // Indigo
+                Color(0xFF26A69A), // Teal
+                Color(0xFF9CCC65), // Light Green
+                Color(0xFFD4E157)  // Lime
+            )
+            val index = Math.abs(category.hashCode()) % colors.size
+            CategoryStyle(Icons.Default.Category, colors[index])
+        }
     }
 }
 
@@ -1727,4 +1930,322 @@ fun RecurringRowItem(
         }
     }
 }
+
+@Composable
+fun VisualAnalyticsSection(
+    transactions: List<Transaction>,
+    modifier: Modifier = Modifier
+) {
+    // Current Month Spending Distribution (Pie Chart)
+    val currentCal = Calendar.getInstance()
+    val curMonth = currentCal.get(Calendar.MONTH)
+    val curYear = currentCal.get(Calendar.YEAR)
+
+    val currentMonthExpenses = remember(transactions) {
+        transactions.filter { tx ->
+            val txCal = Calendar.getInstance().apply { timeInMillis = tx.date }
+            tx.type == "EXPENSE" && txCal.get(Calendar.MONTH) == curMonth && txCal.get(Calendar.YEAR) == curYear
+        }
+    }
+
+    val spendingByCategory = remember(currentMonthExpenses) {
+        currentMonthExpenses.groupBy { it.category }.mapValues { entry ->
+            entry.value.sumOf { it.amount }
+        }
+    }
+
+    val totalCurrentMonthSpent = remember(spendingByCategory) {
+        spendingByCategory.values.sum()
+    }
+
+    // 6-Month Spending Trends (Bar Chart)
+    val monthlyTrends = remember(transactions) {
+        val trends = mutableListOf<MonthTrend>()
+        val cal = Calendar.getInstance()
+        
+        // Start from 5 months ago to current month (6 months total)
+        cal.add(Calendar.MONTH, -5)
+        
+        val monthFormat = SimpleDateFormat("MMM", Locale.getDefault())
+        
+        for (i in 0 until 6) {
+            val targetMonth = cal.get(Calendar.MONTH)
+            val targetYear = cal.get(Calendar.YEAR)
+            val label = monthFormat.format(cal.time)
+            
+            val totalSpent = transactions.filter { tx ->
+                val txCal = Calendar.getInstance().apply { timeInMillis = tx.date }
+                txCal.get(Calendar.MONTH) == targetMonth && 
+                txCal.get(Calendar.YEAR) == targetYear &&
+                tx.type == "EXPENSE"
+            }.sumOf { it.amount }
+            
+            trends.add(
+                MonthTrend(
+                    label = label,
+                    amount = totalSpent,
+                    month = targetMonth,
+                    year = targetYear
+                )
+            )
+            cal.add(Calendar.MONTH, 1)
+        }
+        trends
+    }
+
+    val maxAmount = remember(monthlyTrends) {
+        monthlyTrends.maxOfOrNull { it.amount } ?: 0.0
+    }
+
+    Card(
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+        ),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)),
+        shape = RoundedCornerShape(24.dp),
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp)
+            .testTag("analytics_section_card")
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(20.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.padding(bottom = 16.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.ShowChart,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "Spending Analytics",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            }
+
+            // PIE CHART SECTION (CURRENT MONTH SPENDING SHARE)
+            Text(
+                text = "Category Share (Current Month)",
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(bottom = 12.dp)
+            )
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 20.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                // The Donut Pie Chart Canvas
+                Box(
+                    modifier = Modifier
+                        .size(110.dp)
+                        .testTag("pie_chart_canvas"),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Canvas(modifier = Modifier.fillMaxSize()) {
+                        var startAngle = -90f
+                        val strokeWidth = 14.dp.toPx()
+                        val radius = (this.size.minDimension - strokeWidth) / 2
+                        
+                        if (totalCurrentMonthSpent == 0.0) {
+                            drawCircle(
+                                color = Color.LightGray.copy(alpha = 0.3f),
+                                radius = radius,
+                                style = Stroke(width = strokeWidth)
+                            )
+                        } else {
+                            spendingByCategory.forEach { (cat, amt) ->
+                                val angle = (360f * amt / totalCurrentMonthSpent).toFloat()
+                                val style = getCategoryStyle(cat)
+                                drawArc(
+                                    color = style.color,
+                                    startAngle = startAngle,
+                                    sweepAngle = angle,
+                                    useCenter = false,
+                                    style = Stroke(width = strokeWidth)
+                                )
+                                startAngle += angle
+                            }
+                        }
+                    }
+
+                    // Center label
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            text = "TOTAL",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontSize = 8.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
+                        )
+                        Text(
+                            text = "$${String.format("%.0f", totalCurrentMonthSpent)}",
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                }
+
+                // Legend Column
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    if (totalCurrentMonthSpent == 0.0) {
+                        Text(
+                            text = "No spending recorded this month.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                        )
+                    } else {
+                        spendingByCategory.entries.sortedByDescending { it.value }.take(5).forEach { (cat, amt) ->
+                            val pct = (amt / totalCurrentMonthSpent * 100).toInt()
+                            val style = getCategoryStyle(cat)
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(8.dp)
+                                        .clip(CircleShape)
+                                        .background(style.color)
+                                )
+                                Text(
+                                    text = cat,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    modifier = Modifier.weight(1f),
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                                Text(
+                                    text = "$${String.format("%.0f", amt)} ($pct%)",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+                        if (spendingByCategory.size > 5) {
+                            Text(
+                                text = "+ ${spendingByCategory.size - 5} more categories",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.primary,
+                                fontWeight = FontWeight.SemiBold,
+                                modifier = Modifier.padding(start = 14.dp)
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Divider
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(1.dp)
+                    .background(MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
+                    .padding(vertical = 12.dp)
+            )
+
+            // BAR CHART SECTION (6-MONTH TRENDS)
+            Text(
+                text = "Monthly Spending Trend",
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(bottom = 12.dp)
+            )
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(160.dp)
+                    .testTag("bar_chart_trend"),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.Bottom
+            ) {
+                monthlyTrends.forEach { trend ->
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text(
+                            text = if (trend.amount > 0) "$${trend.amount.toInt()}" else "$0",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxWidth()
+                                .padding(horizontal = 4.dp),
+                            contentAlignment = Alignment.BottomCenter
+                        ) {
+                            // Track
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxHeight()
+                                    .width(14.dp)
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
+                            )
+                            // Filled Bar
+                            val barHeightPct = if (maxAmount > 0) (trend.amount / maxAmount).toFloat() else 0f
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxHeight(barHeightPct.coerceAtLeast(0.03f))
+                                    .width(14.dp)
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(
+                                        Brush.verticalGradient(
+                                            colors = listOf(
+                                                MaterialTheme.colorScheme.primary,
+                                                MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)
+                                            )
+                                        )
+                                    )
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = trend.label,
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+data class MonthTrend(
+    val label: String,
+    val amount: Double,
+    val month: Int,
+    val year: Int
+)
 

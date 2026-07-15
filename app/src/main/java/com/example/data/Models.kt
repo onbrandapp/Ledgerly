@@ -25,3 +25,13 @@ data class RecurringTransaction(
     // Zero-argument constructor required for Firestore deserialization
     constructor() : this("", 0.0, "", "EXPENSE", "", "MONTHLY", System.currentTimeMillis(), 0L)
 }
+
+data class CustomCategory(
+    val id: String = "",
+    val name: String = "",
+    val userEmail: String = ""
+) {
+    // Zero-argument constructor required for Firestore deserialization
+    constructor() : this("", "", "")
+}
+

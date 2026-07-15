@@ -69,6 +69,17 @@ class ExpenseViewModel(application: Application) : AndroidViewModel(application)
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    val customCategories: StateFlow<List<CustomCategory>> = currentUserEmail
+        .flatMapLatest { email ->
+            if (email != null) {
+                transactionRepository.getCustomCategories(email)
+                    .catch { emit(emptyList()) }
+            } else {
+                flowOf(emptyList())
+            }
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
     // Calculations Flow for Current Month
     val monthlySummary = transactions.map { list ->
         val currentCal = Calendar.getInstance()
@@ -272,6 +283,39 @@ class ExpenseViewModel(application: Application) : AndroidViewModel(application)
                 .onFailure { error ->
                     _transactionsError.value = "Failed to delete recurring transaction: ${error.message}"
                 }
+        }
+    }
+
+    fun addCustomCategory(name: String) {
+        val email = currentUserEmail.value ?: return
+        if (name.isBlank()) return
+        viewModelScope.launch {
+            val newCat = CustomCategory(
+                id = java.util.UUID.randomUUID().toString(),
+                name = name.trim(),
+                userEmail = email
+            )
+            transactionRepository.addCustomCategory(email, newCat)
+        }
+    }
+
+    fun updateCustomCategory(id: String, newName: String) {
+        val email = currentUserEmail.value ?: return
+        if (newName.isBlank()) return
+        viewModelScope.launch {
+            val updatedCat = CustomCategory(
+                id = id,
+                name = newName.trim(),
+                userEmail = email
+            )
+            transactionRepository.addCustomCategory(email, updatedCat)
+        }
+    }
+
+    fun deleteCustomCategory(id: String) {
+        val email = currentUserEmail.value ?: return
+        viewModelScope.launch {
+            transactionRepository.deleteCustomCategory(email, id)
         }
     }
 
