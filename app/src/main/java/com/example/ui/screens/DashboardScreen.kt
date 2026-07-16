@@ -3,6 +3,13 @@ package com.example.ui.screens
 import androidx.compose.animation.*
 import androidx.compose.foundation.Canvas
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -76,6 +83,10 @@ fun DashboardScreen(
     val transactionsError by viewModel.transactionsError.collectAsState()
 
     var showBudgetDialog by remember { mutableStateOf(false) }
+    var tempPrimaryHex by remember(primaryColorHex) { mutableStateOf(primaryColorHex) }
+    var tempSecondaryHex by remember(secondaryColorHex) { mutableStateOf(secondaryColorHex) }
+    var tempAccentHex by remember(accentColorHex) { mutableStateOf(accentColorHex) }
+    var activeColorPickerTarget by remember { mutableStateOf<String?>(null) }
     var showManualAddForm by remember { mutableStateOf(false) }
     var editingTransaction by remember { mutableStateOf<Transaction?>(null) }
     var editingRecurringTransaction by remember { mutableStateOf<com.example.data.RecurringTransaction?>(null) }
@@ -1200,13 +1211,6 @@ fun DashboardScreen(
             modifier = Modifier.testTag("budget_bottom_sheet")
         ) {
             var budgetText by remember { mutableStateOf(monthlyBudget.toInt().toString()) }
-            var tempPrimaryHex by remember { mutableStateOf(primaryColorHex) }
-            var tempSecondaryHex by remember { mutableStateOf(secondaryColorHex) }
-            var tempAccentHex by remember { mutableStateOf(accentColorHex) }
-
-            val primaryPresets = listOf("#FFD97D", "#FF8A80", "#80D8FF", "#FF80DF", "#FFD54F")
-            val secondaryPresets = listOf("#A78BFA", "#BA68C8", "#82B1FF", "#FF8A80", "#B2DFDB")
-            val accentPresets = listOf("#D9F99D", "#A7F3D0", "#FFE082", "#80DEEA", "#E6C2FF")
 
             Column(
                 modifier = Modifier
@@ -1264,46 +1268,36 @@ fun DashboardScreen(
 
                     HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f))
 
-                    ColorPresetRow(
-                        selectedColorHex = tempPrimaryHex,
-                        presets = primaryPresets,
-                        onColorSelected = { hex ->
-                            tempPrimaryHex = hex
-                            viewModel.updatePrimaryColor(hex)
-                        },
-                        customHexValue = tempPrimaryHex,
-                        onCustomHexChanged = { hex ->
-                            tempPrimaryHex = hex
-                        },
-                        label = "Primary Color (Budget Card)"
+                    Text(
+                        text = "Theme Customization",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
                     )
 
-                    ColorPresetRow(
-                        selectedColorHex = tempSecondaryHex,
-                        presets = secondaryPresets,
-                        onColorSelected = { hex ->
-                            tempSecondaryHex = hex
-                            viewModel.updateSecondaryColor(hex)
-                        },
-                        customHexValue = tempSecondaryHex,
-                        onCustomHexChanged = { hex ->
-                            tempSecondaryHex = hex
-                        },
-                        label = "Secondary Color (Expenses Card)"
+                    ElegantColorSelectionRow(
+                        label = "Primary Theme Color",
+                        description = "Used for the Budget Card & Main Accents",
+                        colorHex = tempPrimaryHex,
+                        onClick = { activeColorPickerTarget = "primary" },
+                        modifier = Modifier.testTag("primary_color_selector_card")
                     )
 
-                    ColorPresetRow(
-                        selectedColorHex = tempAccentHex,
-                        presets = accentPresets,
-                        onColorSelected = { hex ->
-                            tempAccentHex = hex
-                            viewModel.updateAccentColor(hex)
-                        },
-                        customHexValue = tempAccentHex,
-                        onCustomHexChanged = { hex ->
-                            tempAccentHex = hex
-                        },
-                        label = "Accent Color (Income Card)"
+                    ElegantColorSelectionRow(
+                        label = "Secondary Theme Color",
+                        description = "Used for the Expenses Card & Outflows",
+                        colorHex = tempSecondaryHex,
+                        onClick = { activeColorPickerTarget = "secondary" },
+                        modifier = Modifier.testTag("secondary_color_selector_card")
+                    )
+
+                    ElegantColorSelectionRow(
+                        label = "Accent Theme Color",
+                        description = "Used for the Income Card & Inflows",
+                        colorHex = tempAccentHex,
+                        onClick = { activeColorPickerTarget = "accent" },
+                        modifier = Modifier.testTag("accent_color_selector_card")
                     )
                 }
 
@@ -1415,6 +1409,42 @@ fun DashboardScreen(
                 )
             }
         }
+    }
+
+    // --- CUSTOM COLOR PICKER BOTTOM DRAWER ---
+    activeColorPickerTarget?.let { target ->
+        val title = when (target) {
+            "primary" -> "Primary Theme Color"
+            "secondary" -> "Secondary Theme Color"
+            else -> "Accent Theme Color"
+        }
+        val initialColor = when (target) {
+            "primary" -> tempPrimaryHex
+            "secondary" -> tempSecondaryHex
+            else -> tempAccentHex
+        }
+        
+        ColorPickerBottomSheet(
+            title = title,
+            initialColorHex = initialColor,
+            onColorSelected = { hex ->
+                when (target) {
+                    "primary" -> {
+                        tempPrimaryHex = hex
+                        viewModel.updatePrimaryColor(hex)
+                    }
+                    "secondary" -> {
+                        tempSecondaryHex = hex
+                        viewModel.updateSecondaryColor(hex)
+                    }
+                    "accent" -> {
+                        tempAccentHex = hex
+                        viewModel.updateAccentColor(hex)
+                    }
+                }
+            },
+            onDismiss = { activeColorPickerTarget = null }
+        )
     }
 
     // --- COMPLETE LEDGER BOTTOM DRAWER ---
@@ -3307,4 +3337,394 @@ data class MonthTrend(
     val month: Int,
     val year: Int
 )
+
+// --- CUSTOM COLOR PICKER HELPERS & COMPOSABLES ---
+
+fun hexToHsv(hex: String): FloatArray {
+    val hsv = FloatArray(3)
+    try {
+        val sanitized = if (hex.startsWith("#")) hex else "#$hex"
+        android.graphics.Color.colorToHSV(android.graphics.Color.parseColor(sanitized), hsv)
+    } catch (e: Exception) {
+        hsv[0] = 0f
+        hsv[1] = 1f
+        hsv[2] = 1f
+    }
+    return hsv
+}
+
+fun hsvToHex(h: Float, s: Float, v: Float): String {
+    val hsv = floatArrayOf(h, s, v)
+    val colorInt = android.graphics.Color.HSVToColor(hsv)
+    return String.format("#%06X", 0xFFFFFF and colorInt)
+}
+
+@Composable
+fun ElegantColorSelectionRow(
+    label: String,
+    description: String,
+    colorHex: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val color = remember(colorHex) {
+        try { Color(android.graphics.Color.parseColor(colorHex)) } catch (e: Exception) { Color.Gray }
+    }
+    
+    Card(
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+        ),
+        shape = RoundedCornerShape(12.dp),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.15f)),
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .clickable { onClick() }
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                // Color Preview Circle
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clip(CircleShape)
+                        .background(color)
+                        .border(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f), CircleShape)
+                )
+                
+                Column {
+                    Text(
+                        text = label,
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = "$description • $colorHex",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+            
+            Icon(
+                imageVector = Icons.Default.ChevronRight,
+                contentDescription = "Edit Color",
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                modifier = Modifier.size(20.dp)
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ColorPickerBottomSheet(
+    title: String,
+    initialColorHex: String,
+    onColorSelected: (String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    
+    val initialHsv = remember(initialColorHex) { hexToHsv(initialColorHex) }
+    
+    var currentHue by remember(initialColorHex) { mutableStateOf(initialHsv[0]) }
+    var currentSaturation by remember(initialColorHex) { mutableStateOf(initialHsv[1]) }
+    var currentValue by remember(initialColorHex) { mutableStateOf(initialHsv[2]) }
+    
+    val activeColorHex = remember(currentHue, currentSaturation, currentValue) {
+        hsvToHex(currentHue, currentSaturation, currentValue)
+    }
+    
+    val activeColor = remember(activeColorHex) {
+        try { Color(android.graphics.Color.parseColor(activeColorHex)) } catch (e: Exception) { Color.Gray }
+    }
+    
+    LaunchedEffect(activeColorHex) {
+        onColorSelected(activeColorHex)
+    }
+    
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        containerColor = Color(0xFF121212), // Sleek pitch black/dark gray theme
+        contentColor = Color.White,
+        tonalElevation = 8.dp,
+        dragHandle = { BottomSheetDefaults.DragHandle(color = Color.Gray.copy(alpha = 0.5f)) },
+        modifier = Modifier.testTag("color_picker_bottom_sheet")
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .navigationBarsPadding()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 24.dp)
+                .padding(bottom = 32.dp),
+            verticalArrangement = Arrangement.spacedBy(24.dp)
+        ) {
+            // Header Row
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleLarge.copy(
+                        fontWeight = FontWeight.Black,
+                        fontSize = 22.sp
+                    ),
+                    color = Color.White
+                )
+                IconButton(
+                    onClick = onDismiss,
+                    modifier = Modifier.testTag("close_color_picker")
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = "Close",
+                        tint = Color.White.copy(alpha = 0.8f)
+                    )
+                }
+            }
+            
+            // Large Centered Color Preview Square
+            Box(
+                modifier = Modifier
+                    .size(140.dp)
+                    .align(Alignment.CenterHorizontally)
+                    .clip(RoundedCornerShape(24.dp))
+                    .background(activeColor)
+                    .border(1.dp, Color.White.copy(alpha = 0.15f), RoundedCornerShape(24.dp))
+            )
+            
+            // HEX CODE display box
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E1E)),
+                    shape = RoundedCornerShape(16.dp),
+                    modifier = Modifier.width(180.dp)
+                ) {
+                    Text(
+                        text = activeColorHex.lowercase(),
+                        style = MaterialTheme.typography.headlineMedium.copy(
+                            fontWeight = FontWeight.Bold,
+                            fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
+                        ),
+                        color = Color.White,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 12.dp)
+                    )
+                }
+                Text(
+                    text = "HEX CODE",
+                    style = MaterialTheme.typography.labelSmall.copy(
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 1.5.sp
+                    ),
+                    color = Color.Gray
+                )
+            }
+            
+            // HUE SPECTRUM selection
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "HUE SPECTRUM",
+                        style = MaterialTheme.typography.labelMedium.copy(
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 1.sp
+                        ),
+                        color = Color.Gray
+                    )
+                    Text(
+                        text = "${currentHue.toInt()}°",
+                        style = MaterialTheme.typography.bodyMedium.copy(
+                            fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                            fontWeight = FontWeight.Bold
+                        ),
+                        color = Color.LightGray
+                    )
+                }
+                
+                HueSlider(
+                    hue = currentHue,
+                    onHueChange = { newHue ->
+                        currentHue = newHue
+                        if (currentSaturation < 0.15f) currentSaturation = 0.9f
+                        if (currentValue < 0.15f) currentValue = 0.9f
+                    }
+                )
+            }
+            
+            // PREMIUM PRESETS selection
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text(
+                    text = "PREMIUM PRESETS",
+                    style = MaterialTheme.typography.labelMedium.copy(
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 1.sp
+                    ),
+                    color = Color.Gray
+                )
+                
+                val premiumPresets = listOf(
+                    "#84CC16", "#E11D48", "#D97706", "#2563EB",
+                    "#06B6D4", "#4F46E5", "#7C3AED", "#DB2777",
+                    "#EC4899", "#EA580C", "#CA8A04", "#EAB308"
+                )
+                
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    for (row in 0 until 3) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            for (col in 0 until 4) {
+                                val presetIndex = row * 4 + col
+                                if (presetIndex < premiumPresets.size) {
+                                    val presetHex = premiumPresets[presetIndex]
+                                    val presetColor = remember(presetHex) {
+                                        try { Color(android.graphics.Color.parseColor(presetHex)) } catch (e: Exception) { Color.Gray }
+                                    }
+                                    val isSelected = activeColorHex.equals(presetHex, ignoreCase = true)
+                                    
+                                    Box(
+                                        modifier = Modifier
+                                            .size(56.dp)
+                                            .clip(RoundedCornerShape(16.dp))
+                                            .background(presetColor)
+                                            .border(
+                                                width = if (isSelected) 3.dp else 0.dp,
+                                                color = if (isSelected) Color.White else Color.Transparent,
+                                                shape = RoundedCornerShape(16.dp)
+                                            )
+                                            .clickable {
+                                                val hsv = hexToHsv(presetHex)
+                                                currentHue = hsv[0]
+                                                currentSaturation = hsv[1]
+                                                currentValue = hsv[2]
+                                            }
+                                            .testTag("color_preset_$presetIndex")
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun HueSlider(
+    hue: Float,
+    onHueChange: (Float) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    BoxWithConstraints(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(40.dp)
+    ) {
+        val width = constraints.maxWidth.toFloat()
+        val height = constraints.maxHeight.toFloat()
+        
+        val hueColors = remember {
+            listOf(
+                Color.Red, Color.Yellow, Color.Green, Color.Cyan,
+                Color.Blue, Color.Magenta, Color.Red
+            )
+        }
+        
+        Canvas(
+            modifier = Modifier
+                .fillMaxSize()
+                .pointerInput(Unit) {
+                    detectTapGestures(
+                        onPress = { offset ->
+                            val rawX = offset.x.coerceIn(0f, width)
+                            val selectedHue = (rawX / width) * 360f
+                            onHueChange(selectedHue)
+                        }
+                    )
+                }
+                .pointerInput(Unit) {
+                    detectDragGestures { change, _ ->
+                        change.consume()
+                        val rawX = change.position.x.coerceIn(0f, width)
+                        val selectedHue = (rawX / width) * 360f
+                        onHueChange(selectedHue)
+                    }
+                }
+        ) {
+            val trackHeight = 12.dp.toPx()
+            val trackY = (height - trackHeight) / 2
+            
+            // Draw continuous hue gradient track
+            drawRoundRect(
+                brush = Brush.linearGradient(hueColors),
+                topLeft = Offset(0f, trackY),
+                size = Size(width, trackHeight),
+                cornerRadius = CornerRadius(trackHeight / 2, trackHeight / 2)
+            )
+            
+            // Draw selector thumb
+            val thumbRadius = 14.dp.toPx()
+            val thumbX = (hue / 360f) * width
+            
+            // Outer shadow
+            drawCircle(
+                color = Color.Black.copy(alpha = 0.2f),
+                radius = thumbRadius + 2.dp.toPx(),
+                center = Offset(thumbX, height / 2)
+            )
+            
+            // White ring
+            drawCircle(
+                color = Color.White,
+                radius = thumbRadius,
+                center = Offset(thumbX, height / 2)
+            )
+            
+            // Inner colored center
+            drawCircle(
+                color = Color.hsv(hue, 1f, 1f),
+                radius = thumbRadius - 4.dp.toPx(),
+                center = Offset(thumbX, height / 2)
+            )
+        }
+    }
+}
 
