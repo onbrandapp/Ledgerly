@@ -1006,13 +1006,19 @@ fun DashboardScreen(
                         FilterChip(
                             selected = selectedTab == 0,
                             onClick = { selectedTab = 0 },
-                            label = { Text("Recent Ledger", fontWeight = FontWeight.ExtraBold) },
+                            label = { Text("Recent", fontWeight = FontWeight.ExtraBold) },
                             modifier = Modifier.testTag("tab_transactions")
                         )
                         FilterChip(
                             selected = selectedTab == 1,
                             onClick = { selectedTab = 1 },
-                            label = { Text("Recurring Rules", fontWeight = FontWeight.ExtraBold) },
+                            label = { Text("All Time", fontWeight = FontWeight.ExtraBold) },
+                            modifier = Modifier.testTag("tab_all_time")
+                        )
+                        FilterChip(
+                            selected = selectedTab == 2,
+                            onClick = { selectedTab = 2 },
+                            label = { Text("Recurring", fontWeight = FontWeight.ExtraBold) },
                             modifier = Modifier.testTag("tab_recurring")
                         )
                     }
@@ -1020,7 +1026,11 @@ fun DashboardScreen(
                     Spacer(modifier = Modifier.height(4.dp))
 
                     Text(
-                        text = if (selectedTab == 0) "${monthlySummary.currentMonthList.size} items" else "${recurringTransactions.size} rules",
+                        text = when (selectedTab) {
+                            0 -> "${monthlySummary.currentMonthList.size} items"
+                            1 -> "${transactions.size} items"
+                            else -> "${recurringTransactions.size} rules"
+                        },
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
@@ -1074,6 +1084,72 @@ fun DashboardScreen(
                             verticalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
                             monthlySummary.currentMonthList.forEach { tx ->
+                                TransactionRowItem(
+                                    transaction = tx,
+                                    onEdit = {
+                                        if (tx.recurringId.isNotEmpty()) {
+                                            transactionToEditSeriesOption = tx
+                                        } else {
+                                            editingTransaction = tx
+                                            editingRecurringTransaction = null
+                                            showManualAddForm = true
+                                        }
+                                    },
+                                    onDelete = {
+                                        if (tx.recurringId.isNotEmpty()) {
+                                            transactionToDeleteSeriesOption = tx
+                                        } else {
+                                            viewModel.deleteTransaction(tx.id)
+                                        }
+                                    }
+                                )
+                            }
+                        }
+                    }
+                } else if (selectedTab == 1) {
+                    val allTimeList = remember(transactions) { transactions.sortedByDescending { it.date } }
+                    if (allTimeList.isEmpty()) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 40.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                modifier = Modifier.padding(24.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Category,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
+                                    modifier = Modifier.size(72.dp)
+                                )
+                                Spacer(modifier = Modifier.height(16.dp))
+                                Text(
+                                    text = "No Transactions Yet",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.8f)
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    text = "Try adding a manual transaction or use the Gemini AI prompt!",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
+                                    textAlign = TextAlign.Center
+                                )
+                            }
+                        }
+                    } else {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = 80.dp)
+                                .testTag("all_time_transactions_list"),
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            allTimeList.forEach { tx ->
                                 TransactionRowItem(
                                     transaction = tx,
                                     onEdit = {
@@ -1420,7 +1496,7 @@ fun DashboardScreen(
                                 viewModel.addRecurringTransaction(amount, category, type, description, frequency, selectedDate, numInstances = numInstances)
                                 viewModel.deleteTransaction(editingTransaction!!.id)
                             } else {
-                                viewModel.addTransaction(amount, category, type, description, selectedDate, id, recurringId = editingTransaction!!.recurringId)
+                                viewModel.addTransaction(amount, category, type, description, selectedDate, id, recurringId = editingTransaction!!.recurringId, isPaid = editingTransaction!!.isPaid)
                             }
                         } else if (editingRecurringTransaction != null) {
                             if (!isRecurring) {
@@ -1915,7 +1991,8 @@ fun DashboardScreen(
                                             Spacer(modifier = Modifier.height(2.dp))
                                             Row(
                                                 modifier = Modifier.fillMaxWidth(),
-                                                horizontalArrangement = Arrangement.SpaceBetween
+                                                horizontalArrangement = Arrangement.SpaceBetween,
+                                                verticalAlignment = Alignment.CenterVertically
                                             ) {
                                                 Text(
                                                     text = item.category,
@@ -1927,6 +2004,53 @@ fun DashboardScreen(
                                                     style = MaterialTheme.typography.labelSmall,
                                                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
                                                 )
+                                            }
+                                            Spacer(modifier = Modifier.height(4.dp))
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                horizontalArrangement = Arrangement.End,
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                IconButton(
+                                                    onClick = {
+                                                        if (item.recurringId.isNotEmpty()) {
+                                                            transactionToEditSeriesOption = item
+                                                            showLedgerSheet = false
+                                                        } else {
+                                                            editingTransaction = item
+                                                            editingRecurringTransaction = null
+                                                            showManualAddForm = true
+                                                            showLedgerSheet = false
+                                                        }
+                                                    },
+                                                    modifier = Modifier.size(24.dp).testTag("ledger_edit_${item.id}")
+                                                ) {
+                                                    Icon(
+                                                        imageVector = Icons.Default.Edit,
+                                                        contentDescription = "Edit",
+                                                        tint = MaterialTheme.colorScheme.primary,
+                                                        modifier = Modifier.size(14.dp)
+                                                    )
+                                                }
+                                                Spacer(modifier = Modifier.width(8.dp))
+                                                IconButton(
+                                                    onClick = {
+                                                        if (item.recurringId.isNotEmpty()) {
+                                                            transactionToDeleteSeriesOption = item
+                                                            showLedgerSheet = false
+                                                        } else {
+                                                            viewModel.deleteTransaction(item.id)
+                                                        }
+                                                    },
+                                                    modifier = Modifier.size(24.dp).testTag("ledger_delete_${item.id}")
+                                                ) {
+                                                    Icon(
+                                                        imageVector = Icons.Default.DeleteOutline,
+                                                        contentDescription = "Delete",
+                                                        tint = MaterialTheme.colorScheme.error,
+                                                        modifier = Modifier.size(14.dp)
+                                                    )
+                                                }
                                             }
                                         }
                                     }
@@ -2029,7 +2153,8 @@ fun DashboardScreen(
                                             Spacer(modifier = Modifier.height(2.dp))
                                             Row(
                                                 modifier = Modifier.fillMaxWidth(),
-                                                horizontalArrangement = Arrangement.SpaceBetween
+                                                horizontalArrangement = Arrangement.SpaceBetween,
+                                                verticalAlignment = Alignment.CenterVertically
                                             ) {
                                                 Text(
                                                     text = item.category,
@@ -2041,6 +2166,73 @@ fun DashboardScreen(
                                                     style = MaterialTheme.typography.labelSmall,
                                                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
                                                 )
+                                            }
+                                            Spacer(modifier = Modifier.height(4.dp))
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                horizontalArrangement = Arrangement.End,
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                // "Paid" indicator/toggle button
+                                                Text(
+                                                    text = "Paid",
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    fontWeight = FontWeight.ExtraBold,
+                                                    color = if (item.isPaid) {
+                                                        Color(0xFF2E7D32) // Soft beautiful Green
+                                                    } else {
+                                                        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f) // Default grey
+                                                    },
+                                                    modifier = Modifier
+                                                        .clip(RoundedCornerShape(4.dp))
+                                                        .clickable {
+                                                            viewModel.toggleTransactionPaid(item.id)
+                                                        }
+                                                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                                                        .testTag("ledger_paid_toggle_${item.id}")
+                                                )
+                                                Spacer(modifier = Modifier.width(8.dp))
+
+                                                IconButton(
+                                                    onClick = {
+                                                        if (item.recurringId.isNotEmpty()) {
+                                                            transactionToEditSeriesOption = item
+                                                            showLedgerSheet = false
+                                                        } else {
+                                                            editingTransaction = item
+                                                            editingRecurringTransaction = null
+                                                            showManualAddForm = true
+                                                            showLedgerSheet = false
+                                                        }
+                                                    },
+                                                    modifier = Modifier.size(24.dp).testTag("ledger_edit_${item.id}")
+                                                ) {
+                                                    Icon(
+                                                        imageVector = Icons.Default.Edit,
+                                                        contentDescription = "Edit",
+                                                        tint = MaterialTheme.colorScheme.primary,
+                                                        modifier = Modifier.size(14.dp)
+                                                    )
+                                                }
+                                                Spacer(modifier = Modifier.width(8.dp))
+                                                IconButton(
+                                                    onClick = {
+                                                        if (item.recurringId.isNotEmpty()) {
+                                                            transactionToDeleteSeriesOption = item
+                                                            showLedgerSheet = false
+                                                        } else {
+                                                            viewModel.deleteTransaction(item.id)
+                                                        }
+                                                    },
+                                                    modifier = Modifier.size(24.dp).testTag("ledger_delete_${item.id}")
+                                                ) {
+                                                    Icon(
+                                                        imageVector = Icons.Default.DeleteOutline,
+                                                        contentDescription = "Delete",
+                                                        tint = MaterialTheme.colorScheme.error,
+                                                        modifier = Modifier.size(14.dp)
+                                                    )
+                                                }
                                             }
                                         }
                                     }

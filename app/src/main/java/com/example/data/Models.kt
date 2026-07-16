@@ -7,10 +7,11 @@ data class Transaction(
     val type: String = "EXPENSE", // "EXPENSE" or "INCOME"
     val description: String = "",
     val date: Long = System.currentTimeMillis(),
-    val recurringId: String = ""
+    val recurringId: String = "",
+    val isPaid: Boolean = false
 ) {
     // Zero-argument constructor required for Firestore deserialization
-    constructor() : this("", 0.0, "", "EXPENSE", "", System.currentTimeMillis(), "")
+    constructor() : this("", 0.0, "", "EXPENSE", "", System.currentTimeMillis(), "", false)
 }
 
 data class RecurringTransaction(
