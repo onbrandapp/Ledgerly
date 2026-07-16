@@ -443,21 +443,16 @@ fun DashboardScreen(
                     }
                     Spacer(modifier = Modifier.width(6.dp))
                     
-                    Box(
+                    IconButton(
+                        onClick = { viewModel.logout() },
                         modifier = Modifier
                             .padding(end = 12.dp)
-                            .size(38.dp)
-                            .clip(CircleShape)
-                            .background(Color.Transparent)
-                            .clickable { viewModel.logout() }
-                            .testTag("logout_button"),
-                        contentAlignment = Alignment.Center
+                            .testTag("logout_button")
                     ) {
-                        Image(
-                            painter = painterResource(id = com.example.R.drawable.logo_inside),
-                            contentDescription = "Ledgerly Logo",
-                            modifier = Modifier.fillMaxSize(),
-                            contentScale = ContentScale.Crop
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.Logout,
+                            contentDescription = "Logout",
+                            tint = MaterialTheme.colorScheme.primary
                         )
                     }
                 },
