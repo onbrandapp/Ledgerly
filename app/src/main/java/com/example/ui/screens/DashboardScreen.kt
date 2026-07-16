@@ -61,6 +61,9 @@ import androidx.activity.result.contract.ActivityResultContracts
 import android.widget.Toast
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.Image
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.layout.ContentScale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -264,7 +267,7 @@ fun DashboardScreen(
                 var yPosition = 50f
                 
                 // Title
-                canvas.drawText("Finance.ai Complete Ledger Report", 50f, yPosition, titlePaint)
+                canvas.drawText("Ledgerly Complete Ledger Report", 50f, yPosition, titlePaint)
                 yPosition += 20f
                 
                 val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
@@ -420,7 +423,7 @@ fun DashboardScreen(
                             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
                         )
                         Text(
-                            text = "Finance.ai",
+                            text = "Ledgerly",
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.Black,
                             color = MaterialTheme.colorScheme.onBackground
@@ -440,24 +443,21 @@ fun DashboardScreen(
                     }
                     Spacer(modifier = Modifier.width(6.dp))
                     
-                    val firstLetter = remember(currentUserEmail) {
-                        currentUserEmail?.substringBefore("@")?.firstOrNull()?.uppercaseChar()?.toString() ?: "U"
-                    }
                     Box(
                         modifier = Modifier
                             .padding(end = 12.dp)
                             .size(38.dp)
                             .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.primaryContainer)
+                            .background(Color.Transparent)
                             .clickable { viewModel.logout() }
                             .testTag("logout_button"),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(
-                            text = firstLetter,
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary
+                        Image(
+                            painter = painterResource(id = com.example.R.drawable.logo_inside),
+                            contentDescription = "Ledgerly Logo",
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop
                         )
                     }
                 },

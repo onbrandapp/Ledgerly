@@ -1,5 +1,5 @@
 {
-  "name": "Expense Tracker",
+  "name": "Ledgerly",
   "description": "A smart expense tracker app with natural language transaction parsing using Gemini, integrated with Firebase Auth and Firestore.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]

@@ -91,7 +91,7 @@ fun LoginScreen(
                 )
                 Spacer(modifier = Modifier.width(12.dp))
                 Text(
-                    text = "Finance.ai",
+                    text = "Ledgerly",
                     style = MaterialTheme.typography.displaySmall.copy(fontSize = 32.sp),
                     fontWeight = FontWeight.Black,
                     color = MaterialTheme.colorScheme.onBackground
