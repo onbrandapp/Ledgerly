@@ -1496,7 +1496,7 @@ fun DashboardScreen(
                                 viewModel.addRecurringTransaction(amount, category, type, description, frequency, selectedDate, numInstances = numInstances)
                                 viewModel.deleteTransaction(editingTransaction!!.id)
                             } else {
-                                viewModel.addTransaction(amount, category, type, description, selectedDate, id, recurringId = editingTransaction!!.recurringId, isPaid = editingTransaction!!.isPaid)
+                                viewModel.addTransaction(amount, category, type, description, selectedDate, id, recurringId = editingTransaction!!.recurringId, paid = editingTransaction!!.paid)
                             }
                         } else if (editingRecurringTransaction != null) {
                             if (!isRecurring) {
@@ -2178,7 +2178,7 @@ fun DashboardScreen(
                                                     text = "Paid",
                                                     style = MaterialTheme.typography.labelSmall,
                                                     fontWeight = FontWeight.ExtraBold,
-                                                    color = if (item.isPaid) {
+                                                    color = if (item.paid) {
                                                         Color(0xFF2E7D32) // Soft beautiful Green
                                                     } else {
                                                         MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f) // Default grey

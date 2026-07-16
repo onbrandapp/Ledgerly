@@ -22,7 +22,7 @@ data class LocalTransaction(
     val description: String,
     val date: Long,
     val recurringId: String = "",
-    val isPaid: Boolean = false
+    val paid: Boolean = false
 ) {
     fun toDomain(): Transaction = Transaction(
         id = id,
@@ -32,7 +32,7 @@ data class LocalTransaction(
         description = description,
         date = date,
         recurringId = recurringId,
-        isPaid = isPaid
+        paid = paid
     )
 
     companion object {
@@ -44,7 +44,7 @@ data class LocalTransaction(
             description = t.description,
             date = t.date,
             recurringId = t.recurringId,
-            isPaid = t.isPaid
+            paid = t.paid
         )
     }
 }
@@ -136,7 +136,7 @@ interface TransactionDao {
     suspend fun deleteCustomCategoryById(id: String)
 }
 
-@Database(entities = [LocalTransaction::class, LocalRecurringTransaction::class, LocalCategory::class], version = 5, exportSchema = false)
+@Database(entities = [LocalTransaction::class, LocalRecurringTransaction::class, LocalCategory::class], version = 6, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun transactionDao(): TransactionDao
 

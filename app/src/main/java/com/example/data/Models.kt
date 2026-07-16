@@ -8,7 +8,7 @@ data class Transaction(
     val description: String = "",
     val date: Long = System.currentTimeMillis(),
     val recurringId: String = "",
-    val isPaid: Boolean = false
+    val paid: Boolean = false
 ) {
     // Zero-argument constructor required for Firestore deserialization
     constructor() : this("", 0.0, "", "EXPENSE", "", System.currentTimeMillis(), "", false)

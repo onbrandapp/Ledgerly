@@ -257,7 +257,7 @@ class ExpenseViewModel(application: Application) : AndroidViewModel(application)
         date: Long = System.currentTimeMillis(),
         id: String = "",
         recurringId: String = "",
-        isPaid: Boolean = false
+        paid: Boolean = false
     ) {
         val email = currentUserEmail.value ?: return
         val newTx = Transaction(
@@ -268,7 +268,7 @@ class ExpenseViewModel(application: Application) : AndroidViewModel(application)
             description = description.trim(),
             date = date,
             recurringId = recurringId,
-            isPaid = isPaid
+            paid = paid
         )
         if (isDuplicateTransaction(newTx)) {
             _transactionsError.value = "This ledger item already exists. Please edit the existing ledger item from the series as necessary."
@@ -286,7 +286,7 @@ class ExpenseViewModel(application: Application) : AndroidViewModel(application)
         val email = currentUserEmail.value ?: return
         viewModelScope.launch {
             val transaction = transactions.value.find { it.id == id } ?: return@launch
-            val updatedTx = transaction.copy(isPaid = !transaction.isPaid)
+            val updatedTx = transaction.copy(paid = !transaction.paid)
             transactionRepository.addTransaction(email, updatedTx)
                 .onFailure { error ->
                     _transactionsError.value = "Failed to update transaction status: ${error.message}"
