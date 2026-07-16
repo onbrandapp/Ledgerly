@@ -6,6 +6,10 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.geometry.CornerRadius
@@ -1588,6 +1592,33 @@ fun DashboardScreen(
             val totalExpense = remember(expenseList) { expenseList.sumOf { it.amount } }
             val ledgerFormatter = remember { SimpleDateFormat("MMM dd, yyyy", Locale.getDefault()) }
 
+            val ledgerListNestedScrollConnection = remember {
+                object : NestedScrollConnection {
+                    override fun onPostScroll(
+                        consumed: Offset,
+                        available: Offset,
+                        source: NestedScrollSource
+                    ): Offset {
+                        return if (available.y != 0f) {
+                            Offset(0f, available.y)
+                        } else {
+                            Offset.Zero
+                        }
+                    }
+
+                    override suspend fun onPostFling(
+                        consumed: Velocity,
+                        available: Velocity
+                    ): Velocity {
+                        return if (available.y != 0f) {
+                            Velocity(0f, available.y)
+                        } else {
+                            Velocity.Zero
+                        }
+                    }
+                }
+            }
+
             val showStartDatePicker = {
                 val cal = Calendar.getInstance().apply {
                     if (ledgerStartDate != null) {
@@ -1949,6 +1980,7 @@ fun DashboardScreen(
                                 modifier = Modifier
                                     .weight(1f)
                                     .fillMaxWidth()
+                                    .nestedScroll(ledgerListNestedScrollConnection)
                                     .padding(horizontal = 8.dp),
                                 contentPadding = PaddingValues(vertical = 8.dp),
                                 verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -2111,6 +2143,7 @@ fun DashboardScreen(
                                 modifier = Modifier
                                     .weight(1f)
                                     .fillMaxWidth()
+                                    .nestedScroll(ledgerListNestedScrollConnection)
                                     .padding(horizontal = 8.dp),
                                 contentPadding = PaddingValues(vertical = 8.dp),
                                 verticalArrangement = Arrangement.spacedBy(8.dp)
