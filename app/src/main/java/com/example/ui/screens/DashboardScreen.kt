@@ -59,6 +59,8 @@ import java.util.Locale
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import android.widget.Toast
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.foundation.text.BasicTextField
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -753,18 +755,60 @@ fun DashboardScreen(
                         Column(
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            Text(
-                                text = "Monthly Budget",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = Color(0xFF121214).copy(alpha = 0.7f)
-                            )
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "Monthly Budget",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.7f)
+                                )
+
+                                // Premium Status Pill (Seamlessly translucent backdrop matching any background)
+                                val isOver = remainingBudget < 0
+                                Box(
+                                    modifier = Modifier
+                                        .background(
+                                            MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.12f),
+                                            RoundedCornerShape(50)
+                                        )
+                                        .border(
+                                            1.dp,
+                                            MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.2f),
+                                            RoundedCornerShape(50)
+                                        )
+                                        .padding(horizontal = 10.dp, vertical = 4.dp)
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = if (isOver) Icons.Default.TrendingDown else Icons.Default.TrendingUp,
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.onPrimary,
+                                            modifier = Modifier.size(14.dp)
+                                        )
+                                        Text(
+                                            text = if (isOver) "OVER BUDGET" else "ON TRACK",
+                                            style = MaterialTheme.typography.labelSmall.copy(
+                                                fontWeight = FontWeight.Black,
+                                                letterSpacing = 0.5.sp
+                                            ),
+                                            color = MaterialTheme.colorScheme.onPrimary
+                                        )
+                                    }
+                                }
+                            }
 
                             Text(
                                 text = "$${String.format("%,.2f", remainingBudget)}",
                                 style = MaterialTheme.typography.headlineLarge.copy(fontSize = 38.sp),
                                 fontWeight = FontWeight.Black,
-                                color = if (remainingBudget >= 0) Color(0xFF121214) else Color(0xFFD32F2F),
+                                color = MaterialTheme.colorScheme.onPrimary,
                                 modifier = Modifier
                                     .padding(vertical = 6.dp)
                                     .testTag("remaining_budget_text")
@@ -774,20 +818,20 @@ fun DashboardScreen(
                                 text = "Remaining of $${String.format("%,.2f", monthlyBudget + monthlySummary.totalIncome)}",
                                 style = MaterialTheme.typography.labelMedium,
                                 fontWeight = FontWeight.Bold,
-                                color = Color(0xFF121214).copy(alpha = 0.8f)
+                                color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f)
                             )
 
                             Spacer(modifier = Modifier.height(16.dp))
 
-                            // Budget utilization bar
+                            // Budget utilization bar (uses the clean contrast onPrimary color dynamically)
                             LinearProgressIndicator(
                                 progress = { progress },
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .height(8.dp)
                                     .clip(CircleShape),
-                                color = if (isBudgetAlert) Color(0xFFD32F2F) else Color(0xFF121214),
-                                trackColor = Color(0xFF121214).copy(alpha = 0.15f)
+                                color = MaterialTheme.colorScheme.onPrimary,
+                                trackColor = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.15f)
                             )
                             Spacer(modifier = Modifier.height(6.dp))
                             Row(
@@ -798,13 +842,13 @@ fun DashboardScreen(
                                     text = "${(progress * 100).toInt()}% utilized",
                                     style = MaterialTheme.typography.labelSmall,
                                     fontWeight = FontWeight.Bold,
-                                    color = Color(0xFF121214).copy(alpha = 0.8f)
+                                    color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f)
                                 )
                                 Text(
                                     text = "Limit: $${String.format("%,.0f", monthlyBudget)}",
                                     style = MaterialTheme.typography.labelSmall,
                                     fontWeight = FontWeight.Bold,
-                                    color = Color(0xFF121214).copy(alpha = 0.8f)
+                                    color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f)
                                 )
                             }
                         }
@@ -836,7 +880,7 @@ fun DashboardScreen(
                                 modifier = Modifier
                                     .size(40.dp)
                                     .background(
-                                        Color(0xFF121214).copy(alpha = 0.08f),
+                                        MaterialTheme.colorScheme.onSecondary.copy(alpha = 0.08f),
                                         RoundedCornerShape(12.dp)
                                     ),
                                 contentAlignment = Alignment.Center
@@ -844,7 +888,7 @@ fun DashboardScreen(
                                 Icon(
                                     imageVector = Icons.Default.Payments,
                                     contentDescription = null,
-                                    tint = Color(0xFF121214),
+                                    tint = MaterialTheme.colorScheme.onSecondary,
                                     modifier = Modifier.size(20.dp)
                                 )
                             }
@@ -854,13 +898,13 @@ fun DashboardScreen(
                                     text = "EXPENSES",
                                     style = MaterialTheme.typography.labelSmall,
                                     fontWeight = FontWeight.ExtraBold,
-                                    color = Color(0xFF121214).copy(alpha = 0.7f)
+                                    color = MaterialTheme.colorScheme.onSecondary.copy(alpha = 0.7f)
                                 )
                                 Text(
                                     text = "$${String.format("%,.2f", monthlySummary.totalExpense)}",
                                     style = MaterialTheme.typography.titleLarge,
                                     fontWeight = FontWeight.Black,
-                                    color = Color(0xFF121214),
+                                    color = MaterialTheme.colorScheme.onSecondary,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis
                                 )
@@ -886,7 +930,7 @@ fun DashboardScreen(
                                 modifier = Modifier
                                     .size(40.dp)
                                     .background(
-                                        Color(0xFF121214).copy(alpha = 0.08f),
+                                        MaterialTheme.colorScheme.onTertiary.copy(alpha = 0.08f),
                                         RoundedCornerShape(12.dp)
                                     ),
                                 contentAlignment = Alignment.Center
@@ -894,7 +938,7 @@ fun DashboardScreen(
                                 Icon(
                                     imageVector = Icons.Default.TrendingUp,
                                     contentDescription = null,
-                                    tint = Color(0xFF121214),
+                                    tint = MaterialTheme.colorScheme.onTertiary,
                                     modifier = Modifier.size(20.dp)
                                 )
                             }
@@ -904,13 +948,13 @@ fun DashboardScreen(
                                     text = "INCOME",
                                     style = MaterialTheme.typography.labelSmall,
                                     fontWeight = FontWeight.ExtraBold,
-                                    color = Color(0xFF121214).copy(alpha = 0.7f)
+                                    color = MaterialTheme.colorScheme.onTertiary.copy(alpha = 0.7f)
                                 )
                                 Text(
                                     text = "$${String.format("%,.2f", monthlySummary.totalIncome)}",
                                     style = MaterialTheme.typography.titleLarge,
                                     fontWeight = FontWeight.Black,
-                                    color = Color(0xFF121214),
+                                    color = MaterialTheme.colorScheme.onTertiary,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis
                                 )
@@ -991,8 +1035,8 @@ fun DashboardScreen(
                     if (monthlySummary.currentMonthList.isEmpty()) {
                         Box(
                             modifier = Modifier
-                                .weight(1f)
-                                .fillMaxWidth(),
+                                .fillMaxWidth()
+                                .padding(vertical = 40.dp),
                             contentAlignment = Alignment.Center
                         ) {
                             Column(
@@ -1056,8 +1100,8 @@ fun DashboardScreen(
                     if (recurringTransactions.isEmpty()) {
                         Box(
                             modifier = Modifier
-                                .weight(1f)
-                                .fillMaxWidth(),
+                                .fillMaxWidth()
+                                .padding(vertical = 40.dp),
                             contentAlignment = Alignment.Center
                         ) {
                             Column(
@@ -1108,6 +1152,8 @@ fun DashboardScreen(
                         }
                     }
                 }
+
+                Spacer(modifier = Modifier.height(100.dp))
             }
         }
     }
@@ -2073,12 +2119,46 @@ fun DashboardScreen(
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onSurface
                             )
-                            Text(
-                                text = "${if (netBalance >= 0) "+" else ""}$${String.format("%,.2f", netBalance)}",
-                                style = MaterialTheme.typography.titleLarge,
-                                fontWeight = FontWeight.Black,
-                                color = if (netBalance >= 0) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.error
-                            )
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                val isPositive = netBalance >= 0
+                                Box(
+                                    modifier = Modifier
+                                        .background(
+                                            if (isPositive) MaterialTheme.colorScheme.tertiary.copy(alpha = 0.15f) else MaterialTheme.colorScheme.error.copy(alpha = 0.15f),
+                                            RoundedCornerShape(8.dp)
+                                        )
+                                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = if (isPositive) Icons.Default.TrendingUp else Icons.Default.TrendingDown,
+                                            contentDescription = null,
+                                            tint = if (isPositive) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.error,
+                                            modifier = Modifier.size(12.dp)
+                                        )
+                                        Text(
+                                            text = if (isPositive) "SURPLUS" else "DEFICIT",
+                                            style = MaterialTheme.typography.labelSmall.copy(
+                                                fontWeight = FontWeight.Bold,
+                                                letterSpacing = 0.5.sp
+                                            ),
+                                            color = if (isPositive) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.error
+                                        )
+                                    }
+                                }
+                                Text(
+                                    text = "${if (netBalance >= 0) "+" else ""}$${String.format("%,.2f", netBalance)}",
+                                    style = MaterialTheme.typography.titleLarge,
+                                    fontWeight = FontWeight.Black,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                            }
                         }
                     }
                 }
@@ -3135,12 +3215,12 @@ fun VisualAnalyticsSection(
                     .fillMaxWidth()
                     .padding(bottom = 20.dp),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 // The Donut Pie Chart Canvas
                 Box(
                     modifier = Modifier
-                        .size(110.dp)
+                        .size(96.dp)
                         .testTag("pie_chart_canvas"),
                     contentAlignment = Alignment.Center
                 ) {
@@ -3451,8 +3531,22 @@ fun ColorPickerBottomSheet(
         try { Color(android.graphics.Color.parseColor(activeColorHex)) } catch (e: Exception) { Color.Gray }
     }
     
+    var hexInputText by remember { mutableStateOf(initialColorHex.replace("#", "")) }
+    var hueInputText by remember { mutableStateOf(currentHue.toInt().toString()) }
+    
     LaunchedEffect(activeColorHex) {
         onColorSelected(activeColorHex)
+        val cleanActive = activeColorHex.replace("#", "")
+        if (hexInputText.uppercase() != cleanActive.uppercase()) {
+            hexInputText = cleanActive
+        }
+    }
+    
+    LaunchedEffect(currentHue) {
+        val hInt = currentHue.toInt().toString()
+        if (hueInputText != hInt) {
+            hueInputText = hInt
+        }
     }
     
     ModalBottomSheet(
@@ -3509,32 +3603,72 @@ fun ColorPickerBottomSheet(
                     .border(1.dp, Color.White.copy(alpha = 0.15f), RoundedCornerShape(24.dp))
             )
             
-            // HEX CODE display box
+            // HEX CODE display box (with manual entry support)
             Column(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
-                Card(
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E1E)),
+                OutlinedTextField(
+                    value = hexInputText,
+                    onValueChange = { input ->
+                        val filtered = input.filter { c -> c.isDigit() || c.lowercaseChar() in 'a'..'f' }.take(6)
+                        hexInputText = filtered
+                        if (filtered.length == 6) {
+                            try {
+                                val parsedHsv = hexToHsv("#$filtered")
+                                currentHue = parsedHsv[0]
+                                currentSaturation = parsedHsv[1]
+                                currentValue = parsedHsv[2]
+                            } catch (e: Exception) {
+                                // ignore invalid parse
+                            }
+                        }
+                    },
+                    leadingIcon = {
+                        Text(
+                            text = "#",
+                            style = MaterialTheme.typography.headlineMedium.copy(
+                                fontWeight = FontWeight.Bold,
+                                color = Color.Gray,
+                                fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
+                            )
+                        )
+                    },
+                    textStyle = MaterialTheme.typography.headlineMedium.copy(
+                        fontWeight = FontWeight.Bold,
+                        fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                        color = Color.White
+                    ),
+                    placeholder = {
+                        Text(
+                            text = "ffffff",
+                            style = MaterialTheme.typography.headlineMedium.copy(
+                                fontWeight = FontWeight.Bold,
+                                fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                                color = Color.DarkGray
+                            )
+                        )
+                    },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Ascii,
+                        imeAction = ImeAction.Done
+                    ),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedContainerColor = Color(0xFF1E1E1E),
+                        unfocusedContainerColor = Color(0xFF1E1E1E),
+                        focusedBorderColor = Color.White.copy(alpha = 0.4f),
+                        unfocusedBorderColor = Color.White.copy(alpha = 0.15f),
+                        cursorColor = Color.White
+                    ),
                     shape = RoundedCornerShape(16.dp),
-                    modifier = Modifier.width(180.dp)
-                ) {
-                    Text(
-                        text = activeColorHex.lowercase(),
-                        style = MaterialTheme.typography.headlineMedium.copy(
-                            fontWeight = FontWeight.Bold,
-                            fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
-                        ),
-                        color = Color.White,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 12.dp)
-                    )
-                }
+                    modifier = Modifier
+                        .width(220.dp)
+                        .testTag("color_picker_hex_input")
+                )
                 Text(
-                    text = "HEX CODE",
+                    text = "ENTER HEX CODE",
                     style = MaterialTheme.typography.labelSmall.copy(
                         fontWeight = FontWeight.Bold,
                         letterSpacing = 1.5.sp
@@ -3543,7 +3677,7 @@ fun ColorPickerBottomSheet(
                 )
             }
             
-            // HUE SPECTRUM selection
+            // HUE SPECTRUM selection (with manual degree entry support)
             Column(
                 modifier = Modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -3561,14 +3695,51 @@ fun ColorPickerBottomSheet(
                         ),
                         color = Color.Gray
                     )
-                    Text(
-                        text = "${currentHue.toInt()}°",
-                        style = MaterialTheme.typography.bodyMedium.copy(
-                            fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
-                            fontWeight = FontWeight.Bold
-                        ),
-                        color = Color.LightGray
-                    )
+                    
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        BasicTextField(
+                            value = hueInputText,
+                            onValueChange = { input ->
+                                val filtered = input.filter { c -> c.isDigit() }.take(3)
+                                hueInputText = filtered
+                                if (filtered.isNotEmpty()) {
+                                    val parsedHue = filtered.toFloatOrNull() ?: 0f
+                                    val clampedHue = parsedHue.coerceIn(0f, 360f)
+                                    currentHue = clampedHue
+                                    if (currentSaturation < 0.15f) currentSaturation = 0.9f
+                                    if (currentValue < 0.15f) currentValue = 0.9f
+                                }
+                            },
+                            textStyle = MaterialTheme.typography.bodyMedium.copy(
+                                fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White,
+                                textAlign = TextAlign.End
+                            ),
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(
+                                keyboardType = KeyboardType.Number,
+                                imeAction = ImeAction.Done
+                            ),
+                            cursorBrush = SolidColor(Color.White),
+                            modifier = Modifier
+                                .width(50.dp)
+                                .background(Color(0xFF1E1E1E), RoundedCornerShape(6.dp))
+                                .border(1.dp, Color.White.copy(alpha = 0.15f), RoundedCornerShape(6.dp))
+                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                                .testTag("color_picker_hue_input")
+                        )
+                        Text(
+                            text = "°",
+                            style = MaterialTheme.typography.bodyLarge.copy(
+                                fontWeight = FontWeight.Bold,
+                                color = Color.LightGray
+                            )
+                        )
+                    }
                 }
                 
                 HueSlider(
