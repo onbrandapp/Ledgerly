@@ -100,6 +100,8 @@ fun DashboardScreen(
     var editingTransaction by remember { mutableStateOf<Transaction?>(null) }
     var editingRecurringTransaction by remember { mutableStateOf<com.example.data.RecurringTransaction?>(null) }
     var selectedTab by remember { mutableStateOf(0) } // 0 = Transactions, 1 = Recurring
+    var allTimeSortOption by remember { mutableStateOf("date_desc") }
+    var showSortMenu by remember { mutableStateOf(false) }
 
     var transactionToEditSeriesOption by remember { mutableStateOf<Transaction?>(null) }
     var transactionToDeleteSeriesOption by remember { mutableStateOf<Transaction?>(null) }
@@ -1024,19 +1026,154 @@ fun DashboardScreen(
 
                     Spacer(modifier = Modifier.height(4.dp))
 
-                    Text(
-                        text = when (selectedTab) {
-                            0 -> "${monthlySummary.currentMonthList.size} items"
-                            1 -> "${transactions.size} items"
-                            else -> "${recurringTransactions.size} rules"
-                        },
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
+                    Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 4.dp)
-                    )
+                            .padding(horizontal = 4.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = when (selectedTab) {
+                                0 -> "${monthlySummary.currentMonthList.size} items"
+                                1 -> "${transactions.size} items"
+                                else -> "${recurringTransactions.size} rules"
+                            },
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+                        )
+
+                        if (selectedTab == 1) {
+                            Box {
+                                Row(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .clickable { showSortMenu = true }
+                                        .padding(horizontal = 8.dp, vertical = 4.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Sort,
+                                        contentDescription = "Sort Options",
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                    Text(
+                                        text = "Sort: " + when (allTimeSortOption) {
+                                            "date_desc" -> "Newest"
+                                            "date_asc" -> "Oldest"
+                                            "amount_desc" -> "Highest Amount"
+                                            "amount_asc" -> "Lowest Amount"
+                                            "category_asc" -> "Category"
+                                            "description_asc" -> "Description"
+                                            else -> "Newest"
+                                        },
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                    Icon(
+                                        imageVector = Icons.Default.ArrowDropDown,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+
+                                DropdownMenu(
+                                    expanded = showSortMenu,
+                                    onDismissRequest = { showSortMenu = false }
+                                ) {
+                                    DropdownMenuItem(
+                                        text = { Text("Date: Newest First") },
+                                        leadingIcon = {
+                                            Icon(
+                                                Icons.Default.ArrowDownward,
+                                                contentDescription = null,
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                        },
+                                        onClick = {
+                                            allTimeSortOption = "date_desc"
+                                            showSortMenu = false
+                                        }
+                                    )
+                                    DropdownMenuItem(
+                                        text = { Text("Date: Oldest First") },
+                                        leadingIcon = {
+                                            Icon(
+                                                Icons.Default.ArrowUpward,
+                                                contentDescription = null,
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                        },
+                                        onClick = {
+                                            allTimeSortOption = "date_asc"
+                                            showSortMenu = false
+                                        }
+                                    )
+                                    DropdownMenuItem(
+                                        text = { Text("Amount: Highest First") },
+                                        leadingIcon = {
+                                            Icon(
+                                                Icons.Default.TrendingDown,
+                                                contentDescription = null,
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                        },
+                                        onClick = {
+                                            allTimeSortOption = "amount_desc"
+                                            showSortMenu = false
+                                        }
+                                    )
+                                    DropdownMenuItem(
+                                        text = { Text("Amount: Lowest First") },
+                                        leadingIcon = {
+                                            Icon(
+                                                Icons.Default.TrendingUp,
+                                                contentDescription = null,
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                        },
+                                        onClick = {
+                                            allTimeSortOption = "amount_asc"
+                                            showSortMenu = false
+                                        }
+                                    )
+                                    DropdownMenuItem(
+                                        text = { Text("Category (A to Z)") },
+                                        leadingIcon = {
+                                            Icon(
+                                                Icons.Default.Category,
+                                                contentDescription = null,
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                        },
+                                        onClick = {
+                                            allTimeSortOption = "category_asc"
+                                            showSortMenu = false
+                                        }
+                                    )
+                                    DropdownMenuItem(
+                                        text = { Text("Description (A to Z)") },
+                                        leadingIcon = {
+                                            Icon(
+                                                Icons.Default.Description,
+                                                contentDescription = null,
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                        },
+                                        onClick = {
+                                            allTimeSortOption = "description_asc"
+                                            showSortMenu = false
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                    }
                 }
 
                 // --- 5. CONDITIONALLY RENDER SELECTED TAB LIST ---
@@ -1106,7 +1243,17 @@ fun DashboardScreen(
                         }
                     }
                 } else if (selectedTab == 1) {
-                    val allTimeList = remember(transactions) { transactions.sortedByDescending { it.date } }
+                    val allTimeList = remember(transactions, allTimeSortOption) {
+                        when (allTimeSortOption) {
+                            "date_desc" -> transactions.sortedByDescending { it.date }
+                            "date_asc" -> transactions.sortedBy { it.date }
+                            "amount_desc" -> transactions.sortedByDescending { it.amount }
+                            "amount_asc" -> transactions.sortedBy { it.amount }
+                            "category_asc" -> transactions.sortedBy { it.category.lowercase() }
+                            "description_asc" -> transactions.sortedBy { it.description.lowercase() }
+                            else -> transactions.sortedByDescending { it.date }
+                        }
+                    }
                     if (allTimeList.isEmpty()) {
                         Box(
                             modifier = Modifier
