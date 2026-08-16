@@ -207,14 +207,30 @@ fun DashboardScreen(
         if (uri != null) {
             try {
                 val csvContent = buildString {
-                    append("Date,Type,Category,Description,Amount\n")
+                    append("Date,Type,Category,Description,Amount,Paid\n")
                     val csvFormatter = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
                     ledgerFilteredTransactions.forEach { t ->
                         val dateStr = csvFormatter.format(Date(t.date))
                         val escapedDesc = t.description.replace("\"", "\"\"")
                         val escapedCat = t.category.replace("\"", "\"\"")
-                        append("\"$dateStr\",${t.type},\"$escapedCat\",\"$escapedDesc\",${t.amount}\n")
+                        val paidStr = if (t.paid) "Paid" else "Unpaid"
+                        append("\"$dateStr\",${t.type},\"$escapedCat\",\"$escapedDesc\",${t.amount},$paidStr\n")
                     }
+
+                    // Summary rows
+                    val incomes = ledgerFilteredTransactions.filter { it.type.uppercase() == "INCOME" }
+                    val expenses = ledgerFilteredTransactions.filter { it.type.uppercase() == "EXPENSE" }
+                    val totalIncome = incomes.sumOf { it.amount }
+                    val totalExpense = expenses.sumOf { it.amount }
+                    val totalLeftToPay = expenses.filter { !it.paid }.sumOf { it.amount }
+                    val netBalance = totalIncome - totalExpense
+
+                    append("\n")
+                    append("--- Summary ---\n")
+                    append("Total Income,,,,${String.format(Locale.US, "%.2f", totalIncome)},\n")
+                    append("Total Expenses,,,,${String.format(Locale.US, "%.2f", totalExpense)},\n")
+                    append("Total Left to Pay,,,,${String.format(Locale.US, "%.2f", totalLeftToPay)},\n")
+                    append("Net Balance,,,,${String.format(Locale.US, "%.2f", netBalance)},\n")
                 }
                 context.contentResolver.openOutputStream(uri)?.use { os ->
                     os.write(csvContent.toByteArray())
@@ -253,6 +269,11 @@ fun DashboardScreen(
                     isFakeBoldText = true
                     color = android.graphics.Color.DKGRAY
                 }
+                val colHeaderPaint = android.graphics.Paint().apply {
+                    textSize = 8f
+                    isFakeBoldText = true
+                    color = android.graphics.Color.GRAY
+                }
                 val textPaint = android.graphics.Paint().apply {
                     textSize = 9f
                     color = android.graphics.Color.BLACK
@@ -265,6 +286,16 @@ fun DashboardScreen(
                     textSize = 9f
                     color = android.graphics.Color.parseColor("#43A047") // Green
                 }
+                val paidPaint = android.graphics.Paint().apply {
+                    textSize = 8.5f
+                    isFakeBoldText = true
+                    color = android.graphics.Color.parseColor("#2E7D32") // Green
+                }
+                val unpaidPaint = android.graphics.Paint().apply {
+                    textSize = 8.5f
+                    isFakeBoldText = true
+                    color = android.graphics.Color.parseColor("#D32F2F") // Red
+                }
                 val linePaint = android.graphics.Paint().apply {
                     strokeWidth = 1f
                     color = android.graphics.Color.LTGRAY
@@ -273,7 +304,7 @@ fun DashboardScreen(
                 var yPosition = 50f
                 
                 // Title
-                canvas.drawText("Ledgerly Complete Ledger Report", 50f, yPosition, titlePaint)
+                canvas.drawText("Ledgerly Complete Ledger Report", 45f, yPosition, titlePaint)
                 yPosition += 20f
                 
                 val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
@@ -284,16 +315,24 @@ fun DashboardScreen(
                     }
                     else -> "Range: All Time"
                 }
-                canvas.drawText("Generated on: ${sdf.format(Date())} | Email: ${currentUserEmail ?: ""} | $filterDesc", 50f, yPosition, subPaint)
+                canvas.drawText("Generated on: ${sdf.format(Date())} | Email: ${currentUserEmail ?: ""} | $filterDesc", 45f, yPosition, subPaint)
                 yPosition += 30f
                 
                 // Column Headers
-                canvas.drawText("INCOME", 50f, yPosition, headerPaint)
-                canvas.drawText("EXPENSES", 320f, yPosition, headerPaint)
-                yPosition += 8f
-                canvas.drawLine(50f, yPosition, 275f, yPosition, linePaint)
-                canvas.drawLine(320f, yPosition, 545f, yPosition, linePaint)
-                yPosition += 20f
+                canvas.drawText("INCOME", 45f, yPosition, headerPaint)
+                canvas.drawText("EXPENSES", 310f, yPosition, headerPaint)
+                yPosition += 14f
+                canvas.drawText("DATE / ITEM", 45f, yPosition, colHeaderPaint)
+                canvas.drawText("AMOUNT", 185f, yPosition, colHeaderPaint)
+                canvas.drawText("STATUS", 250f, yPosition, colHeaderPaint)
+
+                canvas.drawText("DATE / ITEM", 310f, yPosition, colHeaderPaint)
+                canvas.drawText("AMOUNT", 450f, yPosition, colHeaderPaint)
+                canvas.drawText("STATUS", 515f, yPosition, colHeaderPaint)
+                yPosition += 6f
+                canvas.drawLine(45f, yPosition, 285f, yPosition, linePaint)
+                canvas.drawLine(310f, yPosition, 550f, yPosition, linePaint)
+                yPosition += 16f
                 
                 val incomes = ledgerFilteredTransactions.filter { it.type.uppercase() == "INCOME" }
                 val expenses = ledgerFilteredTransactions.filter { it.type.uppercase() == "EXPENSE" }
@@ -311,21 +350,32 @@ fun DashboardScreen(
                         canvas = page.canvas
                         yPosition = 50f
                         
-                        canvas.drawText("INCOME (cont.)", 50f, yPosition, headerPaint)
-                        canvas.drawText("EXPENSES (cont.)", 320f, yPosition, headerPaint)
-                        yPosition += 8f
-                        canvas.drawLine(50f, yPosition, 275f, yPosition, linePaint)
-                        canvas.drawLine(320f, yPosition, 545f, yPosition, linePaint)
-                        yPosition += 20f
+                        canvas.drawText("INCOME (cont.)", 45f, yPosition, headerPaint)
+                        canvas.drawText("EXPENSES (cont.)", 310f, yPosition, headerPaint)
+                        yPosition += 14f
+                        canvas.drawText("DATE / ITEM", 45f, yPosition, colHeaderPaint)
+                        canvas.drawText("AMOUNT", 185f, yPosition, colHeaderPaint)
+                        canvas.drawText("STATUS", 250f, yPosition, colHeaderPaint)
+
+                        canvas.drawText("DATE / ITEM", 310f, yPosition, colHeaderPaint)
+                        canvas.drawText("AMOUNT", 450f, yPosition, colHeaderPaint)
+                        canvas.drawText("STATUS", 515f, yPosition, colHeaderPaint)
+                        yPosition += 6f
+                        canvas.drawLine(45f, yPosition, 285f, yPosition, linePaint)
+                        canvas.drawLine(310f, yPosition, 550f, yPosition, linePaint)
+                        yPosition += 16f
                     }
                     
                     // Draw Income row item
                     if (incomeIndex < incomes.size) {
                         val t = incomes[incomeIndex]
                         val dateStr = sdfDate.format(Date(t.date))
-                        val cleanDesc = if (t.description.length > 20) t.description.take(18) + ".." else t.description
-                        canvas.drawText("$dateStr  $cleanDesc", 50f, yPosition, textPaint)
-                        canvas.drawText("+$${String.format(Locale.US, "%.2f", t.amount)}", 210f, yPosition, incomePaint)
+                        val cleanDesc = if (t.description.length > 17) t.description.take(15) + ".." else t.description
+                        canvas.drawText("$dateStr $cleanDesc", 45f, yPosition, textPaint)
+                        canvas.drawText("+$${String.format(Locale.US, "%.2f", t.amount)}", 185f, yPosition, incomePaint)
+                        val paidStatus = if (t.paid) "Paid" else "Unpaid"
+                        val pPaint = if (t.paid) paidPaint else unpaidPaint
+                        canvas.drawText(paidStatus, 250f, yPosition, pPaint)
                         incomeIndex++
                     }
                     
@@ -333,9 +383,12 @@ fun DashboardScreen(
                     if (expenseIndex < expenses.size) {
                         val t = expenses[expenseIndex]
                         val dateStr = sdfDate.format(Date(t.date))
-                        val cleanDesc = if (t.description.length > 20) t.description.take(18) + ".." else t.description
-                        canvas.drawText("$dateStr  $cleanDesc", 320f, yPosition, textPaint)
-                        canvas.drawText("-$${String.format(Locale.US, "%.2f", t.amount)}", 480f, yPosition, expensePaint)
+                        val cleanDesc = if (t.description.length > 17) t.description.take(15) + ".." else t.description
+                        canvas.drawText("$dateStr $cleanDesc", 310f, yPosition, textPaint)
+                        canvas.drawText("-$${String.format(Locale.US, "%.2f", t.amount)}", 450f, yPosition, expensePaint)
+                        val paidStatus = if (t.paid) "Paid" else "Unpaid"
+                        val pPaint = if (t.paid) paidPaint else unpaidPaint
+                        canvas.drawText(paidStatus, 515f, yPosition, pPaint)
                         expenseIndex++
                     }
                     
@@ -345,8 +398,10 @@ fun DashboardScreen(
                 // Totals
                 val totalIncome = incomes.sumOf { it.amount }
                 val totalExpense = expenses.sumOf { it.amount }
+                val totalLeftToPay = expenses.filter { !it.paid }.sumOf { it.amount }
+                val netBalance = totalIncome - totalExpense
                 
-                if (yPosition > 740f) {
+                if (yPosition > 700f) {
                     pdfDocument.finishPage(page)
                     val newPageInfo = android.graphics.pdf.PdfDocument.PageInfo.Builder(595, 842, pdfDocument.pages.size + 1).create()
                     page = pdfDocument.startPage(newPageInfo)
@@ -355,24 +410,35 @@ fun DashboardScreen(
                 }
                 
                 yPosition += 10f
-                canvas.drawLine(50f, yPosition, 275f, yPosition, linePaint)
-                canvas.drawLine(320f, yPosition, 545f, yPosition, linePaint)
+                canvas.drawLine(45f, yPosition, 285f, yPosition, linePaint)
+                canvas.drawLine(310f, yPosition, 550f, yPosition, linePaint)
                 yPosition += 15f
                 
-                canvas.drawText("Total Income:", 50f, yPosition, headerPaint)
-                canvas.drawText("+$${String.format(Locale.US, "%.2f", totalIncome)}", 210f, yPosition, incomePaint)
+                canvas.drawText("Total Income:", 45f, yPosition, headerPaint)
+                canvas.drawText("+$${String.format(Locale.US, "%.2f", totalIncome)}", 185f, yPosition, incomePaint)
                 
-                canvas.drawText("Total Expenses:", 320f, yPosition, headerPaint)
-                canvas.drawText("-$${String.format(Locale.US, "%.2f", totalExpense)}", 480f, yPosition, expensePaint)
+                canvas.drawText("Total Expenses:", 310f, yPosition, headerPaint)
+                canvas.drawText("-$${String.format(Locale.US, "%.2f", totalExpense)}", 450f, yPosition, expensePaint)
                 
-                yPosition += 25f
-                val netBalance = totalIncome - totalExpense
+                yPosition += 16f
+                val unpaidHeaderPaint = android.graphics.Paint().apply {
+                    textSize = 12f
+                    isFakeBoldText = true
+                    color = android.graphics.Color.parseColor("#D32F2F")
+                }
+                canvas.drawText("Total Left to Pay:", 310f, yPosition, unpaidHeaderPaint)
+                canvas.drawText("-$${String.format(Locale.US, "%.2f", totalLeftToPay)}", 450f, yPosition, unpaidPaint.apply { textSize = 9f })
+
+                yPosition += 22f
+                canvas.drawLine(45f, yPosition, 550f, yPosition, linePaint)
+                yPosition += 18f
+
                 val balancePaint = android.graphics.Paint().apply {
                     textSize = 12f
                     isFakeBoldText = true
                     color = if (netBalance >= 0) android.graphics.Color.parseColor("#43A047") else android.graphics.Color.parseColor("#E53935")
                 }
-                canvas.drawText("Net Balance: $${String.format(Locale.US, "%.2f", netBalance)}", 50f, yPosition, balancePaint)
+                canvas.drawText("Net Balance: $${String.format(Locale.US, "%.2f", netBalance)}", 45f, yPosition, balancePaint)
                 
                 pdfDocument.finishPage(page)
                 
@@ -1731,10 +1797,20 @@ fun DashboardScreen(
             val incomeList = remember(ledgerFilteredTransactions) {
                 ledgerFilteredTransactions.filter { it.type.uppercase() == "INCOME" }.sortedByDescending { it.date }
             }
-            val expenseList = remember(ledgerFilteredTransactions) {
+            val rawExpenseList = remember(ledgerFilteredTransactions) {
                 ledgerFilteredTransactions.filter { it.type.uppercase() == "EXPENSE" }.sortedByDescending { it.date }
             }
-            
+
+            var hidePaidExpenses by remember { mutableStateOf(false) }
+
+            val expenseList = remember(rawExpenseList, hidePaidExpenses) {
+                if (hidePaidExpenses) {
+                    rawExpenseList.filter { !it.paid }
+                } else {
+                    rawExpenseList
+                }
+            }
+
             val totalIncome = remember(incomeList) { incomeList.sumOf { it.amount } }
             val totalExpense = remember(expenseList) { expenseList.sumOf { it.amount } }
             val ledgerFormatter = remember { SimpleDateFormat("MMM dd, yyyy", Locale.getDefault()) }
@@ -2013,6 +2089,59 @@ fun DashboardScreen(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
+                // Hide Paid Expenses Toggle Button Row
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Button(
+                        onClick = { hidePaidExpenses = !hidePaidExpenses },
+                        colors = if (hidePaidExpenses) {
+                            ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.errorContainer,
+                                contentColor = MaterialTheme.colorScheme.onErrorContainer
+                            )
+                        } else {
+                            ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        },
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.testTag("ledger_hide_paid_expenses_button")
+                    ) {
+                        Icon(
+                            imageVector = if (hidePaidExpenses) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = if (hidePaidExpenses) "Show Paid Expenses" else "Hide Paid Expenses",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 13.sp
+                        )
+                    }
+
+                    if (hidePaidExpenses) {
+                        Surface(
+                            color = MaterialTheme.colorScheme.error.copy(alpha = 0.15f),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Text(
+                                text = "Paid Hidden",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
                 // Export Options Buttons Row
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -2260,7 +2389,7 @@ fun DashboardScreen(
                                 )
                                 Spacer(modifier = Modifier.width(6.dp))
                                 Text(
-                                    text = "EXPENSES",
+                                    text = if (hidePaidExpenses) "UNPAID EXPENSES" else "EXPENSES",
                                     style = MaterialTheme.typography.titleSmall,
                                     fontWeight = FontWeight.ExtraBold,
                                     color = MaterialTheme.colorScheme.secondary
@@ -2280,7 +2409,7 @@ fun DashboardScreen(
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(
-                                    text = "No expense records",
+                                    text = if (hidePaidExpenses) "No unpaid expenses" else "No expense records",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
                                 )
@@ -2456,7 +2585,7 @@ fun DashboardScreen(
 
                             Column(horizontalAlignment = Alignment.End) {
                                 Text(
-                                    text = "Total Expenses",
+                                    text = if (hidePaidExpenses) "Unpaid Expenses" else "Total Expenses",
                                     style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -3494,6 +3623,12 @@ fun VisualAnalyticsSection(
         spendingByCategory.values.sum()
     }
 
+    var isCategoryShareExpanded by remember { mutableStateOf(false) }
+
+    val sortedCategories = remember(spendingByCategory) {
+        spendingByCategory.entries.sortedByDescending { it.value }
+    }
+
     // 6-Month Spending Trends (Bar Chart)
     val monthlyTrends = remember(transactions) {
         val trends = mutableListOf<MonthTrend>()
@@ -3581,7 +3716,7 @@ fun VisualAnalyticsSection(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(bottom = 20.dp),
-                verticalAlignment = Alignment.CenterVertically,
+                verticalAlignment = Alignment.Top,
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 // The Donut Pie Chart Canvas
@@ -3639,7 +3774,9 @@ fun VisualAnalyticsSection(
                 // Legend Column
                 Column(
                     verticalArrangement = Arrangement.spacedBy(6.dp),
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier
+                        .weight(1f)
+                        .animateContentSize()
                 ) {
                     if (totalCurrentMonthSpent == 0.0) {
                         Text(
@@ -3648,7 +3785,8 @@ fun VisualAnalyticsSection(
                             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
                         )
                     } else {
-                        spendingByCategory.entries.sortedByDescending { it.value }.take(5).forEach { (cat, amt) ->
+                        val categoriesToShow = if (isCategoryShareExpanded) sortedCategories else sortedCategories.take(3)
+                        categoriesToShow.forEach { (cat, amt) ->
                             val pct = (amt / totalCurrentMonthSpent * 100).toInt()
                             val style = getCategoryStyle(cat)
                             Row(
@@ -3679,14 +3817,28 @@ fun VisualAnalyticsSection(
                                 )
                             }
                         }
-                        if (spendingByCategory.size > 5) {
-                            Text(
-                                text = "+ ${spendingByCategory.size - 5} more categories",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.primary,
-                                fontWeight = FontWeight.SemiBold,
-                                modifier = Modifier.padding(start = 14.dp)
-                            )
+                        if (sortedCategories.size > 3) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .clickable { isCategoryShareExpanded = !isCategoryShareExpanded }
+                                    .padding(top = 2.dp, bottom = 2.dp)
+                            ) {
+                                Text(
+                                    text = if (isCategoryShareExpanded) "Show Less" else "+ ${sortedCategories.size - 3} more categories (View All)",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Icon(
+                                    imageVector = if (isCategoryShareExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                                    contentDescription = if (isCategoryShareExpanded) "Show Less" else "View All Categories",
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
                         }
                     }
                 }
