@@ -213,7 +213,11 @@ fun DashboardScreen(
                         val dateStr = csvFormatter.format(Date(t.date))
                         val escapedDesc = t.description.replace("\"", "\"\"")
                         val escapedCat = t.category.replace("\"", "\"\"")
-                        val paidStr = if (t.paid) "Paid" else "Unpaid"
+                        val paidStr = if (t.type.uppercase() == "EXPENSE") {
+                            if (t.paid) "Paid" else "Unpaid"
+                        } else {
+                            if (t.paid) "Received" else ""
+                        }
                         append("\"$dateStr\",${t.type},\"$escapedCat\",\"$escapedDesc\",${t.amount},$paidStr\n")
                     }
 
@@ -375,8 +379,8 @@ fun DashboardScreen(
                         val cleanDesc = if (t.description.length > 17) t.description.take(15) + ".." else t.description
                         canvas.drawText("$dateStr $cleanDesc", 45f, yPosition, textPaint)
                         canvas.drawText("+$${String.format(Locale.US, "%.2f", t.amount)}", 185f, yPosition, incomePaint)
-                        val paidStatus = if (t.paid) "Paid" else "Unpaid"
-                        val pPaint = if (t.paid) paidPaint else unpaidPaint
+                        val paidStatus = if (t.paid) "Received" else ""
+                        val pPaint = if (t.paid) paidPaint else textPaint
                         canvas.drawText(paidStatus, 250f, yPosition, pPaint)
                         incomeIndex++
                     }
@@ -2325,6 +2329,26 @@ fun DashboardScreen(
                                                 horizontalArrangement = Arrangement.End,
                                                 verticalAlignment = Alignment.CenterVertically
                                             ) {
+                                                // "Received" indicator/toggle button
+                                                Text(
+                                                    text = "Received",
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    fontWeight = FontWeight.ExtraBold,
+                                                    color = if (item.paid) {
+                                                        Color(0xFF2E7D32) // Soft beautiful Green
+                                                    } else {
+                                                        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f) // Default grey
+                                                    },
+                                                    modifier = Modifier
+                                                        .clip(RoundedCornerShape(4.dp))
+                                                        .clickable {
+                                                            viewModel.toggleTransactionPaid(item.id)
+                                                        }
+                                                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                                                        .testTag("ledger_received_toggle_${item.id}")
+                                                )
+                                                Spacer(modifier = Modifier.width(8.dp))
+
                                                 IconButton(
                                                     onClick = {
                                                         if (item.recurringId.isNotEmpty()) {
