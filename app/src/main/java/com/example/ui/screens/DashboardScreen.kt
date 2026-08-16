@@ -224,6 +224,7 @@ fun DashboardScreen(
                     val totalExpense = expenses.sumOf { it.amount }
                     val totalLeftToPay = expenses.filter { !it.paid }.sumOf { it.amount }
                     val netBalance = totalIncome - totalExpense
+                    val currentBalance = totalIncome - totalLeftToPay
 
                     append("\n")
                     append("--- Summary ---\n")
@@ -231,6 +232,7 @@ fun DashboardScreen(
                     append("Total Expenses,,,,${String.format(Locale.US, "%.2f", totalExpense)},\n")
                     append("Total Left to Pay,,,,${String.format(Locale.US, "%.2f", totalLeftToPay)},\n")
                     append("Net Balance,,,,${String.format(Locale.US, "%.2f", netBalance)},\n")
+                    append("Current Balance,,,,${String.format(Locale.US, "%.2f", currentBalance)},\n")
                 }
                 context.contentResolver.openOutputStream(uri)?.use { os ->
                     os.write(csvContent.toByteArray())
@@ -439,6 +441,15 @@ fun DashboardScreen(
                     color = if (netBalance >= 0) android.graphics.Color.parseColor("#43A047") else android.graphics.Color.parseColor("#E53935")
                 }
                 canvas.drawText("Net Balance: $${String.format(Locale.US, "%.2f", netBalance)}", 45f, yPosition, balancePaint)
+
+                val currentBalance = totalIncome - totalLeftToPay
+                val currentBalancePaint = android.graphics.Paint().apply {
+                    textSize = 12f
+                    isFakeBoldText = true
+                    color = if (currentBalance >= 0) android.graphics.Color.parseColor("#43A047") else android.graphics.Color.parseColor("#E53935")
+                }
+                val cbSign = if (currentBalance >= 0) "+" else "-"
+                canvas.drawText("Current Balance: $cbSign$${String.format(Locale.US, "%.2f", kotlin.math.abs(currentBalance))}", 310f, yPosition, currentBalancePaint)
                 
                 pdfDocument.finishPage(page)
                 
