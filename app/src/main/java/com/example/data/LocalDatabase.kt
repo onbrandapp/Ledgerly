@@ -106,6 +106,127 @@ data class LocalCategory(
     }
 }
 
+@Entity(tableName = "local_forecast_incomes")
+data class LocalForecastIncome(
+    @PrimaryKey val id: String,
+    val title: String,
+    val amount: Double,
+    val expectedDate: Long,
+    val category: String,
+    val status: String,
+    val notes: String,
+    val bulletPointsJson: String,
+    val completedBulletsJson: String,
+    val isRealized: Boolean,
+    val userEmail: String,
+    val createdAt: Long
+) {
+    fun toDomain(): ForecastIncome = ForecastIncome(
+        id = id,
+        title = title,
+        amount = amount,
+        expectedDate = expectedDate,
+        category = category,
+        status = status,
+        notes = notes,
+        bulletPoints = JsonListHelper.jsonToStringList(bulletPointsJson),
+        completedBullets = JsonListHelper.jsonToIntList(completedBulletsJson),
+        isRealized = isRealized,
+        userEmail = userEmail,
+        createdAt = createdAt
+    )
+
+    companion object {
+        fun fromDomain(f: ForecastIncome): LocalForecastIncome = LocalForecastIncome(
+            id = f.id.ifEmpty { java.util.UUID.randomUUID().toString() },
+            title = f.title,
+            amount = f.amount,
+            expectedDate = f.expectedDate,
+            category = f.category,
+            status = f.status,
+            notes = f.notes,
+            bulletPointsJson = JsonListHelper.stringListToJson(f.bulletPoints),
+            completedBulletsJson = JsonListHelper.intListToJson(f.completedBullets),
+            isRealized = f.isRealized,
+            userEmail = f.userEmail,
+            createdAt = f.createdAt
+        )
+    }
+}
+
+@Entity(tableName = "local_future_income_notes")
+data class LocalFutureIncomeNote(
+    @PrimaryKey val id: String,
+    val title: String,
+    val content: String,
+    val bulletPointsJson: String,
+    val completedBulletsJson: String,
+    val userEmail: String,
+    val colorTag: String,
+    val createdAt: Long,
+    val updatedAt: Long
+) {
+    fun toDomain(): FutureIncomeNote = FutureIncomeNote(
+        id = id,
+        title = title,
+        content = content,
+        bulletPoints = JsonListHelper.jsonToStringList(bulletPointsJson),
+        completedBullets = JsonListHelper.jsonToIntList(completedBulletsJson),
+        userEmail = userEmail,
+        colorTag = colorTag,
+        createdAt = createdAt,
+        updatedAt = updatedAt
+    )
+
+    companion object {
+        fun fromDomain(n: FutureIncomeNote): LocalFutureIncomeNote = LocalFutureIncomeNote(
+            id = n.id.ifEmpty { java.util.UUID.randomUUID().toString() },
+            title = n.title,
+            content = n.content,
+            bulletPointsJson = JsonListHelper.stringListToJson(n.bulletPoints),
+            completedBulletsJson = JsonListHelper.intListToJson(n.completedBullets),
+            userEmail = n.userEmail,
+            colorTag = n.colorTag,
+            createdAt = n.createdAt,
+            updatedAt = n.updatedAt
+        )
+    }
+}
+
+object JsonListHelper {
+    fun stringListToJson(list: List<String>): String {
+        val arr = org.json.JSONArray()
+        list.forEach { arr.put(it) }
+        return arr.toString()
+    }
+
+    fun jsonToStringList(json: String): List<String> {
+        if (json.isBlank()) return emptyList()
+        return try {
+            val arr = org.json.JSONArray(json)
+            (0 until arr.length()).map { arr.getString(it) }
+        } catch (e: Exception) {
+            emptyList()
+        }
+    }
+
+    fun intListToJson(list: List<Int>): String {
+        val arr = org.json.JSONArray()
+        list.forEach { arr.put(it) }
+        return arr.toString()
+    }
+
+    fun jsonToIntList(json: String): List<Int> {
+        if (json.isBlank()) return emptyList()
+        return try {
+            val arr = org.json.JSONArray(json)
+            (0 until arr.length()).map { arr.getInt(it) }
+        } catch (e: Exception) {
+            emptyList()
+        }
+    }
+}
+
 @Dao
 interface TransactionDao {
     @Query("SELECT * FROM local_transactions ORDER BY date DESC")
@@ -134,10 +255,41 @@ interface TransactionDao {
 
     @Query("DELETE FROM local_categories WHERE id = :id")
     suspend fun deleteCustomCategoryById(id: String)
+
+    // Forecast Income Queries
+    @Query("SELECT * FROM local_forecast_incomes WHERE userEmail = :userEmail ORDER BY expectedDate ASC")
+    fun getForecastIncomes(userEmail: String): Flow<List<LocalForecastIncome>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertForecastIncome(forecast: LocalForecastIncome)
+
+    @Query("DELETE FROM local_forecast_incomes WHERE id = :id")
+    suspend fun deleteForecastIncomeById(id: String)
+
+    // Future Income Notes Queries
+    @Query("SELECT * FROM local_future_income_notes WHERE userEmail = :userEmail ORDER BY updatedAt DESC")
+    fun getFutureIncomeNotes(userEmail: String): Flow<List<LocalFutureIncomeNote>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertFutureIncomeNote(note: LocalFutureIncomeNote)
+
+    @Query("DELETE FROM local_future_income_notes WHERE id = :id")
+    suspend fun deleteFutureIncomeNoteById(id: String)
 }
 
-@Database(entities = [LocalTransaction::class, LocalRecurringTransaction::class, LocalCategory::class], version = 6, exportSchema = false)
+@Database(
+    entities = [
+        LocalTransaction::class,
+        LocalRecurringTransaction::class,
+        LocalCategory::class,
+        LocalForecastIncome::class,
+        LocalFutureIncomeNote::class
+    ],
+    version = 7,
+    exportSchema = false
+)
 abstract class AppDatabase : RoomDatabase() {
+
     abstract fun transactionDao(): TransactionDao
 
     companion object {

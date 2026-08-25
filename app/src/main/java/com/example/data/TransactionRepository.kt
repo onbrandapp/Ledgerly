@@ -23,6 +23,14 @@ interface TransactionRepository {
     fun getCustomCategories(userEmail: String): Flow<List<CustomCategory>>
     suspend fun addCustomCategory(userEmail: String, category: CustomCategory): Result<Unit>
     suspend fun deleteCustomCategory(userEmail: String, id: String): Result<Unit>
+
+    fun getForecastIncomes(userEmail: String): Flow<List<ForecastIncome>>
+    suspend fun addForecastIncome(userEmail: String, forecast: ForecastIncome): Result<Unit>
+    suspend fun deleteForecastIncome(userEmail: String, id: String): Result<Unit>
+
+    fun getFutureIncomeNotes(userEmail: String): Flow<List<FutureIncomeNote>>
+    suspend fun addFutureIncomeNote(userEmail: String, note: FutureIncomeNote): Result<Unit>
+    suspend fun deleteFutureIncomeNote(userEmail: String, id: String): Result<Unit>
 }
 
 class FirebaseTransactionRepository : TransactionRepository {
@@ -183,6 +191,110 @@ class FirebaseTransactionRepository : TransactionRepository {
                 if (continuation.isActive) continuation.resume(Result.failure(exception))
             }
     }
+
+    override fun getForecastIncomes(userEmail: String): Flow<List<ForecastIncome>> = callbackFlow {
+        val query = firestore.collection("users")
+            .document(userEmail)
+            .collection("forecast_incomes")
+            .orderBy("expectedDate", Query.Direction.ASCENDING)
+
+        val registration = query.addSnapshotListener { snapshot, error ->
+            if (error != null) {
+                close(error)
+                return@addSnapshotListener
+            }
+            if (snapshot != null) {
+                val list = snapshot.documents.mapNotNull { doc ->
+                    doc.toObject(ForecastIncome::class.java)?.copy(id = doc.id)
+                }
+                trySend(list)
+            }
+        }
+        awaitClose { registration.remove() }
+    }
+
+    override suspend fun addForecastIncome(userEmail: String, forecast: ForecastIncome): Result<Unit> = suspendCancellableCoroutine { continuation ->
+        val collection = firestore.collection("users")
+            .document(userEmail)
+            .collection("forecast_incomes")
+
+        val docRef = if (forecast.id.isEmpty()) collection.document() else collection.document(forecast.id)
+        val finalForecast = forecast.copy(id = docRef.id, userEmail = userEmail)
+
+        docRef.set(finalForecast)
+            .addOnSuccessListener {
+                if (continuation.isActive) continuation.resume(Result.success(Unit))
+            }
+            .addOnFailureListener { exception ->
+                if (continuation.isActive) continuation.resume(Result.failure(exception))
+            }
+    }
+
+    override suspend fun deleteForecastIncome(userEmail: String, id: String): Result<Unit> = suspendCancellableCoroutine { continuation ->
+        firestore.collection("users")
+            .document(userEmail)
+            .collection("forecast_incomes")
+            .document(id)
+            .delete()
+            .addOnSuccessListener {
+                if (continuation.isActive) continuation.resume(Result.success(Unit))
+            }
+            .addOnFailureListener { exception ->
+                if (continuation.isActive) continuation.resume(Result.failure(exception))
+            }
+    }
+
+    override fun getFutureIncomeNotes(userEmail: String): Flow<List<FutureIncomeNote>> = callbackFlow {
+        val query = firestore.collection("users")
+            .document(userEmail)
+            .collection("future_income_notes")
+            .orderBy("updatedAt", Query.Direction.DESCENDING)
+
+        val registration = query.addSnapshotListener { snapshot, error ->
+            if (error != null) {
+                close(error)
+                return@addSnapshotListener
+            }
+            if (snapshot != null) {
+                val list = snapshot.documents.mapNotNull { doc ->
+                    doc.toObject(FutureIncomeNote::class.java)?.copy(id = doc.id)
+                }
+                trySend(list)
+            }
+        }
+        awaitClose { registration.remove() }
+    }
+
+    override suspend fun addFutureIncomeNote(userEmail: String, note: FutureIncomeNote): Result<Unit> = suspendCancellableCoroutine { continuation ->
+        val collection = firestore.collection("users")
+            .document(userEmail)
+            .collection("future_income_notes")
+
+        val docRef = if (note.id.isEmpty()) collection.document() else collection.document(note.id)
+        val finalNote = note.copy(id = docRef.id, userEmail = userEmail)
+
+        docRef.set(finalNote)
+            .addOnSuccessListener {
+                if (continuation.isActive) continuation.resume(Result.success(Unit))
+            }
+            .addOnFailureListener { exception ->
+                if (continuation.isActive) continuation.resume(Result.failure(exception))
+            }
+    }
+
+    override suspend fun deleteFutureIncomeNote(userEmail: String, id: String): Result<Unit> = suspendCancellableCoroutine { continuation ->
+        firestore.collection("users")
+            .document(userEmail)
+            .collection("future_income_notes")
+            .document(id)
+            .delete()
+            .addOnSuccessListener {
+                if (continuation.isActive) continuation.resume(Result.success(Unit))
+            }
+            .addOnFailureListener { exception ->
+                if (continuation.isActive) continuation.resume(Result.failure(exception))
+            }
+    }
 }
 
 class RoomTransactionRepository(context: Context) : TransactionRepository {
@@ -257,6 +369,56 @@ class RoomTransactionRepository(context: Context) : TransactionRepository {
     override suspend fun deleteCustomCategory(userEmail: String, id: String): Result<Unit> {
         return try {
             dao.deleteCustomCategoryById(id)
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    override fun getForecastIncomes(userEmail: String): Flow<List<ForecastIncome>> {
+        return dao.getForecastIncomes(userEmail).map { list ->
+            list.map { it.toDomain() }
+        }
+    }
+
+    override suspend fun addForecastIncome(userEmail: String, forecast: ForecastIncome): Result<Unit> {
+        return try {
+            val localForecast = LocalForecastIncome.fromDomain(forecast.copy(userEmail = userEmail))
+            dao.insertForecastIncome(localForecast)
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun deleteForecastIncome(userEmail: String, id: String): Result<Unit> {
+        return try {
+            dao.deleteForecastIncomeById(id)
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    override fun getFutureIncomeNotes(userEmail: String): Flow<List<FutureIncomeNote>> {
+        return dao.getFutureIncomeNotes(userEmail).map { list ->
+            list.map { it.toDomain() }
+        }
+    }
+
+    override suspend fun addFutureIncomeNote(userEmail: String, note: FutureIncomeNote): Result<Unit> {
+        return try {
+            val localNote = LocalFutureIncomeNote.fromDomain(note.copy(userEmail = userEmail))
+            dao.insertFutureIncomeNote(localNote)
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun deleteFutureIncomeNote(userEmail: String, id: String): Result<Unit> {
+        return try {
+            dao.deleteFutureIncomeNoteById(id)
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)

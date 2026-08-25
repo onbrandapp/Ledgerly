@@ -80,6 +80,49 @@ class ExpenseViewModel(application: Application) : AndroidViewModel(application)
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    // Forecast Income State Flow
+    val forecastIncomes: StateFlow<List<ForecastIncome>> = currentUserEmail
+        .flatMapLatest { email ->
+            if (email != null) {
+                transactionRepository.getForecastIncomes(email)
+                    .catch { emit(emptyList()) }
+            } else {
+                flowOf(emptyList())
+            }
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    // Future Income Notes State Flow
+    val futureIncomeNotes: StateFlow<List<FutureIncomeNote>> = currentUserEmail
+        .flatMapLatest { email ->
+            if (email != null) {
+                transactionRepository.getFutureIncomeNotes(email)
+                    .catch { emit(emptyList()) }
+            } else {
+                flowOf(emptyList())
+            }
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    // Forecast Summary Pipeline Calculation
+    val forecastSummary: StateFlow<ForecastSummary> = forecastIncomes.map { list ->
+        val activeList = list.filter { !it.isRealized }
+        val confirmed = activeList.filter { it.status.equals("CONFIRMED", ignoreCase = true) }.sumOf { it.amount }
+        val expected = activeList.filter { it.status.equals("EXPECTED", ignoreCase = true) }.sumOf { it.amount }
+        val tentative = activeList.filter { it.status.equals("TENTATIVE", ignoreCase = true) }.sumOf { it.amount }
+        val total = activeList.sumOf { it.amount }
+        val realizedList = list.filter { it.isRealized }
+
+        ForecastSummary(
+            totalPipeline = total,
+            confirmedAmount = confirmed,
+            expectedAmount = expected,
+            tentativeAmount = tentative,
+            activeCount = activeList.size,
+            realizedCount = realizedList.size
+        )
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), ForecastSummary(0.0, 0.0, 0.0, 0.0, 0, 0))
+
     // Calculations Flow for Current Month
     val monthlySummary = transactions.map { list ->
         val currentCal = Calendar.getInstance()
@@ -577,6 +620,136 @@ class ExpenseViewModel(application: Application) : AndroidViewModel(application)
                 }
         }
     }
+    // Forecast Income Operations
+    fun addOrUpdateForecastIncome(
+        title: String,
+        amount: Double,
+        expectedDate: Long,
+        category: String,
+        status: String,
+        notes: String,
+        bulletPoints: List<String>,
+        id: String = "",
+        completedBullets: List<Int> = emptyList(),
+        isRealized: Boolean = false
+    ) {
+        val email = currentUserEmail.value ?: return
+        if (title.isBlank()) return
+        viewModelScope.launch {
+            val forecast = ForecastIncome(
+                id = id.ifEmpty { java.util.UUID.randomUUID().toString() },
+                title = title.trim(),
+                amount = amount,
+                expectedDate = expectedDate,
+                category = category.trim(),
+                status = status,
+                notes = notes.trim(),
+                bulletPoints = bulletPoints.filter { it.isNotBlank() }.map { it.trim() },
+                completedBullets = completedBullets,
+                isRealized = isRealized,
+                userEmail = email
+            )
+            transactionRepository.addForecastIncome(email, forecast)
+        }
+    }
+
+    fun deleteForecastIncome(id: String) {
+        val email = currentUserEmail.value ?: return
+        viewModelScope.launch {
+            transactionRepository.deleteForecastIncome(email, id)
+        }
+    }
+
+    fun toggleForecastBulletCompleted(forecastId: String, bulletIndex: Int) {
+        val email = currentUserEmail.value ?: return
+        viewModelScope.launch {
+            val item = forecastIncomes.value.find { it.id == forecastId } ?: return@launch
+            val newCompleted = if (item.completedBullets.contains(bulletIndex)) {
+                item.completedBullets - bulletIndex
+            } else {
+                item.completedBullets + bulletIndex
+            }
+            val updated = item.copy(completedBullets = newCompleted)
+            transactionRepository.addForecastIncome(email, updated)
+        }
+    }
+
+    fun convertForecastToActualIncome(forecast: ForecastIncome, markRealizedOnly: Boolean = false) {
+        val email = currentUserEmail.value ?: return
+        viewModelScope.launch {
+            // Add as actual Income transaction
+            val newTx = Transaction(
+                id = java.util.UUID.randomUUID().toString(),
+                amount = forecast.amount,
+                category = forecast.category.ifBlank { "Income" },
+                type = "INCOME",
+                description = "${forecast.title} (From Forecast)",
+                date = System.currentTimeMillis(),
+                paid = true
+            )
+            transactionRepository.addTransaction(email, newTx)
+
+            // Update forecast status to realized
+            val updatedForecast = forecast.copy(isRealized = true, status = "CONFIRMED")
+            transactionRepository.addForecastIncome(email, updatedForecast)
+        }
+    }
+
+    fun toggleForecastRealizedState(id: String) {
+        val email = currentUserEmail.value ?: return
+        viewModelScope.launch {
+            val item = forecastIncomes.value.find { it.id == id } ?: return@launch
+            val updated = item.copy(isRealized = !item.isRealized)
+            transactionRepository.addForecastIncome(email, updated)
+        }
+    }
+
+    // Future Income Notes Operations
+    fun addOrUpdateFutureIncomeNote(
+        title: String,
+        content: String,
+        bulletPoints: List<String>,
+        id: String = "",
+        colorTag: String = "#FFD97D",
+        completedBullets: List<Int> = emptyList()
+    ) {
+        val email = currentUserEmail.value ?: return
+        if (title.isBlank() && content.isBlank() && bulletPoints.none { it.isNotBlank() }) return
+        viewModelScope.launch {
+            val note = FutureIncomeNote(
+                id = id.ifEmpty { java.util.UUID.randomUUID().toString() },
+                title = title.trim(),
+                content = content.trim(),
+                bulletPoints = bulletPoints.filter { it.isNotBlank() }.map { it.trim() },
+                completedBullets = completedBullets,
+                userEmail = email,
+                colorTag = colorTag,
+                updatedAt = System.currentTimeMillis()
+            )
+            transactionRepository.addFutureIncomeNote(email, note)
+        }
+    }
+
+    fun deleteFutureIncomeNote(id: String) {
+        val email = currentUserEmail.value ?: return
+        viewModelScope.launch {
+            transactionRepository.deleteFutureIncomeNote(email, id)
+        }
+    }
+
+    fun toggleNoteBulletCompleted(noteId: String, bulletIndex: Int) {
+        val email = currentUserEmail.value ?: return
+        viewModelScope.launch {
+            val item = futureIncomeNotes.value.find { it.id == noteId } ?: return@launch
+            val newCompleted = if (item.completedBullets.contains(bulletIndex)) {
+                item.completedBullets - bulletIndex
+            } else {
+                item.completedBullets + bulletIndex
+            }
+            val updated = item.copy(completedBullets = newCompleted, updatedAt = System.currentTimeMillis())
+            transactionRepository.addFutureIncomeNote(email, updated)
+        }
+    }
 }
 
 data class MonthlySummary(
@@ -584,3 +757,13 @@ data class MonthlySummary(
     val totalExpense: Double,
     val currentMonthList: List<Transaction>
 )
+
+data class ForecastSummary(
+    val totalPipeline: Double,
+    val confirmedAmount: Double,
+    val expectedAmount: Double,
+    val tentativeAmount: Double,
+    val activeCount: Int,
+    val realizedCount: Int
+)
+

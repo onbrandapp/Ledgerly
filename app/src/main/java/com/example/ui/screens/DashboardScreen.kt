@@ -80,6 +80,7 @@ fun DashboardScreen(
     val monthlySummary by viewModel.monthlySummary.collectAsState()
     val monthlyBudget by viewModel.monthlyBudget.collectAsState()
     val recurringTransactions by viewModel.recurringTransactions.collectAsState()
+    val forecastSummary by viewModel.forecastSummary.collectAsState()
 
     val primaryColorHex by viewModel.primaryColor.collectAsState()
     val secondaryColorHex by viewModel.secondaryColor.collectAsState()
@@ -107,6 +108,7 @@ fun DashboardScreen(
     var transactionToDeleteSeriesOption by remember { mutableStateOf<Transaction?>(null) }
 
     var showLedgerSheet by remember { mutableStateOf(false) }
+    var showForecastSheet by remember { mutableStateOf(false) }
     val context = LocalContext.current
 
     var ledgerStartDate by remember { mutableStateOf<Long?>(null) }
@@ -1045,43 +1047,76 @@ fun DashboardScreen(
                     }
                 }
 
-                // "Complete Ledger" Button directly below the Expenses & Income Bento Grid row
-                OutlinedButton(
-                    onClick = { showLedgerSheet = true },
+                // Action Buttons directly below the Expenses & Income Bento Grid row
+                Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 8.dp)
-                        .testTag("complete_ledger_button"),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = ButtonDefaults.outlinedButtonColors(
-                        contentColor = MaterialTheme.colorScheme.primary
-                    ),
-                    border = BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f))
+                        .padding(vertical = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.ReceiptLong,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = "Complete Ledger",
-                        fontWeight = FontWeight.Bold,
-                        style = MaterialTheme.typography.bodyMedium
-                    )
+                    OutlinedButton(
+                        onClick = { showLedgerSheet = true },
+                        modifier = Modifier
+                            .weight(1f)
+                            .testTag("complete_ledger_button"),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = MaterialTheme.colorScheme.primary
+                        ),
+                        border = BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)),
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 10.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.ReceiptLong,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = "Ledger",
+                            fontWeight = FontWeight.Bold,
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+
+                    FilledTonalButton(
+                        onClick = {
+                            selectedTab = 3
+                            showForecastSheet = true
+                        },
+                        modifier = Modifier
+                            .weight(1f)
+                            .testTag("forecast_quick_button"),
+                        shape = RoundedCornerShape(16.dp),
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 10.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Timeline,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = "Forecast",
+                            fontWeight = FontWeight.Bold,
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
                 }
 
                 // --- 3. DATA VISUALIZATION SECTION ---
                 VisualAnalyticsSection(transactions = transactions)
 
-                // --- 4. TRANSACTION / RECURRING SWITCH HEADER ---
+                // --- 4. TRANSACTION / RECURRING / FORECAST SWITCH HEADER ---
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(top = 16.dp, bottom = 8.dp)
                 ) {
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState()),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -1103,6 +1138,19 @@ fun DashboardScreen(
                             label = { Text("Recurring", fontWeight = FontWeight.ExtraBold) },
                             modifier = Modifier.testTag("tab_recurring")
                         )
+                        FilterChip(
+                            selected = selectedTab == 3,
+                            onClick = { selectedTab = 3 },
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = Icons.Default.TrendingUp,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            },
+                            label = { Text("Forecast & Notes", fontWeight = FontWeight.ExtraBold) },
+                            modifier = Modifier.testTag("tab_forecast")
+                        )
                     }
 
                     Spacer(modifier = Modifier.height(4.dp))
@@ -1118,7 +1166,8 @@ fun DashboardScreen(
                             text = when (selectedTab) {
                                 0 -> "${monthlySummary.currentMonthList.size} items"
                                 1 -> "${transactions.size} items"
-                                else -> "${recurringTransactions.size} rules"
+                                2 -> "${recurringTransactions.size} rules"
+                                else -> "${forecastSummary.activeCount} upcoming pipeline"
                             },
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.SemiBold,
@@ -1399,7 +1448,7 @@ fun DashboardScreen(
                             }
                         }
                     }
-                } else {
+                } else if (selectedTab == 2) {
                     if (recurringTransactions.isEmpty()) {
                         Box(
                             modifier = Modifier
@@ -1454,6 +1503,9 @@ fun DashboardScreen(
                             }
                         }
                     }
+                } else {
+                    // Tab 3: Forecast Future Income & Notes Section
+                    ForecastIncomeSection(viewModel = viewModel)
                 }
 
                 Spacer(modifier = Modifier.height(100.dp))
@@ -2693,6 +2745,84 @@ fun DashboardScreen(
                         }
                     }
                 }
+            }
+        }
+    }
+
+    // --- COMPLETE FORECAST & NOTES BOTTOM DRAWER ---
+    if (showForecastSheet) {
+        val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+        ModalBottomSheet(
+            onDismissRequest = { showForecastSheet = false },
+            sheetState = sheetState,
+            containerColor = MaterialTheme.colorScheme.surface,
+            tonalElevation = 8.dp,
+            dragHandle = { BottomSheetDefaults.DragHandle() },
+            modifier = Modifier
+                .fillMaxHeight(0.92f)
+                .testTag("forecast_bottom_sheet")
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .navigationBarsPadding()
+                    .padding(horizontal = 16.dp)
+                    .verticalScroll(rememberScrollState())
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 12.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Surface(
+                            shape = CircleShape,
+                            color = MaterialTheme.colorScheme.primaryContainer,
+                            modifier = Modifier.size(38.dp)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    imageVector = Icons.Default.Timeline,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                        }
+                        Column {
+                            Text(
+                                text = "Future Income Forecast",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Black,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = "Project upcoming revenue, milestones & notes",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+
+                    IconButton(
+                        onClick = { showForecastSheet = false },
+                        modifier = Modifier.testTag("close_forecast_sheet_button")
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "Close Forecast Sheet"
+                        )
+                    }
+                }
+
+                ForecastIncomeSection(viewModel = viewModel)
+
+                Spacer(modifier = Modifier.height(32.dp))
             }
         }
     }
