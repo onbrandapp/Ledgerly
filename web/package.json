@@ -1,0 +1,19 @@
+{
+  "name": "ledgerly-web-companion",
+  "version": "35.0.0",
+  "description": "Web Companion, Landing Page, and Privacy Policy for Ledgerly Android App",
+  "private": true,
+  "scripts": {
+    "start": "npx serve ."
+  },
+  "keywords": [
+    "ledgerly",
+    "personal-finance",
+    "expense-tracker",
+    "android",
+    "gemini-ai",
+    "landing-page"
+  ],
+  "author": "FeelGood Studio",
+  "license": "MIT"
+}

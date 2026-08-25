@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ledgerly - Smart AI Expense Tracker & Financial Ledger</title>
+  <meta name="description" content="AI-powered financial ledger, future revenue forecasting, recurring bill automation, and offline-first Room database for Android.">
+  <link rel="stylesheet" href="/styles.css">
+  <link rel="icon" type="image/png" href="/Android_App_Icon.png">
+</head>
+<body>
+  <div class="bg-glow"></div>
+
+  <!-- Header -->
+  <header>
+    <div class="container nav-bar">
+      <a href="/" class="logo-group">
+        <div class="logo-badge">L</div>
+        <span class="logo-text">Ledgerly</span>
+        <span class="logo-version">v35.0</span>
+      </a>
+      <nav class="nav-links">
+        <a href="#features">Features</a>
+        <a href="#forecast">Forecast Engine</a>
+        <a href="#demo">Live Demo</a>
+        <a href="/privacy.html">Privacy Policy</a>
+        <a href="https://github.com/feelgoodstudio2026" target="_blank" class="btn-secondary">GitHub</a>
+        <a href="#download" class="btn-primary">Download App</a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Hero -->
+  <main class="container">
+    <section class="hero">
+      <div class="hero-pill">
+        ✨ Powered by Google Gemini 2.5 Flash & Offline-First Jetpack Room
+      </div>
+      <h1>Intelligent Financial Tracking.<br>Future Income Forecasting.</h1>
+      <p>
+        Effortlessly log transactions using natural language AI, project future revenue pipelines with milestone checklists, and automate recurring subscriptions with complete privacy.
+      </p>
+      <div class="hero-cta">
+        <a href="#download" class="btn-primary" style="padding: 14px 28px; font-size: 16px;">
+          ⚡ Get on Google Play
+        </a>
+        <a href="#demo" class="btn-secondary" style="padding: 14px 28px; font-size: 16px;">
+          Try Interactive Demo
+        </a>
+      </div>
+    </section>
+
+    <!-- Release Info Banner -->
+    <section class="release-banner" id="download">
+      <div class="release-info">
+        <h3>Ledgerly Production Release v35.0 (Target SDK 36)</h3>
+        <p>Verified on Google Play Console and GitHub. Full offline Room persistence + Cloud Firestore Sync.</p>
+      </div>
+      <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+        <a href="https://play.google.com/store" target="_blank" class="btn-primary">
+          Google Play Store
+        </a>
+        <a href="https://github.com/feelgoodstudio2026" target="_blank" class="btn-secondary">
+          Download APK (.apk)
+        </a>
+      </div>
+    </section>
+
+    <!-- Bento Features Grid -->
+    <section class="bento-section" id="features">
+      <div class="section-title">
+        <h2>Designed for Complete Financial Mastery</h2>
+        <p>From instant natural language parsing to multi-month pipeline planning.</p>
+      </div>
+
+      <div class="bento-grid">
+        <!-- Card 1: Gemini AI NLP -->
+        <div class="bento-card col-2" id="demo">
+          <div class="card-icon icon-purple">⚡</div>
+          <h3>Natural Language AI Transaction Parsing</h3>
+          <p>
+            Simply type or speak as you normally do. Gemini 2.5 Flash extracts the exact financial amount, category, type (Expense/Income), and note in structured format.
+          </p>
+
+          <div class="demo-box">
+            <div class="input-row">
+              <input type="text" id="nlp-input" class="demo-input" placeholder="e.g. Spent $32.40 on groceries at Trader Joe's" value="Received $1,250 design retainer from Acme Corp">
+              <button id="btn-simulate-parse" class="btn-primary" style="padding: 8px 16px;">Parse</button>
+            </div>
+            <div id="nlp-result" class="demo-result">
+              <span style="color: #94a3b8;">Click "Parse" to test the Gemini parser logic live...</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 2: Dual Persistence -->
+        <div class="bento-card">
+          <div class="card-icon icon-green">🛡️</div>
+          <h3>Offline-First & Cloud Sync</h3>
+          <p>
+            Your data is saved instantly on-device via <strong>Android Jetpack Room SQLite</strong> with zero latency. When connected, changes seamlessly sync to <strong>Firebase Firestore</strong>.
+          </p>
+        </div>
+
+        <!-- Card 3: Future Income Pipeline -->
+        <div class="bento-card col-2" id="forecast">
+          <div class="card-icon icon-amber">📈</div>
+          <h3>Future Income Pipeline & Forecasting</h3>
+          <p>
+            Anticipate expected invoices, project bonuses, and freelance retainers. Filter by <em>Confirmed</em>, <em>Expected</em>, or <em>Tentative</em>, and realize them into your active ledger with one tap upon payment.
+          </p>
+
+          <div class="demo-box">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+              <span style="font-size:13px; color:var(--text-muted);">Pipeline Total:</span>
+              <strong id="forecast-total-display" data-total="5650" style="color:#34d399; font-size:18px;">$5,650.00</strong>
+            </div>
+
+            <div class="input-row">
+              <input type="text" id="forecast-title" class="demo-input" placeholder="Project name (e.g. Website Overhaul)">
+              <input type="number" id="forecast-amount" class="demo-input" placeholder="Amount ($)" style="max-width:110px;">
+              <select id="forecast-status" class="demo-input" style="max-width:130px; background:#1e293b;">
+                <option value="EXPECTED">Expected</option>
+                <option value="CONFIRMED">Confirmed</option>
+                <option value="TENTATIVE">Tentative</option>
+              </select>
+              <button id="btn-add-forecast" class="btn-primary" style="padding: 8px 14px;">+ Add</button>
+            </div>
+
+            <div id="forecast-items-list" class="pipeline-bars">
+              <div class="pipeline-item">
+                <span><strong>Q3 Retainer Renewal</strong></span>
+                <span><span class="tag-confirmed">CONFIRMED</span> · <strong>$3,200.00</strong></span>
+              </div>
+              <div class="pipeline-item">
+                <span><strong>Mobile App MVP Milestone</strong></span>
+                <span><span class="tag-expected">EXPECTED</span> · <strong>$2,450.00</strong></span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 4: Automated Recurrences -->
+        <div class="bento-card">
+          <div class="card-icon icon-blue">🔄</div>
+          <h3>Recurring Series Engine</h3>
+          <p>
+            Set recurring schedules for rent, cloud hosting, payroll, and subscriptions. Ledgerly monitors timestamps and auto-posts ledger entries when due.
+          </p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Footer -->
+  <footer>
+    <div class="container footer-content">
+      <div style="font-size: 13px; color: var(--text-muted);">
+        &copy; 2026 <strong>Ledgerly</strong>. Built natively with Jetpack Compose & Kotlin for Android.
+      </div>
+      <div class="footer-links">
+        <a href="/privacy.html">Privacy Policy</a>
+        <a href="/terms.html">Terms of Service</a>
+        <a href="https://github.com/feelgoodstudio2026" target="_blank">GitHub</a>
+      </div>
+    </div>
+  </footer>
+
+  <script src="/app.js"></script>
+</body>
+</html>
