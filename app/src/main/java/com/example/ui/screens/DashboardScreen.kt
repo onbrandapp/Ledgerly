@@ -226,9 +226,9 @@ fun DashboardScreen(
                     // Summary rows
                     val incomes = ledgerFilteredTransactions.filter { it.type.uppercase() == "INCOME" }
                     val expenses = ledgerFilteredTransactions.filter { it.type.uppercase() == "EXPENSE" }
-                    val totalIncome = incomes.sumOf { it.amount }
-                    val totalLeftToReceive = incomes.filter { !it.paid }.sumOf { it.amount }
-                    val cashOnHand = incomes.filter { it.category.contains("cash", ignoreCase = true) || it.description.contains("cash", ignoreCase = true) }.sumOf { it.amount }
+                    val cashOnHand = incomes.filter { it.category.trim().equals("cash", ignoreCase = true) }.sumOf { it.amount }
+                    val totalIncome = incomes.filter { !it.category.trim().equals("cash", ignoreCase = true) }.sumOf { it.amount }
+                    val totalLeftToReceive = incomes.filter { !it.paid && !it.category.trim().equals("cash", ignoreCase = true) }.sumOf { it.amount }
                     val totalExpense = expenses.sumOf { it.amount }
                     val totalLeftToPay = expenses.filter { !it.paid }.sumOf { it.amount }
                     val netBalance = totalIncome - totalExpense
@@ -408,9 +408,9 @@ fun DashboardScreen(
                 }
                 
                 // Totals
-                val totalIncome = incomes.sumOf { it.amount }
-                val totalLeftToReceive = incomes.filter { !it.paid }.sumOf { it.amount }
-                val cashOnHand = incomes.filter { it.category.contains("cash", ignoreCase = true) || it.description.contains("cash", ignoreCase = true) }.sumOf { it.amount }
+                val cashOnHand = incomes.filter { it.category.trim().equals("cash", ignoreCase = true) }.sumOf { it.amount }
+                val totalIncome = incomes.filter { !it.category.trim().equals("cash", ignoreCase = true) }.sumOf { it.amount }
+                val totalLeftToReceive = incomes.filter { !it.paid && !it.category.trim().equals("cash", ignoreCase = true) }.sumOf { it.amount }
                 val totalExpense = expenses.sumOf { it.amount }
                 val totalLeftToPay = expenses.filter { !it.paid }.sumOf { it.amount }
                 val netBalance = totalIncome - totalExpense
@@ -1914,9 +1914,9 @@ fun DashboardScreen(
                 }
             }
 
-            val totalIncome = remember(incomeList) { incomeList.sumOf { it.amount } }
-            val totalLeftToReceive = remember(incomeList) { incomeList.filter { !it.paid }.sumOf { it.amount } }
-            val cashOnHand = remember(incomeList) { incomeList.filter { it.category.contains("cash", ignoreCase = true) || it.description.contains("cash", ignoreCase = true) }.sumOf { it.amount } }
+            val cashOnHand = remember(incomeList) { incomeList.filter { it.category.trim().equals("cash", ignoreCase = true) }.sumOf { it.amount } }
+            val totalIncome = remember(incomeList) { incomeList.filter { !it.category.trim().equals("cash", ignoreCase = true) }.sumOf { it.amount } }
+            val totalLeftToReceive = remember(incomeList) { incomeList.filter { !it.paid && !it.category.trim().equals("cash", ignoreCase = true) }.sumOf { it.amount } }
             val totalExpense = remember(expenseList) { expenseList.sumOf { it.amount } }
             val totalLeftToPay = remember(rawExpenseList) { rawExpenseList.filter { !it.paid }.sumOf { it.amount } }
             val ledgerFormatter = remember { SimpleDateFormat("MMM dd, yyyy", Locale.getDefault()) }
@@ -3860,7 +3860,7 @@ fun VisualAnalyticsSection(
         spendingByCategory.entries.sortedByDescending { it.value }
     }
 
-    // 6-Month Spending Trends (Bar Chart)
+    // 6-Month Income & Spending Trends (Grouped Bar Chart)
     val monthlyTrends = remember(transactions) {
         val trends = mutableListOf<MonthTrend>()
         val cal = Calendar.getInstance()
@@ -3881,11 +3881,20 @@ fun VisualAnalyticsSection(
                 txCal.get(Calendar.YEAR) == targetYear &&
                 tx.type == "EXPENSE"
             }.sumOf { it.amount }
+
+            val totalEarned = transactions.filter { tx ->
+                val txCal = Calendar.getInstance().apply { timeInMillis = tx.date }
+                txCal.get(Calendar.MONTH) == targetMonth && 
+                txCal.get(Calendar.YEAR) == targetYear &&
+                tx.type == "INCOME" &&
+                !tx.category.trim().equals("cash", ignoreCase = true)
+            }.sumOf { it.amount }
             
             trends.add(
                 MonthTrend(
                     label = label,
-                    amount = totalSpent,
+                    expenseAmount = totalSpent,
+                    incomeAmount = totalEarned,
                     month = targetMonth,
                     year = targetYear
                 )
@@ -3896,7 +3905,7 @@ fun VisualAnalyticsSection(
     }
 
     val maxAmount = remember(monthlyTrends) {
-        monthlyTrends.maxOfOrNull { it.amount } ?: 0.0
+        monthlyTrends.maxOfOrNull { maxOf(it.expenseAmount, it.incomeAmount) } ?: 0.0
     }
 
     Card(
@@ -4084,14 +4093,59 @@ fun VisualAnalyticsSection(
                     .padding(vertical = 12.dp)
             )
 
-            // BAR CHART SECTION (6-MONTH TRENDS)
-            Text(
-                text = "Monthly Spending Trend",
-                style = MaterialTheme.typography.labelMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(bottom = 12.dp)
-            )
+            // BAR CHART SECTION (6-MONTH INCOME VS SPENDING TRENDS)
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 12.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "6-Month Income vs Spending",
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                // Legend
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(8.dp)
+                                .clip(RoundedCornerShape(2.dp))
+                                .background(Color(0xFF10B981))
+                        )
+                        Text(
+                            text = "Income",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(8.dp)
+                                .clip(RoundedCornerShape(2.dp))
+                                .background(MaterialTheme.colorScheme.primary)
+                        )
+                        Text(
+                            text = "Expenses",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
 
             Row(
                 modifier = Modifier
@@ -4107,7 +4161,7 @@ fun VisualAnalyticsSection(
                         modifier = Modifier.weight(1f)
                     ) {
                         Text(
-                            text = if (trend.amount > 0) "$${trend.amount.toInt()}" else "$0",
+                            text = if (trend.expenseAmount > 0) "$${trend.expenseAmount.toInt()}" else "$0",
                             style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -4119,33 +4173,47 @@ fun VisualAnalyticsSection(
                             modifier = Modifier
                                 .weight(1f)
                                 .fillMaxWidth()
-                                .padding(horizontal = 4.dp),
+                                .padding(horizontal = 2.dp),
                             contentAlignment = Alignment.BottomCenter
                         ) {
-                            // Track
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxHeight()
-                                    .width(14.dp)
-                                    .clip(RoundedCornerShape(6.dp))
-                                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
-                            )
-                            // Filled Bar
-                            val barHeightPct = if (maxAmount > 0) (trend.amount / maxAmount).toFloat() else 0f
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxHeight(barHeightPct.coerceAtLeast(0.03f))
-                                    .width(14.dp)
-                                    .clip(RoundedCornerShape(6.dp))
-                                    .background(
-                                        Brush.verticalGradient(
-                                            colors = listOf(
-                                                MaterialTheme.colorScheme.primary,
-                                                MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)
+                            Row(
+                                modifier = Modifier.fillMaxHeight(),
+                                horizontalArrangement = Arrangement.spacedBy(3.dp),
+                                verticalAlignment = Alignment.Bottom
+                            ) {
+                                // Income Bar (Green)
+                                val incomeHeightPct = if (maxAmount > 0) (trend.incomeAmount / maxAmount).toFloat() else 0f
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxHeight(incomeHeightPct.coerceAtLeast(0.03f))
+                                        .width(7.dp)
+                                        .clip(RoundedCornerShape(4.dp))
+                                        .background(
+                                            Brush.verticalGradient(
+                                                colors = listOf(
+                                                    Color(0xFF34D399),
+                                                    Color(0xFF059669)
+                                                )
                                             )
                                         )
-                                    )
-                            )
+                                )
+                                // Expense Bar (Primary)
+                                val expenseHeightPct = if (maxAmount > 0) (trend.expenseAmount / maxAmount).toFloat() else 0f
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxHeight(expenseHeightPct.coerceAtLeast(0.03f))
+                                        .width(7.dp)
+                                        .clip(RoundedCornerShape(4.dp))
+                                        .background(
+                                            Brush.verticalGradient(
+                                                colors = listOf(
+                                                    MaterialTheme.colorScheme.primary,
+                                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)
+                                                )
+                                            )
+                                        )
+                                )
+                            }
                         }
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
@@ -4163,10 +4231,13 @@ fun VisualAnalyticsSection(
 
 data class MonthTrend(
     val label: String,
-    val amount: Double,
+    val expenseAmount: Double,
+    val incomeAmount: Double = 0.0,
     val month: Int,
     val year: Int
-)
+) {
+    val amount: Double get() = expenseAmount
+}
 
 // --- CUSTOM COLOR PICKER HELPERS & COMPOSABLES ---
 

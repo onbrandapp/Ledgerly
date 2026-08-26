@@ -21,6 +21,7 @@
       </a>
       <nav class="nav-links">
         <a href="#features">Features</a>
+        <a href="#overview">Monthly Overview</a>
         <a href="#forecast">Forecast Engine</a>
         <a href="#demo">Live Demo</a>
         <a href="/privacy.html">Privacy Policy</a>
@@ -150,6 +151,77 @@
         </div>
       </div>
     </section>
+
+    <!-- 6-Month Spending & Income Overview (D3.js Visualization) -->
+    <section class="overview-section" id="overview">
+      <div class="section-title">
+        <div class="pill-tag">📊 D3.js Financial Visualization</div>
+        <h2>Monthly Spending & Income Overview</h2>
+        <p>Real-time visual comparison of your cash inflows versus outflows over the past 6 months.</p>
+      </div>
+
+      <div class="overview-card">
+        <!-- Metric Summary Cards -->
+        <div class="metrics-grid">
+          <div class="metric-card">
+            <span class="metric-label">6-Month Total Income</span>
+            <div class="metric-value income" id="metric-income">$0.00</div>
+            <span class="metric-sub">▲ Inflows across all sources</span>
+          </div>
+          <div class="metric-card">
+            <span class="metric-label">6-Month Total Expenses</span>
+            <div class="metric-value expense" id="metric-expense">$0.00</div>
+            <span class="metric-sub">▼ Total living & operating spend</span>
+          </div>
+          <div class="metric-card">
+            <span class="metric-label">Net Surplus / Savings</span>
+            <div class="metric-value net" id="metric-net">$0.00</div>
+            <span class="metric-sub" id="metric-rate">0% Savings Rate</span>
+          </div>
+          <div class="metric-card">
+            <span class="metric-label">Avg Monthly Spend</span>
+            <div class="metric-value avg" id="metric-avg">$0.00</div>
+            <span class="metric-sub">Average per 30 days</span>
+          </div>
+        </div>
+
+        <!-- Chart Header & Mode Controls -->
+        <div class="chart-header">
+          <div class="chart-legend">
+            <span class="legend-item"><span class="legend-dot income"></span> Income</span>
+            <span class="legend-item"><span class="legend-dot expense"></span> Expenses</span>
+            <span class="legend-item"><span class="legend-dot net"></span> Net Surplus</span>
+          </div>
+          <div class="chart-view-toggle">
+            <button class="toggle-btn active" data-mode="grouped">Grouped Bars</button>
+            <button class="toggle-btn" data-mode="stacked">Stacked</button>
+            <button class="toggle-btn" data-mode="net">Net Trend</button>
+          </div>
+        </div>
+
+        <!-- D3 SVG Container -->
+        <div class="chart-container" id="d3-chart-wrapper">
+          <div id="d3-spending-chart"></div>
+          <div id="chart-tooltip" class="d3-tooltip"></div>
+        </div>
+
+        <!-- Interactive Quick Simulator -->
+        <div class="chart-footer-simulator">
+          <span style="font-size: 13px; color: var(--text-muted); font-weight: 600;">Simulate Monthly Transaction:</span>
+          <div class="sim-controls">
+            <input type="text" id="sim-desc" placeholder="e.g. Bonus / Equipment" class="demo-input" style="min-width: 180px;">
+            <input type="number" id="sim-amount" placeholder="Amount ($)" class="demo-input" style="max-width: 110px;">
+            <select id="sim-type" class="demo-input" style="max-width: 125px; background:#1e293b;">
+              <option value="EXPENSE">Expense (-)</option>
+              <option value="INCOME">Income (+)</option>
+            </select>
+            <select id="sim-month" class="demo-input" style="max-width: 110px; background:#1e293b;"></select>
+            <button id="btn-add-sim-tx" class="btn-primary" style="padding: 8px 16px;">+ Update</button>
+            <button id="btn-reset-data" class="btn-secondary" style="padding: 8px 12px;">Reset</button>
+          </div>
+        </div>
+      </div>
+    </section>
   </main>
 
   <!-- Footer -->
@@ -166,6 +238,8 @@
     </div>
   </footer>
 
+  <!-- D3.js Visualization Engine -->
+  <script src="https://d3js.org/d3.v7.min.js"></script>
   <script src="/app.js"></script>
 </body>
 </html>

@@ -429,9 +429,13 @@ class RoomTransactionRepository(context: Context) : TransactionRepository {
 object TransactionRepositoryFactory {
     fun create(context: Context): TransactionRepository {
         return try {
-            FirebaseApp.getInstance()
-            FirebaseFirestore.getInstance()
-            FirebaseTransactionRepository()
+            val app = initFirebase(context)
+            if (app != null) {
+                FirebaseFirestore.getInstance(app)
+                FirebaseTransactionRepository()
+            } else {
+                RoomTransactionRepository(context)
+            }
         } catch (e: Exception) {
             RoomTransactionRepository(context)
         }

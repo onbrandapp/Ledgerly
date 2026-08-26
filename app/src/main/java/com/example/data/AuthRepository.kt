@@ -2,6 +2,7 @@ package com.example.data
 
 import android.content.Context
 import com.google.firebase.FirebaseApp
+import com.google.firebase.FirebaseOptions
 import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
@@ -147,13 +148,48 @@ class LocalAuthRepository(context: Context) : AuthRepository {
     }
 }
 
+internal fun initFirebase(context: Context): FirebaseApp? {
+    return try {
+        if (FirebaseApp.getApps(context).isNotEmpty()) {
+            FirebaseApp.getInstance()
+        } else {
+            FirebaseApp.initializeApp(context) ?: run {
+                val options = FirebaseOptions.Builder()
+                    .setApplicationId("1:1088225563978:android:31bf2c538833d889eb9db3")
+                    .setApiKey("AIzaSyDJmJYb8iS-RFI5xLGhMlIqaROu1rrbrP4")
+                    .setProjectId("finance-ai-cc067")
+                    .setStorageBucket("finance-ai-cc067.firebasestorage.app")
+                    .setGcmSenderId("1088225563978")
+                    .build()
+                FirebaseApp.initializeApp(context, options)
+            }
+        }
+    } catch (e: Exception) {
+        try {
+            val options = FirebaseOptions.Builder()
+                .setApplicationId("1:1088225563978:android:31bf2c538833d889eb9db3")
+                .setApiKey("AIzaSyDJmJYb8iS-RFI5xLGhMlIqaROu1rrbrP4")
+                .setProjectId("finance-ai-cc067")
+                .setStorageBucket("finance-ai-cc067.firebasestorage.app")
+                .setGcmSenderId("1088225563978")
+                .build()
+            FirebaseApp.initializeApp(context, options)
+        } catch (e2: Exception) {
+            null
+        }
+    }
+}
+
 object AuthRepositoryFactory {
     fun create(context: Context): AuthRepository {
         return try {
-            FirebaseApp.getInstance()
-            FirebaseAuth.getInstance()
-            // Firebase initialized and auth class found
-            FirebaseAuthRepository()
+            val app = initFirebase(context)
+            if (app != null) {
+                FirebaseAuth.getInstance(app)
+                FirebaseAuthRepository()
+            } else {
+                LocalAuthRepository(context)
+            }
         } catch (e: Exception) {
             LocalAuthRepository(context)
         }
