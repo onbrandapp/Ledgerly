@@ -227,6 +227,8 @@ fun DashboardScreen(
                     val incomes = ledgerFilteredTransactions.filter { it.type.uppercase() == "INCOME" }
                     val expenses = ledgerFilteredTransactions.filter { it.type.uppercase() == "EXPENSE" }
                     val totalIncome = incomes.sumOf { it.amount }
+                    val totalLeftToReceive = incomes.filter { !it.paid }.sumOf { it.amount }
+                    val cashOnHand = incomes.filter { it.category.contains("cash", ignoreCase = true) || it.description.contains("cash", ignoreCase = true) }.sumOf { it.amount }
                     val totalExpense = expenses.sumOf { it.amount }
                     val totalLeftToPay = expenses.filter { !it.paid }.sumOf { it.amount }
                     val netBalance = totalIncome - totalExpense
@@ -235,6 +237,8 @@ fun DashboardScreen(
                     append("\n")
                     append("--- Summary ---\n")
                     append("Total Income,,,,${String.format(Locale.US, "%.2f", totalIncome)},\n")
+                    append("Total Left to Receive,,,,${String.format(Locale.US, "%.2f", totalLeftToReceive)},\n")
+                    append("Cash on Hand,,,,${String.format(Locale.US, "%.2f", cashOnHand)},\n")
                     append("Total Expenses,,,,${String.format(Locale.US, "%.2f", totalExpense)},\n")
                     append("Total Left to Pay,,,,${String.format(Locale.US, "%.2f", totalLeftToPay)},\n")
                     append("Net Balance,,,,${String.format(Locale.US, "%.2f", netBalance)},\n")
@@ -405,11 +409,13 @@ fun DashboardScreen(
                 
                 // Totals
                 val totalIncome = incomes.sumOf { it.amount }
+                val totalLeftToReceive = incomes.filter { !it.paid }.sumOf { it.amount }
+                val cashOnHand = incomes.filter { it.category.contains("cash", ignoreCase = true) || it.description.contains("cash", ignoreCase = true) }.sumOf { it.amount }
                 val totalExpense = expenses.sumOf { it.amount }
                 val totalLeftToPay = expenses.filter { !it.paid }.sumOf { it.amount }
                 val netBalance = totalIncome - totalExpense
                 
-                if (yPosition > 700f) {
+                if (yPosition > 670f) {
                     pdfDocument.finishPage(page)
                     val newPageInfo = android.graphics.pdf.PdfDocument.PageInfo.Builder(595, 842, pdfDocument.pages.size + 1).create()
                     page = pdfDocument.startPage(newPageInfo)
@@ -422,6 +428,7 @@ fun DashboardScreen(
                 canvas.drawLine(310f, yPosition, 550f, yPosition, linePaint)
                 yPosition += 15f
                 
+                // Line 1: Total Income & Total Expenses
                 canvas.drawText("Total Income:", 45f, yPosition, headerPaint)
                 canvas.drawText("+$${String.format(Locale.US, "%.2f", totalIncome)}", 185f, yPosition, incomePaint)
                 
@@ -429,6 +436,20 @@ fun DashboardScreen(
                 canvas.drawText("-$${String.format(Locale.US, "%.2f", totalExpense)}", 450f, yPosition, expensePaint)
                 
                 yPosition += 16f
+
+                // Line 2: Total Left to Receive & Total Left to Pay
+                val unreceivedHeaderPaint = android.graphics.Paint().apply {
+                    textSize = 12f
+                    isFakeBoldText = true
+                    color = android.graphics.Color.parseColor("#E65100") // Amber Orange
+                }
+                val unreceivedValuePaint = android.graphics.Paint().apply {
+                    textSize = 9f
+                    color = android.graphics.Color.parseColor("#E65100")
+                }
+                canvas.drawText("Total Left to Receive:", 45f, yPosition, unreceivedHeaderPaint)
+                canvas.drawText("+$${String.format(Locale.US, "%.2f", totalLeftToReceive)}", 185f, yPosition, unreceivedValuePaint)
+
                 val unpaidHeaderPaint = android.graphics.Paint().apply {
                     textSize = 12f
                     isFakeBoldText = true
@@ -436,6 +457,21 @@ fun DashboardScreen(
                 }
                 canvas.drawText("Total Left to Pay:", 310f, yPosition, unpaidHeaderPaint)
                 canvas.drawText("-$${String.format(Locale.US, "%.2f", totalLeftToPay)}", 450f, yPosition, unpaidPaint.apply { textSize = 9f })
+
+                yPosition += 16f
+
+                // Line 3: Cash on Hand
+                val cashHeaderPaint = android.graphics.Paint().apply {
+                    textSize = 12f
+                    isFakeBoldText = true
+                    color = android.graphics.Color.DKGRAY
+                }
+                val cashValuePaint = android.graphics.Paint().apply {
+                    textSize = 9f
+                    color = android.graphics.Color.parseColor("#43A047")
+                }
+                canvas.drawText("Cash on Hand:", 45f, yPosition, cashHeaderPaint)
+                canvas.drawText("+$${String.format(Locale.US, "%.2f", cashOnHand)}", 185f, yPosition, cashValuePaint)
 
                 yPosition += 22f
                 canvas.drawLine(45f, yPosition, 550f, yPosition, linePaint)
@@ -1879,7 +1915,10 @@ fun DashboardScreen(
             }
 
             val totalIncome = remember(incomeList) { incomeList.sumOf { it.amount } }
+            val totalLeftToReceive = remember(incomeList) { incomeList.filter { !it.paid }.sumOf { it.amount } }
+            val cashOnHand = remember(incomeList) { incomeList.filter { it.category.contains("cash", ignoreCase = true) || it.description.contains("cash", ignoreCase = true) }.sumOf { it.amount } }
             val totalExpense = remember(expenseList) { expenseList.sumOf { it.amount } }
+            val totalLeftToPay = remember(rawExpenseList) { rawExpenseList.filter { !it.paid }.sumOf { it.amount } }
             val ledgerFormatter = remember { SimpleDateFormat("MMM dd, yyyy", Locale.getDefault()) }
 
             val ledgerListNestedScrollConnection = remember {
@@ -2660,13 +2699,31 @@ fun DashboardScreen(
                                     fontWeight = FontWeight.ExtraBold,
                                     color = MaterialTheme.colorScheme.tertiary
                                 )
+                                if (totalLeftToReceive > 0) {
+                                    Spacer(modifier = Modifier.height(3.dp))
+                                    Text(
+                                        text = "Left to Receive: +$${String.format("%,.2f", totalLeftToReceive)}",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = Color(0xFFE65100),
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                                if (cashOnHand > 0) {
+                                    Spacer(modifier = Modifier.height(2.dp))
+                                    Text(
+                                        text = "Cash on Hand: +$${String.format("%,.2f", cashOnHand)}",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.tertiary,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
                             }
                             
                             // Vertical separator
                             Box(
                                 modifier = Modifier
                                     .width(1.dp)
-                                    .height(40.dp)
+                                    .height(if (totalLeftToReceive > 0 || totalLeftToPay > 0) 54.dp else 40.dp)
                                     .background(MaterialTheme.colorScheme.outlineVariant)
                             )
 
@@ -2682,6 +2739,15 @@ fun DashboardScreen(
                                     fontWeight = FontWeight.ExtraBold,
                                     color = MaterialTheme.colorScheme.error
                                 )
+                                if (totalLeftToPay > 0) {
+                                    Spacer(modifier = Modifier.height(3.dp))
+                                    Text(
+                                        text = "Left to Pay: -$${String.format("%,.2f", totalLeftToPay)}",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.error,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
                             }
                         }
 
