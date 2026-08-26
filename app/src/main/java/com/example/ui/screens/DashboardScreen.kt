@@ -34,6 +34,7 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -1149,44 +1150,100 @@ fun DashboardScreen(
                         .fillMaxWidth()
                         .padding(top = 16.dp, bottom = 8.dp)
                 ) {
+                    val filterScrollState = rememberScrollState()
+                    val coroutineScope = rememberCoroutineScope()
+
                     Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .horizontalScroll(rememberScrollState()),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        FilterChip(
-                            selected = selectedTab == 0,
-                            onClick = { selectedTab = 0 },
-                            label = { Text("Recent", fontWeight = FontWeight.ExtraBold) },
-                            modifier = Modifier.testTag("tab_transactions")
-                        )
-                        FilterChip(
-                            selected = selectedTab == 1,
-                            onClick = { selectedTab = 1 },
-                            label = { Text("All Time", fontWeight = FontWeight.ExtraBold) },
-                            modifier = Modifier.testTag("tab_all_time")
-                        )
-                        FilterChip(
-                            selected = selectedTab == 2,
-                            onClick = { selectedTab = 2 },
-                            label = { Text("Recurring", fontWeight = FontWeight.ExtraBold) },
-                            modifier = Modifier.testTag("tab_recurring")
-                        )
-                        FilterChip(
-                            selected = selectedTab == 3,
-                            onClick = { selectedTab = 3 },
-                            leadingIcon = {
+                        AnimatedVisibility(
+                            visible = filterScrollState.canScrollBackward,
+                            enter = fadeIn() + expandHorizontally(),
+                            exit = fadeOut() + shrinkHorizontally()
+                        ) {
+                            IconButton(
+                                onClick = {
+                                    coroutineScope.launch {
+                                        filterScrollState.animateScrollTo((filterScrollState.value - 300).coerceAtLeast(0))
+                                    }
+                                },
+                                modifier = Modifier
+                                    .size(32.dp)
+                                    .padding(end = 2.dp)
+                            ) {
                                 Icon(
-                                    imageVector = Icons.Default.TrendingUp,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(16.dp)
+                                    imageVector = Icons.Default.ChevronLeft,
+                                    contentDescription = "Scroll tabs left",
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(22.dp)
                                 )
-                            },
-                            label = { Text("Forecast & Notes", fontWeight = FontWeight.ExtraBold) },
-                            modifier = Modifier.testTag("tab_forecast")
-                        )
+                            }
+                        }
+
+                        Row(
+                            modifier = Modifier
+                                .weight(1f)
+                                .horizontalScroll(filterScrollState),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            FilterChip(
+                                selected = selectedTab == 0,
+                                onClick = { selectedTab = 0 },
+                                label = { Text("Recent", fontWeight = FontWeight.ExtraBold) },
+                                modifier = Modifier.testTag("tab_transactions")
+                            )
+                            FilterChip(
+                                selected = selectedTab == 1,
+                                onClick = { selectedTab = 1 },
+                                label = { Text("All Time", fontWeight = FontWeight.ExtraBold) },
+                                modifier = Modifier.testTag("tab_all_time")
+                            )
+                            FilterChip(
+                                selected = selectedTab == 2,
+                                onClick = { selectedTab = 2 },
+                                label = { Text("Recurring", fontWeight = FontWeight.ExtraBold) },
+                                modifier = Modifier.testTag("tab_recurring")
+                            )
+                            FilterChip(
+                                selected = selectedTab == 3,
+                                onClick = { selectedTab = 3 },
+                                leadingIcon = {
+                                    Icon(
+                                        imageVector = Icons.Default.TrendingUp,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                },
+                                label = { Text("Forecast & Notes", fontWeight = FontWeight.ExtraBold) },
+                                modifier = Modifier.testTag("tab_forecast")
+                            )
+                        }
+
+                        AnimatedVisibility(
+                            visible = filterScrollState.canScrollForward,
+                            enter = fadeIn() + expandHorizontally(),
+                            exit = fadeOut() + shrinkHorizontally()
+                        ) {
+                            IconButton(
+                                onClick = {
+                                    coroutineScope.launch {
+                                        filterScrollState.animateScrollTo((filterScrollState.value + 300).coerceAtMost(filterScrollState.maxValue))
+                                    }
+                                },
+                                modifier = Modifier
+                                    .size(32.dp)
+                                    .padding(start = 2.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.ChevronRight,
+                                    contentDescription = "Scroll tabs right",
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(22.dp)
+                                )
+                            }
+                        }
                     }
 
                     Spacer(modifier = Modifier.height(4.dp))
@@ -4094,12 +4151,11 @@ fun VisualAnalyticsSection(
             )
 
             // BAR CHART SECTION (6-MONTH INCOME VS SPENDING TRENDS)
-            Row(
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(bottom = 12.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 Text(
                     text = "6-Month Income vs Spending",
@@ -4107,19 +4163,20 @@ fun VisualAnalyticsSection(
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                // Legend
+                // Legend on its own line
                 Row(
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
                         Box(
                             modifier = Modifier
-                                .size(8.dp)
-                                .clip(RoundedCornerShape(2.dp))
+                                .size(10.dp)
+                                .clip(RoundedCornerShape(3.dp))
                                 .background(Color(0xFF10B981))
                         )
                         Text(
@@ -4130,12 +4187,12 @@ fun VisualAnalyticsSection(
                     }
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
                         Box(
                             modifier = Modifier
-                                .size(8.dp)
-                                .clip(RoundedCornerShape(2.dp))
+                                .size(10.dp)
+                                .clip(RoundedCornerShape(3.dp))
                                 .background(MaterialTheme.colorScheme.primary)
                         )
                         Text(
