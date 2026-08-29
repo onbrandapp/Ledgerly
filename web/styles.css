@@ -101,6 +101,15 @@ header {
   box-shadow: var(--shadow-glow);
 }
 
+.logo-img {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  object-fit: cover;
+  box-shadow: 0 0 16px rgba(99, 102, 241, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
 .logo-text {
   font-size: 20px;
   font-weight: 800;
@@ -288,6 +297,25 @@ header {
 .icon-green { background: rgba(16, 185, 129, 0.18); color: #34d399; }
 .icon-amber { background: rgba(245, 158, 11, 0.18); color: #fbbf24; }
 .icon-blue { background: rgba(59, 130, 246, 0.18); color: #60a5fa; }
+.icon-teal { background: rgba(20, 184, 166, 0.18); color: #2dd4bf; }
+.icon-rose { background: rgba(244, 63, 94, 0.18); color: #fb7185; }
+.icon-indigo { background: rgba(99, 102, 241, 0.18); color: #a5b4fc; }
+
+.bento-card .feat-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  background: rgba(99, 102, 241, 0.15);
+  color: #a5b4fc;
+  border: 1px solid rgba(99, 102, 241, 0.3);
+  margin-bottom: 14px;
+}
 
 .bento-card h3 {
   font-size: 20px;
@@ -295,10 +323,76 @@ header {
   margin-bottom: 10px;
 }
 
+.bento-card .feat-subtitle {
+  color: #34d399;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
 .bento-card p {
   color: var(--text-muted);
   font-size: 14px;
   line-height: 1.6;
+}
+
+.feat-bullets {
+  list-style: none;
+  padding: 0;
+  margin: 14px 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.feat-bullets li {
+  font-size: 13px;
+  color: #cbd5e1;
+  line-height: 1.5;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.feat-bullets li::before {
+  content: "✓";
+  color: #34d399;
+  font-weight: 800;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.prompt-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 12px 0 16px;
+}
+
+.prompt-chip {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  color: #e2e8f0;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: monospace;
+}
+
+.prompt-chip:hover {
+  background: rgba(99, 102, 241, 0.2);
+  border-color: rgba(99, 102, 241, 0.4);
+  color: #a5b4fc;
+}
+
+.tag-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
 }
 
 /* Interactive Simulator */

@@ -105,8 +105,8 @@ app/src/main/java/com/example/
 
 1. **Clone the Repository**:
    ```bash
-   git clone https://github.com/example/ledgerly.git
-   cd ledgerly
+   git clone https://github.com/onbrandapp/Ledgerly.git
+   cd Ledgerly
    ```
 
 2. **Set up API Keys**:

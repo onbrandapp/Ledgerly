@@ -6,31 +6,44 @@ document.addEventListener('DOMContentLoaded', () => {
   const parseInput = document.getElementById('nlp-input');
   const parseResult = document.getElementById('nlp-result');
 
+  function runParser(text) {
+    if (!text || !parseResult) return;
+    parseResult.innerHTML = '<span style="color: #a5b4fc;">⚡ Gemini 2.5 Flash is parsing financial intent...</span>';
+
+    setTimeout(() => {
+      const parsed = simulateAiParse(text);
+      parseResult.innerHTML = `
+        <div style="display:flex; flex-direction:column; gap:4px; width:100%;">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <strong style="color: ${parsed.type === 'INCOME' ? '#34d399' : '#f87171'}; font-size:15px;">
+              ${parsed.type === 'INCOME' ? '+' : '-'}$${parsed.amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (${parsed.type})
+            </strong>
+            <span style="background:rgba(99,102,241,0.25); color:#c7d2fe; padding:2px 8px; border-radius:6px; font-size:11px; font-weight:700;">
+              ${parsed.category}
+            </span>
+          </div>
+          <div style="color:#94a3b8; font-size:12px;">"${parsed.description}"</div>
+        </div>
+      `;
+    }, 400);
+  }
+
   if (parseBtn && parseInput && parseResult) {
     parseBtn.addEventListener('click', () => {
-      const text = parseInput.value.trim();
-      if (!text) return;
-
-      parseResult.innerHTML = '<span style="color: #a5b4fc;">⚡ Gemini 2.5 Flash is parsing financial intent...</span>';
-
-      setTimeout(() => {
-        const parsed = simulateAiParse(text);
-        parseResult.innerHTML = `
-          <div style="display:flex; flex-direction:column; gap:4px; width:100%;">
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-              <strong style="color: ${parsed.type === 'INCOME' ? '#34d399' : '#f87171'}; font-size:15px;">
-                ${parsed.type === 'INCOME' ? '+' : '-'}$${parsed.amount.toFixed(2)} (${parsed.type})
-              </strong>
-              <span style="background:rgba(99,102,241,0.25); color:#c7d2fe; padding:2px 8px; border-radius:6px; font-size:11px; font-weight:700;">
-                ${parsed.category}
-              </span>
-            </div>
-            <div style="color:#94a3b8; font-size:12px;">"${parsed.description}"</div>
-          </div>
-        `;
-      }, 500);
+      runParser(parseInput.value.trim());
     });
   }
+
+  // Prompt chip click handlers
+  document.querySelectorAll('.prompt-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      const phrase = chip.getAttribute('data-phrase') || chip.textContent.replace(/^[“"]|[”"]$/g, '').trim();
+      if (parseInput) {
+        parseInput.value = phrase;
+        runParser(phrase);
+      }
+    });
+  });
 
   function simulateAiParse(query) {
     const lower = query.toLowerCase();
@@ -39,22 +52,24 @@ document.addEventListener('DOMContentLoaded', () => {
     let category = "Food & Dining";
     let description = query;
 
-    // Extract numbers if present
-    const match = query.match(/\$?(\d+(?:\.\d{1,2})?)/);
+    // Extract numbers with optional commas/decimals
+    const match = query.match(/\$?\s*([\d,]+(?:\.\d{1,2})?)/);
     if (match) {
-      amount = parseFloat(match[1]);
+      amount = parseFloat(match[1].replace(/,/g, ''));
     }
 
-    if (lower.includes("received") || lower.includes("earned") || lower.includes("salary") || lower.includes("retainer") || lower.includes("bonus") || lower.includes("income") || lower.includes("invoice")) {
+    if (lower.includes("received") || lower.includes("earned") || lower.includes("salary") || lower.includes("retainer") || lower.includes("bonus") || lower.includes("dividend") || lower.includes("income") || lower.includes("invoice")) {
       type = "INCOME";
       category = "Income";
-      if (lower.includes("retainer") || lower.includes("client")) category = "Freelance";
-      if (lower.includes("salary")) category = "Salary";
-    } else if (lower.includes("coffee") || lower.includes("lunch") || lower.includes("dinner") || lower.includes("chipotle") || lower.includes("starbucks") || lower.includes("food")) {
+      if (lower.includes("retainer") || lower.includes("freelance") || lower.includes("client") || lower.includes("acme")) category = "Freelance";
+      else if (lower.includes("salary") || lower.includes("payroll")) category = "Salary";
+      else if (lower.includes("bonus")) category = "Bonus";
+      else if (lower.includes("dividend")) category = "Investment";
+    } else if (lower.includes("coffee") || lower.includes("lunch") || lower.includes("dinner") || lower.includes("chipotle") || lower.includes("starbucks") || lower.includes("groceries") || lower.includes("food")) {
       category = "Food & Dining";
     } else if (lower.includes("uber") || lower.includes("lyft") || lower.includes("gas") || lower.includes("train") || lower.includes("flight")) {
       category = "Transportation";
-    } else if (lower.includes("rent") || lower.includes("electric") || lower.includes("wifi") || lower.includes("utility")) {
+    } else if (lower.includes("electric") || lower.includes("utility") || lower.includes("bill") || lower.includes("rent") || lower.includes("wifi")) {
       category = "Bills & Utilities";
     } else if (lower.includes("amazon") || lower.includes("shopping") || lower.includes("clothes")) {
       category = "Shopping";
