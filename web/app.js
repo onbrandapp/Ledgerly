@@ -1,6 +1,34 @@
 // Ledgerly Web Companion & Interactive Demo Logic
 
 document.addEventListener('DOMContentLoaded', () => {
+  // Mobile Navigation Drawer Toggle
+  const mobileToggle = document.getElementById('mobile-toggle');
+  const navLinks = document.getElementById('nav-links');
+
+  if (mobileToggle && navLinks) {
+    mobileToggle.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const isOpen = navLinks.classList.toggle('open');
+      mobileToggle.classList.toggle('active', isOpen);
+    });
+
+    // Close menu when clicking on any link
+    navLinks.querySelectorAll('a').forEach(link => {
+      link.addEventListener('click', () => {
+        navLinks.classList.remove('open');
+        mobileToggle.classList.remove('active');
+      });
+    });
+
+    // Close menu when clicking outside
+    document.addEventListener('click', (e) => {
+      if (navLinks.classList.contains('open') && !navLinks.contains(e.target) && !mobileToggle.contains(e.target)) {
+        navLinks.classList.remove('open');
+        mobileToggle.classList.remove('active');
+      }
+    });
+  }
+
   // 1. Natural Language Parser Simulator
   const parseBtn = document.getElementById('btn-simulate-parse');
   const parseInput = document.getElementById('nlp-input');

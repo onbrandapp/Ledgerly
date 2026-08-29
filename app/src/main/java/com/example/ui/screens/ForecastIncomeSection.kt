@@ -6,6 +6,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.*
@@ -192,6 +193,7 @@ fun ForecastIncomeSection(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
+                .horizontalScroll(rememberScrollState())
                 .padding(vertical = 8.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically
@@ -206,7 +208,14 @@ fun ForecastIncomeSection(
                         modifier = Modifier.size(16.dp)
                     )
                 },
-                label = { Text("Income Pipeline (${forecastIncomes.count { !it.isRealized }})", fontWeight = FontWeight.Bold) },
+                label = {
+                    Text(
+                        text = "Income Pipeline (${forecastIncomes.count { !it.isRealized }})",
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        softWrap = false
+                    )
+                },
                 modifier = Modifier.testTag("tab_forecast_pipeline")
             )
             FilterChip(
@@ -219,7 +228,14 @@ fun ForecastIncomeSection(
                         modifier = Modifier.size(16.dp)
                     )
                 },
-                label = { Text("Notes & Ideas (${futureIncomeNotes.size})", fontWeight = FontWeight.Bold) },
+                label = {
+                    Text(
+                        text = "Notes & Ideas (${futureIncomeNotes.size})",
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        softWrap = false
+                    )
+                },
                 modifier = Modifier.testTag("tab_forecast_notes")
             )
         }
@@ -260,6 +276,8 @@ fun ForecastIncomeSection(
                                 text = label,
                                 style = MaterialTheme.typography.labelSmall,
                                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                maxLines = 1,
+                                softWrap = false,
                                 modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
                             )
                         }
@@ -275,7 +293,9 @@ fun ForecastIncomeSection(
                     },
                     shape = RoundedCornerShape(16.dp),
                     contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
-                    modifier = Modifier.testTag("add_forecast_button")
+                    modifier = Modifier
+                        .wrapContentWidth()
+                        .testTag("add_forecast_button")
                 ) {
                     Icon(
                         imageVector = Icons.Default.Add,
@@ -283,7 +303,13 @@ fun ForecastIncomeSection(
                         modifier = Modifier.size(16.dp)
                     )
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text("Add Forecast", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+                    Text(
+                        text = "Add Forecast",
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        softWrap = false
+                    )
                 }
             }
 
@@ -372,11 +398,16 @@ fun ForecastIncomeSection(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Income Notes & Brainstorming",
-                    style = MaterialTheme.typography.titleSmall,
+                    text = "Income Notes & Ideas",
+                    style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onBackground
+                    color = MaterialTheme.colorScheme.onBackground,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f, fill = false)
                 )
+
+                Spacer(modifier = Modifier.width(8.dp))
 
                 FilledTonalButton(
                     onClick = {
@@ -384,8 +415,10 @@ fun ForecastIncomeSection(
                         showAddNoteDialog = true
                     },
                     shape = RoundedCornerShape(16.dp),
-                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
-                    modifier = Modifier.testTag("add_income_note_button")
+                    contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp),
+                    modifier = Modifier
+                        .wrapContentWidth()
+                        .testTag("add_income_note_button")
                 ) {
                     Icon(
                         imageVector = Icons.Default.Add,
@@ -393,7 +426,13 @@ fun ForecastIncomeSection(
                         modifier = Modifier.size(16.dp)
                     )
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text("New Note", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+                    Text(
+                        text = "New Note",
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        softWrap = false
+                    )
                 }
             }
 
