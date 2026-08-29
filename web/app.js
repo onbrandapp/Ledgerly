@@ -29,6 +29,32 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  // Scroll-reveal animation for bento-grid cards
+  const bentoCards = document.querySelectorAll('.bento-card');
+  if (bentoCards.length > 0) {
+    if ('IntersectionObserver' in window) {
+      const cardObserver = new IntersectionObserver((entries, observer) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('revealed');
+            observer.unobserve(entry.target);
+          }
+        });
+      }, {
+        root: null,
+        rootMargin: '0px 0px -40px 0px',
+        threshold: 0.1
+      });
+
+      bentoCards.forEach((card, index) => {
+        card.style.transitionDelay = `${(index % 2) * 120}ms`;
+        cardObserver.observe(card);
+      });
+    } else {
+      bentoCards.forEach(card => card.classList.add('revealed'));
+    }
+  }
+
   // 1. Natural Language Parser Simulator
   const parseBtn = document.getElementById('btn-simulate-parse');
   const parseInput = document.getElementById('nlp-input');
