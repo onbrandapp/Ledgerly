@@ -43,16 +43,17 @@ data class ForecastIncome(
     val amount: Double = 0.0,
     val expectedDate: Long = System.currentTimeMillis(),
     val category: String = "Freelance",
-    val status: String = "EXPECTED", // "CONFIRMED", "EXPECTED", "TENTATIVE"
+    val status: String = "EXPECTED", // "CONFIRMED", "EXPECTED", "TENTATIVE", "RECEIVED"
     val notes: String = "",
     val bulletPoints: List<String> = emptyList(),
     val completedBullets: List<Int> = emptyList(),
     val isRealized: Boolean = false,
     val userEmail: String = "",
+    val colorTag: String = "#FFD97D",
     val createdAt: Long = System.currentTimeMillis()
 ) {
     // Zero-argument constructor required for Firestore deserialization
-    constructor() : this("", "", 0.0, System.currentTimeMillis(), "Freelance", "EXPECTED", "", emptyList(), emptyList(), false, "", System.currentTimeMillis())
+    constructor() : this("", "", 0.0, System.currentTimeMillis(), "Freelance", "EXPECTED", "", emptyList(), emptyList(), false, "", "#FFD97D", System.currentTimeMillis())
 }
 
 data class FutureIncomeNote(

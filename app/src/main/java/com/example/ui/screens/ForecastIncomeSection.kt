@@ -529,7 +529,7 @@ fun ForecastIncomeSection(
                 showAddForecastDialog = false
                 editingForecast = null
             },
-            onSave = { title, amount, expectedDate, category, status, notes, bullets ->
+            onSave = { title, amount, expectedDate, category, status, notes, bullets, colorTag ->
                 val isRealized = status.equals("RECEIVED", ignoreCase = true)
                 viewModel.addOrUpdateForecastIncome(
                     title = title,
@@ -541,7 +541,8 @@ fun ForecastIncomeSection(
                     bulletPoints = bullets,
                     id = editingForecast?.id ?: "",
                     completedBullets = editingForecast?.completedBullets ?: emptyList(),
-                    isRealized = isRealized
+                    isRealized = isRealized,
+                    colorTag = colorTag
                 )
                 showAddForecastDialog = false
                 editingForecast = null
@@ -711,6 +712,14 @@ fun ForecastIncomeCard(
 
     val isItemReceived = item.isRealized || item.status.equals("RECEIVED", ignoreCase = true)
 
+    val accentColor = remember(item.colorTag) {
+        try {
+            Color(android.graphics.Color.parseColor(item.colorTag))
+        } catch (e: Exception) {
+            Color(0xFFFFD97D)
+        }
+    }
+
     val (statusColor, statusBg, statusLabel) = when (item.status.uppercase()) {
         "RECEIVED" -> Triple(Color(0xFF16A34A), Color(0xFFDCFCE7), "Received")
         "CONFIRMED" -> Triple(Color(0xFF2E7D32), Color(0xFFE8F5E9), "Confirmed")
@@ -725,7 +734,7 @@ fun ForecastIncomeCard(
         shape = RoundedCornerShape(20.dp),
         border = BorderStroke(
             width = if (isItemReceived) 1.dp else 1.5.dp,
-            color = if (isItemReceived) Color(0xFF16A34A).copy(alpha = 0.35f) else statusColor.copy(alpha = 0.4f)
+            color = if (isItemReceived) Color(0xFF16A34A).copy(alpha = 0.35f) else accentColor.copy(alpha = 0.6f)
         ),
         modifier = modifier.fillMaxWidth()
     ) {
@@ -734,7 +743,7 @@ fun ForecastIncomeCard(
                 .fillMaxWidth()
                 .padding(16.dp)
         ) {
-            // Header Row: Title + Category + Status Chip
+            // Header Row: Color bar + Title + Category + Status Chip
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -742,6 +751,14 @@ fun ForecastIncomeCard(
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            modifier = Modifier
+                                .width(5.dp)
+                                .height(22.dp)
+                                .clip(RoundedCornerShape(3.dp))
+                                .background(if (isItemReceived) Color(0xFF16A34A) else accentColor)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             text = item.title,
                             style = MaterialTheme.typography.titleMedium,
@@ -753,7 +770,7 @@ fun ForecastIncomeCard(
 
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(top = 2.dp)
+                        modifier = Modifier.padding(top = 4.dp, start = 13.dp)
                     ) {
                         Surface(
                             shape = RoundedCornerShape(6.dp),
@@ -903,7 +920,11 @@ fun ForecastIncomeCard(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f), RoundedCornerShape(12.dp))
+                        .background(
+                            if (isItemReceived) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
+                            else accentColor.copy(alpha = 0.12f),
+                            RoundedCornerShape(12.dp)
+                        )
                         .padding(10.dp),
                     verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
@@ -911,7 +932,7 @@ fun ForecastIncomeCard(
                         Icon(
                             imageVector = Icons.Default.Checklist,
                             contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
+                            tint = if (isItemReceived) MaterialTheme.colorScheme.primary else accentColor,
                             modifier = Modifier.size(16.dp)
                         )
                         Spacer(modifier = Modifier.width(6.dp))
@@ -919,7 +940,7 @@ fun ForecastIncomeCard(
                             text = "Milestones & Checklist (${item.completedBullets.size}/${item.bulletPoints.size})",
                             style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary
+                            color = if (isItemReceived) MaterialTheme.colorScheme.primary else accentColor
                         )
                     }
 
@@ -937,7 +958,7 @@ fun ForecastIncomeCard(
                                 checked = isDone,
                                 onCheckedChange = { onToggleBullet(index) },
                                 colors = CheckboxDefaults.colors(
-                                    checkedColor = MaterialTheme.colorScheme.primary,
+                                    checkedColor = if (isItemReceived) MaterialTheme.colorScheme.primary else accentColor,
                                     uncheckedColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
                                 ),
                                 modifier = Modifier.size(24.dp)
@@ -1139,7 +1160,7 @@ fun FutureIncomeNoteCard(
 fun AddEditForecastIncomeDialog(
     initialItem: ForecastIncome?,
     onDismiss: () -> Unit,
-    onSave: (title: String, amount: Double, expectedDate: Long, category: String, status: String, notes: String, bullets: List<String>) -> Unit
+    onSave: (title: String, amount: Double, expectedDate: Long, category: String, status: String, notes: String, bullets: List<String>, colorTag: String) -> Unit
 ) {
     val context = LocalContext.current
     var title by remember { mutableStateOf(initialItem?.title ?: "") }
@@ -1153,6 +1174,7 @@ fun AddEditForecastIncomeDialog(
         )
     }
     var notes by remember { mutableStateOf(initialItem?.notes ?: "") }
+    var colorTag by remember { mutableStateOf(initialItem?.colorTag ?: "#FFD97D") }
 
     var bulletsList by remember { mutableStateOf(initialItem?.bulletPoints ?: emptyList()) }
     var newBulletInput by remember { mutableStateOf("") }
@@ -1160,6 +1182,7 @@ fun AddEditForecastIncomeDialog(
     var isCategoryDropdownOpen by remember { mutableStateOf(false) }
 
     val categories = listOf("Freelance", "Client Invoice", "Bonus", "Salary Increase", "Dividend/Investment", "Tax Refund", "Product Sales", "Contract Gig", "Other")
+    val presetColors = listOf("#FFD97D", "#A78BFA", "#D9F99D", "#93C5FD", "#FCA5A5", "#FDBA74")
 
     val dateFormatter = remember { SimpleDateFormat("MMM dd, yyyy", Locale.getDefault()) }
     val dateDisplay = remember(expectedDate) { dateFormatter.format(Date(expectedDate)) }
@@ -1225,6 +1248,32 @@ fun AddEditForecastIncomeDialog(
                                 }
                             )
                         }
+                    }
+                }
+
+                // Color accent picker
+                Text("Card Color Accent", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    presetColors.forEach { hex ->
+                        val col = remember(hex) {
+                            try { Color(android.graphics.Color.parseColor(hex)) } catch (e: Exception) { Color.Gray }
+                        }
+                        val isSelected = colorTag.equals(hex, ignoreCase = true)
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .background(col)
+                                .border(
+                                    width = if (isSelected) 3.dp else 0.dp,
+                                    color = if (isSelected) MaterialTheme.colorScheme.onSurface else Color.Transparent,
+                                    shape = CircleShape
+                                )
+                                .clickable { colorTag = hex }
+                        )
                     }
                 }
 
@@ -1425,7 +1474,7 @@ fun AddEditForecastIncomeDialog(
                         } else {
                             bulletsList
                         }
-                        onSave(title, amountVal, expectedDate, category, status, notes, finalBullets)
+                        onSave(title, amountVal, expectedDate, category, status, notes, finalBullets, colorTag)
                     }
                 },
                 enabled = title.isNotBlank()

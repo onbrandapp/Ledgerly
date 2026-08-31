@@ -631,7 +631,8 @@ class ExpenseViewModel(application: Application) : AndroidViewModel(application)
         bulletPoints: List<String>,
         id: String = "",
         completedBullets: List<Int> = emptyList(),
-        isRealized: Boolean = false
+        isRealized: Boolean = false,
+        colorTag: String = "#FFD97D"
     ) {
         val email = currentUserEmail.value ?: return
         if (title.isBlank()) return
@@ -654,7 +655,8 @@ class ExpenseViewModel(application: Application) : AndroidViewModel(application)
                 bulletPoints = bulletPoints.filter { it.isNotBlank() }.map { it.trim() },
                 completedBullets = completedBullets,
                 isRealized = isItemRealized,
-                userEmail = email
+                userEmail = email,
+                colorTag = colorTag.ifBlank { "#FFD97D" }
             )
             transactionRepository.addForecastIncome(email, forecast)
         }

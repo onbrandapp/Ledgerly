@@ -119,6 +119,7 @@ data class LocalForecastIncome(
     val completedBulletsJson: String,
     val isRealized: Boolean,
     val userEmail: String,
+    val colorTag: String = "#FFD97D",
     val createdAt: Long
 ) {
     fun toDomain(): ForecastIncome = ForecastIncome(
@@ -133,6 +134,7 @@ data class LocalForecastIncome(
         completedBullets = JsonListHelper.jsonToIntList(completedBulletsJson),
         isRealized = isRealized,
         userEmail = userEmail,
+        colorTag = colorTag.ifBlank { "#FFD97D" },
         createdAt = createdAt
     )
 
@@ -149,6 +151,7 @@ data class LocalForecastIncome(
             completedBulletsJson = JsonListHelper.intListToJson(f.completedBullets),
             isRealized = f.isRealized,
             userEmail = f.userEmail,
+            colorTag = f.colorTag.ifBlank { "#FFD97D" },
             createdAt = f.createdAt
         )
     }
@@ -285,7 +288,7 @@ interface TransactionDao {
         LocalForecastIncome::class,
         LocalFutureIncomeNote::class
     ],
-    version = 7,
+    version = 8,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
