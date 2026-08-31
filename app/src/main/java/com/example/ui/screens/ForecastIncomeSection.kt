@@ -23,6 +23,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
@@ -1182,7 +1183,6 @@ fun AddEditForecastIncomeDialog(
     var isCategoryDropdownOpen by remember { mutableStateOf(false) }
 
     val categories = listOf("Freelance", "Client Invoice", "Bonus", "Salary Increase", "Dividend/Investment", "Tax Refund", "Product Sales", "Contract Gig", "Other")
-    val presetColors = listOf("#FFD97D", "#A78BFA", "#D9F99D", "#93C5FD", "#FCA5A5", "#FDBA74")
 
     val dateFormatter = remember { SimpleDateFormat("MMM dd, yyyy", Locale.getDefault()) }
     val dateDisplay = remember(expectedDate) { dateFormatter.format(Date(expectedDate)) }
@@ -1251,31 +1251,12 @@ fun AddEditForecastIncomeDialog(
                     }
                 }
 
-                // Color accent picker
-                Text("Card Color Accent", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    presetColors.forEach { hex ->
-                        val col = remember(hex) {
-                            try { Color(android.graphics.Color.parseColor(hex)) } catch (e: Exception) { Color.Gray }
-                        }
-                        val isSelected = colorTag.equals(hex, ignoreCase = true)
-                        Box(
-                            modifier = Modifier
-                                .size(36.dp)
-                                .clip(CircleShape)
-                                .background(col)
-                                .border(
-                                    width = if (isSelected) 3.dp else 0.dp,
-                                    color = if (isSelected) MaterialTheme.colorScheme.onSurface else Color.Transparent,
-                                    shape = CircleShape
-                                )
-                                .clickable { colorTag = hex }
-                        )
-                    }
-                }
+                // Color accent picker with custom Hex# input
+                ColorAccentPicker(
+                    selectedColorHex = colorTag,
+                    onColorSelected = { colorTag = it },
+                    title = "Card Color Accent"
+                )
 
                 // Confidence / Status
                 Text("Forecast Status", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
@@ -1503,8 +1484,6 @@ fun AddEditFutureIncomeNoteDialog(
     var bulletsList by remember { mutableStateOf(initialNote?.bulletPoints ?: emptyList()) }
     var newBulletInput by remember { mutableStateOf("") }
 
-    val presetColors = listOf("#FFD97D", "#A78BFA", "#D9F99D", "#93C5FD", "#FCA5A5", "#FDBA74")
-
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
@@ -1539,31 +1518,12 @@ fun AddEditFutureIncomeNoteDialog(
                     modifier = Modifier.fillMaxWidth()
                 )
 
-                // Color accent picker
-                Text("Note Color Accent", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    presetColors.forEach { hex ->
-                        val col = remember(hex) {
-                            try { Color(android.graphics.Color.parseColor(hex)) } catch (e: Exception) { Color.Gray }
-                        }
-                        val isSelected = colorTag.equals(hex, ignoreCase = true)
-                        Box(
-                            modifier = Modifier
-                                .size(36.dp)
-                                .clip(CircleShape)
-                                .background(col)
-                                .border(
-                                    width = if (isSelected) 3.dp else 0.dp,
-                                    color = if (isSelected) MaterialTheme.colorScheme.onSurface else Color.Transparent,
-                                    shape = CircleShape
-                                )
-                                .clickable { colorTag = hex }
-                        )
-                    }
-                }
+                // Color accent picker with custom Hex# input
+                ColorAccentPicker(
+                    selectedColorHex = colorTag,
+                    onColorSelected = { colorTag = it },
+                    title = "Note Color Accent"
+                )
 
                 // Bullet items builder
                 HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
@@ -1659,4 +1619,179 @@ fun AddEditFutureIncomeNoteDialog(
             }
         }
     )
+}
+
+@Composable
+fun ColorAccentPicker(
+    selectedColorHex: String,
+    onColorSelected: (String) -> Unit,
+    title: String = "Card Color Accent",
+    modifier: Modifier = Modifier
+) {
+    val presetColors = listOf("#FFD97D", "#A78BFA", "#D9F99D", "#93C5FD", "#FCA5A5", "#FDBA74", "#34D399", "#38BDF8")
+    
+    var customHexInput by remember(selectedColorHex) {
+        mutableStateOf(selectedColorHex.removePrefix("#").uppercase())
+    }
+
+    val parsedColor = remember(customHexInput, selectedColorHex) {
+        val clean = customHexInput.trim().removePrefix("#")
+        val hexToTry = when (clean.length) {
+            3 -> "#${clean[0]}${clean[0]}${clean[1]}${clean[1]}${clean[2]}${clean[2]}"
+            6, 8 -> "#$clean"
+            else -> selectedColorHex
+        }
+        try {
+            Color(android.graphics.Color.parseColor(hexToTry))
+        } catch (e: Exception) {
+            try {
+                Color(android.graphics.Color.parseColor(selectedColorHex))
+            } catch (e2: Exception) {
+                Color(0xFFFFD97D)
+            }
+        }
+    }
+
+    val primaryColor = MaterialTheme.colorScheme.primary
+    val primaryThemeHex = remember(primaryColor) {
+        String.format(
+            Locale.US,
+            "#%02X%02X%02X",
+            (primaryColor.red * 255).toInt().coerceIn(0, 255),
+            (primaryColor.green * 255).toInt().coerceIn(0, 255),
+            (primaryColor.blue * 255).toInt().coerceIn(0, 255)
+        )
+    }
+
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(title, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+
+            // Quick button to match current app primary theme
+            Surface(
+                shape = RoundedCornerShape(8.dp),
+                color = MaterialTheme.colorScheme.surfaceVariant,
+                modifier = Modifier.clickable {
+                    onColorSelected(primaryThemeHex)
+                    customHexInput = primaryThemeHex.removePrefix("#")
+                }
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(10.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.primary)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = "Match Theme",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
+
+        // Preset Color Swatches
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            presetColors.forEach { hex ->
+                val col = remember(hex) {
+                    try { Color(android.graphics.Color.parseColor(hex)) } catch (e: Exception) { Color.Gray }
+                }
+                val isSelected = selectedColorHex.equals(hex, ignoreCase = true)
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier
+                        .size(34.dp)
+                        .clip(CircleShape)
+                        .background(col)
+                        .border(
+                            width = if (isSelected) 2.5.dp else 1.dp,
+                            color = if (isSelected) MaterialTheme.colorScheme.onSurface else Color.White.copy(alpha = 0.2f),
+                            shape = CircleShape
+                        )
+                        .clickable {
+                            onColorSelected(hex)
+                            customHexInput = hex.removePrefix("#")
+                        }
+                ) {
+                    if (isSelected) {
+                        Icon(
+                            imageVector = Icons.Default.Check,
+                            contentDescription = "Selected",
+                            tint = if (col.luminance() > 0.5f) Color.Black else Color.White,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                }
+            }
+        }
+
+        // Custom Hex# input row with real-time swatch preview
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            OutlinedTextField(
+                value = customHexInput,
+                onValueChange = { input ->
+                    val filtered = input.filter { it.isDigit() || (it in 'a'..'f') || (it in 'A'..'F') }.take(6).uppercase()
+                    customHexInput = filtered
+                    if (filtered.length == 6 || filtered.length == 3) {
+                        val fullHex = if (filtered.length == 3) {
+                            "#${filtered[0]}${filtered[0]}${filtered[1]}${filtered[1]}${filtered[2]}${filtered[2]}"
+                        } else {
+                            "#$filtered"
+                        }
+                        try {
+                            android.graphics.Color.parseColor(fullHex)
+                            onColorSelected(fullHex)
+                        } catch (_: Exception) {}
+                    }
+                },
+                prefix = {
+                    Text("#", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                },
+                label = { Text("Custom Hex Color (#RRGGBB)") },
+                placeholder = { Text("e.g. FFD97D") },
+                singleLine = true,
+                modifier = Modifier.weight(1f)
+            )
+
+            Surface(
+                shape = RoundedCornerShape(12.dp),
+                color = parsedColor,
+                border = BorderStroke(1.5.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)),
+                modifier = Modifier
+                    .height(54.dp)
+                    .width(54.dp)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = Icons.Default.Palette,
+                        contentDescription = "Custom Color Preview",
+                        tint = if (parsedColor.luminance() > 0.5f) Color.Black.copy(alpha = 0.75f) else Color.White.copy(alpha = 0.85f),
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            }
+        }
+    }
 }
