@@ -154,6 +154,7 @@ document.addEventListener('DOMContentLoaded', () => {
       let statusClass = 'tag-expected';
       if (status === 'CONFIRMED') statusClass = 'tag-confirmed';
       if (status === 'TENTATIVE') statusClass = 'tag-tentative';
+      if (status === 'RECEIVED') statusClass = 'tag-received';
 
       itemDiv.innerHTML = `
         <span><strong>${title}</strong></span>

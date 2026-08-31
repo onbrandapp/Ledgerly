@@ -106,12 +106,12 @@ class ExpenseViewModel(application: Application) : AndroidViewModel(application)
 
     // Forecast Summary Pipeline Calculation
     val forecastSummary: StateFlow<ForecastSummary> = forecastIncomes.map { list ->
-        val activeList = list.filter { !it.isRealized }
+        val activeList = list.filter { !it.isRealized && !it.status.equals("RECEIVED", ignoreCase = true) }
         val confirmed = activeList.filter { it.status.equals("CONFIRMED", ignoreCase = true) }.sumOf { it.amount }
         val expected = activeList.filter { it.status.equals("EXPECTED", ignoreCase = true) }.sumOf { it.amount }
         val tentative = activeList.filter { it.status.equals("TENTATIVE", ignoreCase = true) }.sumOf { it.amount }
         val total = activeList.sumOf { it.amount }
-        val realizedList = list.filter { it.isRealized }
+        val realizedList = list.filter { it.isRealized || it.status.equals("RECEIVED", ignoreCase = true) }
 
         ForecastSummary(
             totalPipeline = total,
@@ -636,6 +636,13 @@ class ExpenseViewModel(application: Application) : AndroidViewModel(application)
         val email = currentUserEmail.value ?: return
         if (title.isBlank()) return
         viewModelScope.launch {
+            val isItemRealized = if (status.equals("RECEIVED", ignoreCase = true)) {
+                true
+            } else if (status.equals("CONFIRMED", ignoreCase = true) || status.equals("EXPECTED", ignoreCase = true) || status.equals("TENTATIVE", ignoreCase = true)) {
+                false
+            } else {
+                isRealized
+            }
             val forecast = ForecastIncome(
                 id = id.ifEmpty { java.util.UUID.randomUUID().toString() },
                 title = title.trim(),
@@ -646,7 +653,7 @@ class ExpenseViewModel(application: Application) : AndroidViewModel(application)
                 notes = notes.trim(),
                 bulletPoints = bulletPoints.filter { it.isNotBlank() }.map { it.trim() },
                 completedBullets = completedBullets,
-                isRealized = isRealized,
+                isRealized = isItemRealized,
                 userEmail = email
             )
             transactionRepository.addForecastIncome(email, forecast)
@@ -677,20 +684,22 @@ class ExpenseViewModel(application: Application) : AndroidViewModel(application)
     fun convertForecastToActualIncome(forecast: ForecastIncome, markRealizedOnly: Boolean = false) {
         val email = currentUserEmail.value ?: return
         viewModelScope.launch {
-            // Add as actual Income transaction
-            val newTx = Transaction(
-                id = java.util.UUID.randomUUID().toString(),
-                amount = forecast.amount,
-                category = forecast.category.ifBlank { "Income" },
-                type = "INCOME",
-                description = "${forecast.title} (From Forecast)",
-                date = System.currentTimeMillis(),
-                paid = true
-            )
-            transactionRepository.addTransaction(email, newTx)
+            if (!markRealizedOnly) {
+                // Add as actual Income transaction
+                val newTx = Transaction(
+                    id = java.util.UUID.randomUUID().toString(),
+                    amount = forecast.amount,
+                    category = forecast.category.ifBlank { "Income" },
+                    type = "INCOME",
+                    description = "${forecast.title} (From Forecast)",
+                    date = System.currentTimeMillis(),
+                    paid = true
+                )
+                transactionRepository.addTransaction(email, newTx)
+            }
 
-            // Update forecast status to realized
-            val updatedForecast = forecast.copy(isRealized = true, status = "CONFIRMED")
+            // Update forecast status to RECEIVED and isRealized to true
+            val updatedForecast = forecast.copy(isRealized = true, status = "RECEIVED")
             transactionRepository.addForecastIncome(email, updatedForecast)
         }
     }
@@ -699,7 +708,10 @@ class ExpenseViewModel(application: Application) : AndroidViewModel(application)
         val email = currentUserEmail.value ?: return
         viewModelScope.launch {
             val item = forecastIncomes.value.find { it.id == id } ?: return@launch
-            val updated = item.copy(isRealized = !item.isRealized)
+            val wasReceived = item.isRealized || item.status.equals("RECEIVED", ignoreCase = true)
+            val newRealized = !wasReceived
+            val newStatus = if (newRealized) "RECEIVED" else "CONFIRMED"
+            val updated = item.copy(isRealized = newRealized, status = newStatus)
             transactionRepository.addForecastIncome(email, updated)
         }
     }

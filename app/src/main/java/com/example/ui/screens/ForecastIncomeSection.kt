@@ -51,7 +51,7 @@ fun ForecastIncomeSection(
     val forecastSummary by viewModel.forecastSummary.collectAsState()
 
     var forecastSubTab by remember { mutableStateOf(0) } // 0 = Pipeline Forecast, 1 = Bulleted Notes & Ideas
-    var statusFilter by remember { mutableStateOf("ALL") } // "ALL", "CONFIRMED", "EXPECTED", "TENTATIVE", "REALIZED"
+    var statusFilter by remember { mutableStateOf("ALL") } // "ALL", "CONFIRMED", "EXPECTED", "TENTATIVE", "RECEIVED"
 
     var showAddForecastDialog by remember { mutableStateOf(false) }
     var editingForecast by remember { mutableStateOf<ForecastIncome?>(null) }
@@ -62,11 +62,11 @@ fun ForecastIncomeSection(
 
     val filteredForecasts = remember(forecastIncomes, statusFilter) {
         when (statusFilter) {
-            "CONFIRMED" -> forecastIncomes.filter { it.status.equals("CONFIRMED", ignoreCase = true) && !it.isRealized }
-            "EXPECTED" -> forecastIncomes.filter { it.status.equals("EXPECTED", ignoreCase = true) && !it.isRealized }
-            "TENTATIVE" -> forecastIncomes.filter { it.status.equals("TENTATIVE", ignoreCase = true) && !it.isRealized }
-            "REALIZED" -> forecastIncomes.filter { it.isRealized }
-            else -> forecastIncomes.filter { !it.isRealized }
+            "CONFIRMED" -> forecastIncomes.filter { it.status.equals("CONFIRMED", ignoreCase = true) && !it.isRealized && !it.status.equals("RECEIVED", ignoreCase = true) }
+            "EXPECTED" -> forecastIncomes.filter { it.status.equals("EXPECTED", ignoreCase = true) && !it.isRealized && !it.status.equals("RECEIVED", ignoreCase = true) }
+            "TENTATIVE" -> forecastIncomes.filter { it.status.equals("TENTATIVE", ignoreCase = true) && !it.isRealized && !it.status.equals("RECEIVED", ignoreCase = true) }
+            "RECEIVED", "REALIZED" -> forecastIncomes.filter { it.isRealized || it.status.equals("RECEIVED", ignoreCase = true) }
+            else -> forecastIncomes.filter { !it.isRealized && !it.status.equals("RECEIVED", ignoreCase = true) }
         }
     }
 
@@ -221,7 +221,7 @@ fun ForecastIncomeSection(
                 },
                 label = {
                     Text(
-                        text = "Income Pipeline (${forecastIncomes.count { !it.isRealized }})",
+                        text = "Income Pipeline (${forecastIncomes.count { !it.isRealized && !it.status.equals("RECEIVED", ignoreCase = true) }})",
                         fontWeight = FontWeight.Bold,
                         maxLines = 1,
                         softWrap = false
@@ -271,7 +271,7 @@ fun ForecastIncomeSection(
                         "CONFIRMED" to "Confirmed",
                         "EXPECTED" to "Expected",
                         "TENTATIVE" to "Tentative",
-                        "REALIZED" to "Realized"
+                        "RECEIVED" to "Received"
                     )
                     items(filters) { (key, label) ->
                         val isSelected = statusFilter == key
@@ -350,7 +350,7 @@ fun ForecastIncomeSection(
                         )
                         Spacer(modifier = Modifier.height(12.dp))
                         Text(
-                            text = if (statusFilter == "REALIZED") "No Realized Forecasts Yet" else "No Forecasted Income In This View",
+                            text = if (statusFilter == "RECEIVED" || statusFilter == "REALIZED") "No Received Forecasts Yet" else "No Forecasted Income In This View",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onBackground
@@ -530,6 +530,7 @@ fun ForecastIncomeSection(
                 editingForecast = null
             },
             onSave = { title, amount, expectedDate, category, status, notes, bullets ->
+                val isRealized = status.equals("RECEIVED", ignoreCase = true)
                 viewModel.addOrUpdateForecastIncome(
                     title = title,
                     amount = amount,
@@ -540,7 +541,7 @@ fun ForecastIncomeSection(
                     bulletPoints = bullets,
                     id = editingForecast?.id ?: "",
                     completedBullets = editingForecast?.completedBullets ?: emptyList(),
-                    isRealized = editingForecast?.isRealized ?: false
+                    isRealized = isRealized
                 )
                 showAddForecastDialog = false
                 editingForecast = null
@@ -578,61 +579,83 @@ fun ForecastIncomeSection(
                     Icon(
                         imageVector = Icons.Default.CheckCircle,
                         contentDescription = null,
-                        tint = Color(0xFF2E7D32),
+                        tint = Color(0xFF16A34A),
                         modifier = Modifier.size(24.dp)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Realize Forecasted Income", fontWeight = FontWeight.Bold)
+                    Text("Mark as Received", fontWeight = FontWeight.Bold)
                 }
             },
             text = {
                 Column {
                     Text(
-                        text = "Would you like to move this forecasted item directly into your active Ledgerly Income?",
+                        text = "How would you like to record this forecasted income?",
                         style = MaterialTheme.typography.bodyMedium
                     )
                     Spacer(modifier = Modifier.height(12.dp))
                     Surface(
                         shape = RoundedCornerShape(12.dp),
-                        color = Color(0xFFE8F5E9),
-                        border = BorderStroke(1.dp, Color(0xFFC8E6C9)),
+                        color = Color(0xFFDCFCE7),
+                        border = BorderStroke(1.dp, Color(0xFF86EFAC)),
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Column(modifier = Modifier.padding(12.dp)) {
                             Text(
                                 text = forecast.title,
                                 fontWeight = FontWeight.Bold,
-                                color = Color(0xFF1B5E20)
+                                color = Color(0xFF14532D)
                             )
                             Text(
                                 text = String.format(Locale.US, "+$%.2f  •  %s", forecast.amount, forecast.category),
                                 fontWeight = FontWeight.Black,
                                 fontSize = 16.sp,
-                                color = Color(0xFF2E7D32)
+                                color = Color(0xFF16A34A)
                             )
                         }
                     }
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(12.dp))
                     Text(
-                        text = "This will create an actual Income transaction in your active ledger.",
+                        text = "• 'Add to Ledger': Creates an Income transaction in your active ledger and updates status to Received.\n\n• 'Already in Ledger': Sets status to Received without adding a duplicate ledger transaction.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             },
             confirmButton = {
-                Button(
-                    onClick = {
-                        viewModel.convertForecastToActualIncome(forecast)
-                        forecastToRealize = null
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2E7D32))
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    Text("Add to Ledger")
+                    Button(
+                        onClick = {
+                            viewModel.convertForecastToActualIncome(forecast, markRealizedOnly = false)
+                            forecastToRealize = null
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF16A34A)),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Add to Ledger")
+                    }
+                    OutlinedButton(
+                        onClick = {
+                            viewModel.convertForecastToActualIncome(forecast, markRealizedOnly = true)
+                            forecastToRealize = null
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Already in Ledger (Mark Received)")
+                    }
                 }
             },
             dismissButton = {
-                TextButton(onClick = { forecastToRealize = null }) {
+                TextButton(
+                    onClick = { forecastToRealize = null },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
                     Text("Cancel")
                 }
             }
@@ -686,7 +709,10 @@ fun ForecastIncomeCard(
     val dateFormatter = remember { SimpleDateFormat("MMM dd, yyyy", Locale.getDefault()) }
     val dateStr = remember(item.expectedDate) { dateFormatter.format(Date(item.expectedDate)) }
 
+    val isItemReceived = item.isRealized || item.status.equals("RECEIVED", ignoreCase = true)
+
     val (statusColor, statusBg, statusLabel) = when (item.status.uppercase()) {
+        "RECEIVED" -> Triple(Color(0xFF16A34A), Color(0xFFDCFCE7), "Received")
         "CONFIRMED" -> Triple(Color(0xFF2E7D32), Color(0xFFE8F5E9), "Confirmed")
         "EXPECTED" -> Triple(Color(0xFFD97706), Color(0xFFFEF3C7), "Expected")
         else -> Triple(Color(0xFF7C3AED), Color(0xFFEDE9FE), "Tentative")
@@ -694,12 +720,12 @@ fun ForecastIncomeCard(
 
     Card(
         colors = CardDefaults.cardColors(
-            containerColor = if (item.isRealized) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f) else MaterialTheme.colorScheme.surface
+            containerColor = if (isItemReceived) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f) else MaterialTheme.colorScheme.surface
         ),
         shape = RoundedCornerShape(20.dp),
         border = BorderStroke(
-            width = if (item.isRealized) 1.dp else 1.5.dp,
-            color = if (item.isRealized) MaterialTheme.colorScheme.outline.copy(alpha = 0.3f) else statusColor.copy(alpha = 0.4f)
+            width = if (isItemReceived) 1.dp else 1.5.dp,
+            color = if (isItemReceived) Color(0xFF16A34A).copy(alpha = 0.35f) else statusColor.copy(alpha = 0.4f)
         ),
         modifier = modifier.fillMaxWidth()
     ) {
@@ -720,8 +746,8 @@ fun ForecastIncomeCard(
                             text = item.title,
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
-                            color = if (item.isRealized) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f) else MaterialTheme.colorScheme.onSurface,
-                            textDecoration = if (item.isRealized) TextDecoration.LineThrough else TextDecoration.None
+                            color = if (isItemReceived) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f) else MaterialTheme.colorScheme.onSurface,
+                            textDecoration = if (isItemReceived) TextDecoration.LineThrough else TextDecoration.None
                         )
                     }
 
@@ -761,25 +787,34 @@ fun ForecastIncomeCard(
                 // Status Badge
                 Surface(
                     shape = RoundedCornerShape(10.dp),
-                    color = if (item.isRealized) Color(0xFFE0E0E0) else statusBg,
-                    border = BorderStroke(1.dp, if (item.isRealized) Color(0xFFBDBDBD) else statusColor.copy(alpha = 0.3f))
+                    color = if (isItemReceived) Color(0xFFDCFCE7) else statusBg,
+                    border = BorderStroke(1.dp, if (isItemReceived) Color(0xFF86EFAC) else statusColor.copy(alpha = 0.3f))
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                     ) {
-                        Box(
-                            modifier = Modifier
-                                .size(6.dp)
-                                .clip(CircleShape)
-                                .background(if (item.isRealized) Color.Gray else statusColor)
-                        )
+                        if (isItemReceived) {
+                            Icon(
+                                imageVector = Icons.Default.CheckCircle,
+                                contentDescription = null,
+                                tint = Color(0xFF16A34A),
+                                modifier = Modifier.size(12.dp)
+                            )
+                        } else {
+                            Box(
+                                modifier = Modifier
+                                    .size(6.dp)
+                                    .clip(CircleShape)
+                                    .background(statusColor)
+                            )
+                        }
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
-                            text = if (item.isRealized) "Realized" else statusLabel,
+                            text = if (isItemReceived) "Received" else statusLabel,
                             style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.ExtraBold,
-                            color = if (item.isRealized) Color.DarkGray else statusColor
+                            color = if (isItemReceived) Color(0xFF15803D) else statusColor
                         )
                     }
                 }
@@ -797,10 +832,10 @@ fun ForecastIncomeCard(
                     text = String.format(Locale.US, "+$%.2f", item.amount),
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Black,
-                    color = if (item.isRealized) Color.Gray else Color(0xFF2E7D32)
+                    color = if (isItemReceived) Color.Gray else Color(0xFF2E7D32)
                 )
 
-                if (!item.isRealized) {
+                if (!isItemReceived) {
                     Button(
                         onClick = onRealize,
                         colors = ButtonDefaults.buttonColors(
@@ -830,8 +865,15 @@ fun ForecastIncomeCard(
                         contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
                         modifier = Modifier.height(30.dp)
                     ) {
+                        Icon(
+                            imageVector = Icons.Default.Refresh,
+                            contentDescription = null,
+                            modifier = Modifier.size(12.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
                         Text(
-                            text = "Undo Realized",
+                            text = "Revert to Active",
                             style = MaterialTheme.typography.labelSmall
                         )
                     }
@@ -1104,7 +1146,12 @@ fun AddEditForecastIncomeDialog(
     var amountText by remember { mutableStateOf(if (initialItem != null && initialItem.amount > 0) initialItem.amount.toString() else "") }
     var expectedDate by remember { mutableStateOf(initialItem?.expectedDate ?: (System.currentTimeMillis() + 14L * 24 * 60 * 60 * 1000)) }
     var category by remember { mutableStateOf(initialItem?.category ?: "Freelance") }
-    var status by remember { mutableStateOf(initialItem?.status ?: "EXPECTED") }
+    var status by remember {
+        mutableStateOf(
+            if (initialItem?.isRealized == true || initialItem?.status?.equals("RECEIVED", ignoreCase = true) == true) "RECEIVED"
+            else initialItem?.status ?: "EXPECTED"
+        )
+    }
     var notes by remember { mutableStateOf(initialItem?.notes ?: "") }
 
     var bulletsList by remember { mutableStateOf(initialItem?.bulletPoints ?: emptyList()) }
@@ -1182,29 +1229,71 @@ fun AddEditForecastIncomeDialog(
                 }
 
                 // Confidence / Status
-                Text("Forecast Confidence / Status", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    val statusOptions = listOf("CONFIRMED" to "Confirmed", "EXPECTED" to "Expected", "TENTATIVE" to "Tentative")
-                    statusOptions.forEach { (key, label) ->
-                        val isSelected = status == key
-                        Surface(
-                            shape = RoundedCornerShape(12.dp),
-                            color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
-                            contentColor = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier
-                                .weight(1f)
-                                .clickable { status = key }
-                        ) {
-                            Text(
-                                text = label,
-                                style = MaterialTheme.typography.labelSmall,
-                                fontWeight = FontWeight.Bold,
-                                textAlign = TextAlign.Center,
-                                modifier = Modifier.padding(vertical = 8.dp)
-                            )
+                Text("Forecast Status", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        val row1 = listOf("CONFIRMED" to "Confirmed", "EXPECTED" to "Expected")
+                        row1.forEach { (key, label) ->
+                            val isSelected = status == key
+                            Surface(
+                                shape = RoundedCornerShape(12.dp),
+                                color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
+                                contentColor = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clickable { status = key }
+                            ) {
+                                Text(
+                                    text = label,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    textAlign = TextAlign.Center,
+                                    modifier = Modifier.padding(vertical = 10.dp)
+                                )
+                            }
+                        }
+                    }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        val row2 = listOf("TENTATIVE" to "Tentative", "RECEIVED" to "Received")
+                        row2.forEach { (key, label) ->
+                            val isSelected = status == key
+                            val activeBgColor = if (key == "RECEIVED") Color(0xFF16A34A) else MaterialTheme.colorScheme.primary
+                            Surface(
+                                shape = RoundedCornerShape(12.dp),
+                                color = if (isSelected) activeBgColor else MaterialTheme.colorScheme.surfaceVariant,
+                                contentColor = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clickable { status = key }
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(vertical = 10.dp),
+                                    horizontalArrangement = Arrangement.Center,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    if (key == "RECEIVED" && isSelected) {
+                                        Icon(
+                                            imageVector = Icons.Default.CheckCircle,
+                                            contentDescription = null,
+                                            tint = Color.White,
+                                            modifier = Modifier.size(14.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                    }
+                                    Text(
+                                        text = label,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = FontWeight.Bold,
+                                        textAlign = TextAlign.Center
+                                    )
+                                }
+                            }
                         }
                     }
                 }

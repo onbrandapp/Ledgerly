@@ -547,6 +547,7 @@ header {
 .tag-confirmed { color: #34d399; font-weight: 700; }
 .tag-expected { color: #60a5fa; font-weight: 700; }
 .tag-tentative { color: #fbbf24; font-weight: 700; }
+.tag-received { color: #10b981; font-weight: 700; }
 
 /* Specs / Release Box */
 .release-banner {
