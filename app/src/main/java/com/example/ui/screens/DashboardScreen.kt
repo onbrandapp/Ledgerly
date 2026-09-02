@@ -1,8 +1,10 @@
 package com.example.ui.screens
 
 import androidx.compose.animation.*
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.ui.input.pointer.pointerInput
@@ -839,12 +841,86 @@ fun DashboardScreen(
                     }
                 }
 
-                // --- 2. THE BUDGET SUMMARY PANEL ---
+                // --- 2. THE BUDGET SUMMARY PANEL & ENTRANCE COUNT-UP ANIMATIONS ---
                 val remainingBudget = monthlyBudget + monthlySummary.totalIncome - monthlySummary.totalExpense
                 val isBudgetAlert = remainingBudget < 0.1 * monthlyBudget
-                val progress = if (monthlyBudget > 0) {
-                    (monthlySummary.totalExpense / (monthlyBudget + monthlySummary.totalIncome)).coerceIn(0.0, 1.0).toFloat()
+                val totalBudget = monthlyBudget + monthlySummary.totalIncome
+                val progress = if (totalBudget > 0) {
+                    (monthlySummary.totalExpense / totalBudget).coerceIn(0.0, 1.0).toFloat()
                 } else 0f
+
+                // Entrance Slide & Fade Animatables for Staggered Reveal
+                val budgetCardAlpha = remember { Animatable(0f) }
+                val budgetCardSlideY = remember { Animatable(28f) }
+                val expensesCardAlpha = remember { Animatable(0f) }
+                val expensesCardSlideY = remember { Animatable(28f) }
+                val incomeCardAlpha = remember { Animatable(0f) }
+                val incomeCardSlideY = remember { Animatable(28f) }
+
+                // Count-Up Animated Values for Numbers & Progress
+                val animatedRemainingBudget = remember { Animatable(0f) }
+                val animatedTotalBudget = remember { Animatable(0f) }
+                val animatedExpenses = remember { Animatable(0f) }
+                val animatedIncome = remember { Animatable(0f) }
+                val animatedProgress = remember { Animatable(0f) }
+
+                LaunchedEffect(Unit) {
+                    launch {
+                        budgetCardAlpha.animateTo(1f, animationSpec = tween(650, easing = FastOutSlowInEasing))
+                    }
+                    launch {
+                        budgetCardSlideY.animateTo(0f, animationSpec = tween(650, easing = FastOutSlowInEasing))
+                    }
+                    launch {
+                        delay(90)
+                        expensesCardAlpha.animateTo(1f, animationSpec = tween(650, easing = FastOutSlowInEasing))
+                    }
+                    launch {
+                        delay(90)
+                        expensesCardSlideY.animateTo(0f, animationSpec = tween(650, easing = FastOutSlowInEasing))
+                    }
+                    launch {
+                        delay(180)
+                        incomeCardAlpha.animateTo(1f, animationSpec = tween(650, easing = FastOutSlowInEasing))
+                    }
+                    launch {
+                        delay(180)
+                        incomeCardSlideY.animateTo(0f, animationSpec = tween(650, easing = FastOutSlowInEasing))
+                    }
+                }
+
+                LaunchedEffect(remainingBudget, totalBudget, monthlySummary.totalExpense, monthlySummary.totalIncome, progress) {
+                    launch {
+                        animatedRemainingBudget.animateTo(
+                            targetValue = remainingBudget.toFloat(),
+                            animationSpec = tween(durationMillis = 1100, easing = FastOutSlowInEasing)
+                        )
+                    }
+                    launch {
+                        animatedTotalBudget.animateTo(
+                            targetValue = totalBudget.toFloat(),
+                            animationSpec = tween(durationMillis = 1100, easing = FastOutSlowInEasing)
+                        )
+                    }
+                    launch {
+                        animatedExpenses.animateTo(
+                            targetValue = monthlySummary.totalExpense.toFloat(),
+                            animationSpec = tween(durationMillis = 1100, delayMillis = 60, easing = FastOutSlowInEasing)
+                        )
+                    }
+                    launch {
+                        animatedIncome.animateTo(
+                            targetValue = monthlySummary.totalIncome.toFloat(),
+                            animationSpec = tween(durationMillis = 1100, delayMillis = 120, easing = FastOutSlowInEasing)
+                        )
+                    }
+                    launch {
+                        animatedProgress.animateTo(
+                            targetValue = progress,
+                            animationSpec = tween(durationMillis = 1100, easing = FastOutSlowInEasing)
+                        )
+                    }
+                }
 
                 // Bento Card 1: Remaining Budget Panel (Span 2)
                 Card(
@@ -855,6 +931,10 @@ fun DashboardScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(vertical = 8.dp)
+                        .graphicsLayer {
+                            alpha = budgetCardAlpha.value
+                            translationY = budgetCardSlideY.value
+                        }
                 ) {
                     Box(
                         modifier = Modifier
@@ -925,8 +1005,14 @@ fun DashboardScreen(
                                 }
                             }
 
+                            val formattedRemaining = remember(animatedRemainingBudget.value) {
+                                val v = animatedRemainingBudget.value
+                                if (v < 0) "-$${String.format(Locale.US, "%,.2f", Math.abs(v))}"
+                                else "$${String.format(Locale.US, "%,.2f", v)}"
+                            }
+
                             Text(
-                                text = "$${String.format("%,.2f", remainingBudget)}",
+                                text = formattedRemaining,
                                 style = MaterialTheme.typography.headlineLarge.copy(fontSize = 38.sp),
                                 fontWeight = FontWeight.Black,
                                 color = MaterialTheme.colorScheme.onPrimary,
@@ -936,7 +1022,7 @@ fun DashboardScreen(
                             )
 
                             Text(
-                                text = "Remaining of $${String.format("%,.2f", monthlyBudget + monthlySummary.totalIncome)}",
+                                text = "Remaining of $${String.format(Locale.US, "%,.2f", animatedTotalBudget.value)}",
                                 style = MaterialTheme.typography.labelMedium,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f)
@@ -946,7 +1032,7 @@ fun DashboardScreen(
 
                             // Budget utilization bar (uses the clean contrast onPrimary color dynamically)
                             LinearProgressIndicator(
-                                progress = { progress },
+                                progress = { animatedProgress.value },
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .height(8.dp)
@@ -960,13 +1046,13 @@ fun DashboardScreen(
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
                                 Text(
-                                    text = "${(progress * 100).toInt()}% utilized",
+                                    text = "${(animatedProgress.value * 100).toInt()}% utilized",
                                     style = MaterialTheme.typography.labelSmall,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f)
                                 )
                                 Text(
-                                    text = "Limit: $${String.format("%,.0f", monthlyBudget)}",
+                                    text = "Limit: $${String.format(Locale.US, "%,.0f", monthlyBudget)}",
                                     style = MaterialTheme.typography.labelSmall,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f)
@@ -985,7 +1071,12 @@ fun DashboardScreen(
                 ) {
                     // Card 2: Today's Expenses (Using Secondary/Purple Background)
                     Card(
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier
+                            .weight(1f)
+                            .graphicsLayer {
+                                alpha = expensesCardAlpha.value
+                                translationY = expensesCardSlideY.value
+                            },
                         colors = CardDefaults.cardColors(
                             containerColor = MaterialTheme.colorScheme.secondary
                         ),
@@ -1022,7 +1113,7 @@ fun DashboardScreen(
                                     color = MaterialTheme.colorScheme.onSecondary.copy(alpha = 0.7f)
                                 )
                                 Text(
-                                    text = "$${String.format("%,.2f", monthlySummary.totalExpense)}",
+                                    text = "$${String.format(Locale.US, "%,.2f", animatedExpenses.value)}",
                                     style = MaterialTheme.typography.titleLarge,
                                     fontWeight = FontWeight.Black,
                                     color = MaterialTheme.colorScheme.onSecondary,
@@ -1035,7 +1126,12 @@ fun DashboardScreen(
 
                     // Card 3: Income (Using Accent/Lime Green Background)
                     Card(
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier
+                            .weight(1f)
+                            .graphicsLayer {
+                                alpha = incomeCardAlpha.value
+                                translationY = incomeCardSlideY.value
+                            },
                         colors = CardDefaults.cardColors(
                             containerColor = MaterialTheme.colorScheme.tertiary
                         ),
@@ -1072,7 +1168,7 @@ fun DashboardScreen(
                                     color = MaterialTheme.colorScheme.onTertiary.copy(alpha = 0.7f)
                                 )
                                 Text(
-                                    text = "$${String.format("%,.2f", monthlySummary.totalIncome)}",
+                                    text = "$${String.format(Locale.US, "%,.2f", animatedIncome.value)}",
                                     style = MaterialTheme.typography.titleLarge,
                                     fontWeight = FontWeight.Black,
                                     color = MaterialTheme.colorScheme.onTertiary,
