@@ -2047,7 +2047,7 @@ fun DashboardScreen(
             tonalElevation = 8.dp,
             dragHandle = { BottomSheetDefaults.DragHandle() },
             modifier = Modifier
-                .fillMaxHeight(0.9f)
+                .fillMaxHeight(0.96f)
                 .testTag("ledger_bottom_sheet")
         ) {
             val incomeList = remember(ledgerFilteredTransactions) {
@@ -2157,10 +2157,10 @@ fun DashboardScreen(
 
             Column(
                 modifier = Modifier
-                    .fillMaxWidth()
+                    .fillMaxSize()
                     .navigationBarsPadding()
-                    .padding(horizontal = 16.dp)
-                    .padding(bottom = 16.dp)
+                    .padding(horizontal = 14.dp)
+                    .padding(bottom = 8.dp)
             ) {
                 // Header Row
                 Row(
@@ -2196,14 +2196,14 @@ fun DashboardScreen(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(8.dp))
 
                 // Date Filters Quick Selection Row
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .horizontalScroll(rememberScrollState())
-                        .padding(vertical = 4.dp),
+                        .padding(vertical = 2.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -2226,7 +2226,7 @@ fun DashboardScreen(
 
                 // Custom Date Range Selectors
                 if (ledgerSelectedFilter == "Custom") {
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(6.dp))
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -2324,7 +2324,7 @@ fun DashboardScreen(
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Row(
-                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 5.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.Center
                             ) {
@@ -2346,14 +2346,15 @@ fun DashboardScreen(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(8.dp))
 
-                // Hide Paid Expenses Toggle Button Row
+                // Streamlined Action Controls Row: Hide/Show Paid Expenses + Export CSV + Export PDF
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    // Hide Paid Expenses Toggle Button
                     Button(
                         onClick = { hidePaidExpenses = !hidePaidExpenses },
                         colors = if (hidePaidExpenses) {
@@ -2367,64 +2368,49 @@ fun DashboardScreen(
                                 contentColor = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         },
-                        shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier.testTag("ledger_hide_paid_expenses_button")
+                        shape = RoundedCornerShape(10.dp),
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+                        modifier = Modifier
+                            .weight(1.2f)
+                            .height(38.dp)
+                            .testTag("ledger_hide_paid_expenses_button")
                     ) {
                         Icon(
                             imageVector = if (hidePaidExpenses) Icons.Default.Visibility else Icons.Default.VisibilityOff,
                             contentDescription = null,
-                            modifier = Modifier.size(18.dp)
+                            modifier = Modifier.size(16.dp)
                         )
-                        Spacer(modifier = Modifier.width(8.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
                         Text(
-                            text = if (hidePaidExpenses) "Show Paid Expenses" else "Hide Paid Expenses",
+                            text = if (hidePaidExpenses) "Show Paid" else "Hide Paid",
                             fontWeight = FontWeight.Bold,
-                            fontSize = 13.sp
+                            fontSize = 12.sp,
+                            maxLines = 1
                         )
                     }
 
-                    if (hidePaidExpenses) {
-                        Surface(
-                            color = MaterialTheme.colorScheme.error.copy(alpha = 0.15f),
-                            shape = RoundedCornerShape(8.dp)
-                        ) {
-                            Text(
-                                text = "Paid Hidden",
-                                style = MaterialTheme.typography.labelSmall,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.error,
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                            )
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                // Export Options Buttons Row
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
                     // Export CSV
                     Button(
                         onClick = {
                             csvLauncher.launch("Finance_Ledger_${SimpleDateFormat("yyyyMMdd", Locale.getDefault()).format(Date())}.csv")
                         },
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(38.dp),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = MaterialTheme.colorScheme.primaryContainer,
                             contentColor = MaterialTheme.colorScheme.onPrimaryContainer
                         ),
-                        shape = RoundedCornerShape(12.dp)
+                        shape = RoundedCornerShape(10.dp),
+                        contentPadding = PaddingValues(horizontal = 6.dp, vertical = 4.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Default.TableChart,
                             contentDescription = null,
-                            modifier = Modifier.size(18.dp)
+                            modifier = Modifier.size(16.dp)
                         )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Export CSV", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("CSV", fontWeight = FontWeight.Bold, fontSize = 12.sp, maxLines = 1)
                     }
 
                     // Export PDF
@@ -2432,24 +2418,27 @@ fun DashboardScreen(
                         onClick = {
                             pdfLauncher.launch("Finance_Ledger_${SimpleDateFormat("yyyyMMdd", Locale.getDefault()).format(Date())}.pdf")
                         },
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(38.dp),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = MaterialTheme.colorScheme.secondaryContainer,
                             contentColor = MaterialTheme.colorScheme.onSecondaryContainer
                         ),
-                        shape = RoundedCornerShape(12.dp)
+                        shape = RoundedCornerShape(10.dp),
+                        contentPadding = PaddingValues(horizontal = 6.dp, vertical = 4.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Default.PictureAsPdf,
                             contentDescription = null,
-                            modifier = Modifier.size(18.dp)
+                            modifier = Modifier.size(16.dp)
                         )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Export PDF", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("PDF", fontWeight = FontWeight.Bold, fontSize = 12.sp, maxLines = 1)
                     }
                 }
 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(8.dp))
 
                 // The Dual-Column Layout with Scrollable Lists
                 Row(
@@ -2825,17 +2814,17 @@ fun DashboardScreen(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(8.dp))
 
                 // Bottom Totals Section Card
                 Card(
                     colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.8f)
                     ),
-                    shape = RoundedCornerShape(16.dp),
+                    shape = RoundedCornerShape(14.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
+                    Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp)) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween
@@ -2853,7 +2842,7 @@ fun DashboardScreen(
                                     color = MaterialTheme.colorScheme.tertiary
                                 )
                                 if (totalLeftToReceive > 0) {
-                                    Spacer(modifier = Modifier.height(3.dp))
+                                    Spacer(modifier = Modifier.height(2.dp))
                                     Text(
                                         text = "Left to Receive: +$${String.format("%,.2f", totalLeftToReceive)}",
                                         style = MaterialTheme.typography.labelSmall,
@@ -2876,7 +2865,7 @@ fun DashboardScreen(
                             Box(
                                 modifier = Modifier
                                     .width(1.dp)
-                                    .height(if (totalLeftToReceive > 0 || totalLeftToPay > 0) 54.dp else 40.dp)
+                                    .height(if (totalLeftToReceive > 0 || totalLeftToPay > 0) 46.dp else 36.dp)
                                     .background(MaterialTheme.colorScheme.outlineVariant)
                             )
 
@@ -2893,7 +2882,7 @@ fun DashboardScreen(
                                     color = MaterialTheme.colorScheme.error
                                 )
                                 if (totalLeftToPay > 0) {
-                                    Spacer(modifier = Modifier.height(3.dp))
+                                    Spacer(modifier = Modifier.height(2.dp))
                                     Text(
                                         text = "Left to Pay: -$${String.format("%,.2f", totalLeftToPay)}",
                                         style = MaterialTheme.typography.labelSmall,
@@ -2905,7 +2894,7 @@ fun DashboardScreen(
                         }
 
                         HorizontalDivider(
-                            modifier = Modifier.padding(vertical = 12.dp),
+                            modifier = Modifier.padding(vertical = 6.dp),
                             color = MaterialTheme.colorScheme.outlineVariant
                         )
 
@@ -2932,7 +2921,7 @@ fun DashboardScreen(
                                             if (isPositive) MaterialTheme.colorScheme.tertiary.copy(alpha = 0.15f) else MaterialTheme.colorScheme.error.copy(alpha = 0.15f),
                                             RoundedCornerShape(8.dp)
                                         )
-                                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                                        .padding(horizontal = 8.dp, vertical = 3.dp)
                                 ) {
                                     Row(
                                         verticalAlignment = Alignment.CenterVertically,
@@ -2956,7 +2945,7 @@ fun DashboardScreen(
                                 }
                                 Text(
                                     text = "${if (netBalance >= 0) "+" else ""}$${String.format("%,.2f", netBalance)}",
-                                    style = MaterialTheme.typography.titleLarge,
+                                    style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.Black,
                                     color = MaterialTheme.colorScheme.onSurface
                                 )

@@ -17,8 +17,8 @@ android {
     applicationId = "com.aistudio.expensetracker.mvkqxl"
     minSdk = 24
     targetSdk = 36
-    versionCode = 52
-    versionName = "52.0"
+    versionCode = 54
+    versionName = "54.0"
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
   }
