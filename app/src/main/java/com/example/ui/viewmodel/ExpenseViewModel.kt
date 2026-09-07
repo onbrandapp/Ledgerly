@@ -30,6 +30,87 @@ class ExpenseViewModel(application: Application) : AndroidViewModel(application)
     private val _authError = MutableStateFlow<String?>(null)
     val authError = _authError.asStateFlow()
 
+    // Biometric Security State
+    private val securityPrefs = application.getSharedPreferences("security_prefs", Context.MODE_PRIVATE)
+    private val _isBiometricEnabled = MutableStateFlow(securityPrefs.getBoolean("biometric_enabled", false))
+    val isBiometricEnabled = _isBiometricEnabled.asStateFlow()
+
+    private val _isBiometricUnlocked = MutableStateFlow(false)
+    val isBiometricUnlocked = _isBiometricUnlocked.asStateFlow()
+
+    fun setBiometricEnabled(enabled: Boolean) {
+        securityPrefs.edit().putBoolean("biometric_enabled", enabled).apply()
+        _isBiometricEnabled.value = enabled
+        if (enabled) {
+            _isBiometricUnlocked.value = true
+            currentUserEmail.value?.let { email ->
+                securityPrefs.edit().putString("biometric_email", email).apply()
+            }
+        }
+    }
+
+    val biometricEmail: String?
+        get() = securityPrefs.getString("biometric_email", null)
+
+    fun recordBiometricCredentials(email: String, password: String?) {
+        securityPrefs.edit().putString("biometric_email", email).apply()
+        if (password != null) {
+            securityPrefs.edit().putString("biometric_pwd", password).apply()
+        }
+    }
+
+    fun loginWithBiometrics(onSuccess: () -> Unit = {}, onFailure: (String) -> Unit = {}) {
+        val email = securityPrefs.getString("biometric_email", null)
+        val password = securityPrefs.getString("biometric_pwd", null)
+        if (email != null && password != null) {
+            viewModelScope.launch {
+                _isAuthLoading.value = true
+                _authError.value = null
+                authRepository.login(email.trim(), password)
+                    .onSuccess {
+                        _isAuthLoading.value = false
+                        _isBiometricUnlocked.value = true
+                        onSuccess()
+                    }
+                    .onFailure { exception ->
+                        _isAuthLoading.value = false
+                        val err = exception.message ?: "Biometric login failed."
+                        _authError.value = err
+                        onFailure(err)
+                    }
+            }
+        } else if (email != null) {
+            viewModelScope.launch {
+                _isAuthLoading.value = true
+                _authError.value = null
+                authRepository.login(email.trim(), "biometric_authorized")
+                    .onSuccess {
+                        _isAuthLoading.value = false
+                        _isBiometricUnlocked.value = true
+                        onSuccess()
+                    }
+                    .onFailure { exception ->
+                        _isAuthLoading.value = false
+                        val err = exception.message ?: "Biometric login failed."
+                        _authError.value = err
+                        onFailure(err)
+                    }
+            }
+        } else {
+            val err = "No account linked with biometrics yet. Please sign in with email/password first."
+            _authError.value = err
+            onFailure(err)
+        }
+    }
+
+    fun unlockWithBiometric() {
+        _isBiometricUnlocked.value = true
+    }
+
+    fun lockApp() {
+        _isBiometricUnlocked.value = false
+    }
+
     // Monthly Budget State
     private val budgetPrefs = application.getSharedPreferences("budget_prefs", Context.MODE_PRIVATE)
     private val _monthlyBudget = MutableStateFlow(budgetPrefs.getFloat("limit", 2000f).toDouble())
@@ -209,6 +290,8 @@ class ExpenseViewModel(application: Application) : AndroidViewModel(application)
             _authError.value = null
             authRepository.login(email.trim(), password)
                 .onSuccess {
+                    recordBiometricCredentials(email.trim(), password)
+                    _isBiometricUnlocked.value = true
                     _isAuthLoading.value = false
                 }
                 .onFailure { exception ->
@@ -228,6 +311,8 @@ class ExpenseViewModel(application: Application) : AndroidViewModel(application)
             _authError.value = null
             authRepository.signup(email.trim(), password)
                 .onSuccess {
+                    recordBiometricCredentials(email.trim(), password)
+                    _isBiometricUnlocked.value = true
                     _isAuthLoading.value = false
                 }
                 .onFailure { exception ->
@@ -239,6 +324,7 @@ class ExpenseViewModel(application: Application) : AndroidViewModel(application)
 
     fun logout() {
         viewModelScope.launch {
+            _isBiometricUnlocked.value = false
             authRepository.logout()
         }
     }

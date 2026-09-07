@@ -59,6 +59,7 @@ import android.app.DatePickerDialog
 import java.util.Calendar
 import com.example.data.Transaction
 import com.example.data.CustomCategory
+import com.example.ui.components.BiometricSettingsCard
 import com.example.ui.viewmodel.ExpenseViewModel
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -559,6 +560,19 @@ fun DashboardScreen(
                     }
                 },
                 actions = {
+                    val isBiometricEnabled by viewModel.isBiometricEnabled.collectAsState()
+                    if (isBiometricEnabled) {
+                        IconButton(
+                            onClick = { viewModel.lockApp() },
+                            modifier = Modifier.testTag("lock_app_button")
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Lock,
+                                contentDescription = "Lock App",
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
                     IconButton(
                         onClick = { showBudgetDialog = true },
                         modifier = Modifier.testTag("edit_budget_button")
@@ -1538,6 +1552,7 @@ fun DashboardScreen(
                                 .testTag("transactions_list"),
                             verticalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
+                            ExpenseReconciliationHeader(transactions = monthlySummary.currentMonthList)
                             monthlySummary.currentMonthList.forEach { tx ->
                                 TransactionRowItem(
                                     transaction = tx,
@@ -1556,6 +1571,9 @@ fun DashboardScreen(
                                         } else {
                                             viewModel.deleteTransaction(tx.id)
                                         }
+                                    },
+                                    onTogglePaid = {
+                                        viewModel.toggleTransactionPaid(tx.id)
                                     }
                                 )
                             }
@@ -1614,6 +1632,7 @@ fun DashboardScreen(
                                 .testTag("all_time_transactions_list"),
                             verticalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
+                            ExpenseReconciliationHeader(transactions = allTimeList)
                             allTimeList.forEach { tx ->
                                 TransactionRowItem(
                                     transaction = tx,
@@ -1632,6 +1651,9 @@ fun DashboardScreen(
                                         } else {
                                             viewModel.deleteTransaction(tx.id)
                                         }
+                                    },
+                                    onTogglePaid = {
+                                        viewModel.toggleTransactionPaid(tx.id)
                                     }
                                 )
                             }
@@ -1888,6 +1910,24 @@ fun DashboardScreen(
                         colorHex = tempAccentHex,
                         onClick = { activeColorPickerTarget = "accent" },
                         modifier = Modifier.testTag("accent_color_selector_card")
+                    )
+
+                    HorizontalDivider(
+                        modifier = Modifier.padding(vertical = 12.dp),
+                        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
+                    )
+
+                    Text(
+                        text = "Security & Privacy",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.padding(top = 4.dp, bottom = 4.dp)
+                    )
+
+                    BiometricSettingsCard(
+                        viewModel = viewModel,
+                        onDismissParent = { showBudgetDialog = false }
                     )
                 }
 
@@ -3584,10 +3624,156 @@ fun ManualAddForm(
 }
 
 @Composable
+fun ExpenseReconciliationHeader(
+    transactions: List<Transaction>,
+    modifier: Modifier = Modifier
+) {
+    val expenseTransactions = remember(transactions) {
+        transactions.filter { it.type.uppercase() == "EXPENSE" }
+    }
+    if (expenseTransactions.isEmpty()) return
+
+    val totalExpense = remember(expenseTransactions) { expenseTransactions.sumOf { it.amount } }
+    val paidExpenses = remember(expenseTransactions) { expenseTransactions.filter { it.paid } }
+    val paidTotal = remember(paidExpenses) { paidExpenses.sumOf { it.amount } }
+    val unpaidExpenses = remember(expenseTransactions) { expenseTransactions.filter { !it.paid } }
+    val unpaidTotal = remember(unpaidExpenses) { unpaidExpenses.sumOf { it.amount } }
+
+    val reconciliationRatio = if (totalExpense > 0.0) (paidTotal / totalExpense).toFloat().coerceIn(0f, 1f) else 1f
+    val reconciliationPercent = (reconciliationRatio * 100).toInt()
+    val isFullyReconciled = unpaidExpenses.isEmpty()
+
+    Card(
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+        ),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)),
+        modifier = modifier
+            .fillMaxWidth()
+            .testTag("expense_reconciliation_header")
+    ) {
+        Column(modifier = Modifier.padding(14.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Icon(
+                        imageVector = if (isFullyReconciled) Icons.Default.CheckCircle else Icons.Default.Receipt,
+                        contentDescription = null,
+                        tint = if (isFullyReconciled) Color(0xFF2E7D32) else MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Text(
+                        text = "Expense Reconciliation",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+
+                Surface(
+                    color = if (isFullyReconciled) Color(0xFF2E7D32).copy(alpha = 0.12f) else MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Text(
+                        text = if (isFullyReconciled) "100% Reconciled" else "$reconciliationPercent% Reconciled",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = if (isFullyReconciled) Color(0xFF2E7D32) else MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            val animatedProgress by animateFloatAsState(
+                targetValue = reconciliationRatio,
+                animationSpec = tween(durationMillis = 400),
+                label = "reconciliation_progress"
+            )
+
+            LinearProgressIndicator(
+                progress = { animatedProgress },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(6.dp)
+                    .clip(RoundedCornerShape(3.dp)),
+                color = if (isFullyReconciled) Color(0xFF2E7D32) else MaterialTheme.colorScheme.primary,
+                trackColor = MaterialTheme.colorScheme.surfaceVariant
+            )
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Paid breakdown
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(8.dp)
+                            .background(Color(0xFF2E7D32), CircleShape)
+                    )
+                    Text(
+                        text = "Paid (${paidExpenses.size}):",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = "$${String.format("%,.2f", paidTotal)}",
+                        style = MaterialTheme.typography.bodySmall,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = Color(0xFF2E7D32),
+                        modifier = Modifier.testTag("reconciliation_paid_amount")
+                    )
+                }
+
+                // Unpaid breakdown
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(8.dp)
+                            .background(Color(0xFFE65100), CircleShape)
+                    )
+                    Text(
+                        text = "Unpaid (${unpaidExpenses.size}):",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = "$${String.format("%,.2f", unpaidTotal)}",
+                        style = MaterialTheme.typography.bodySmall,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = Color(0xFFE65100),
+                        modifier = Modifier.testTag("reconciliation_unpaid_amount")
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
 fun TransactionRowItem(
     transaction: Transaction,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
+    onTogglePaid: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val categoryStyle = getCategoryStyle(transaction.category)
@@ -3663,6 +3849,46 @@ fun TransactionRowItem(
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
                     )
+                }
+
+                // Clickable status badge for expense entries
+                if (isExpense && onTogglePaid != null) {
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Surface(
+                        onClick = onTogglePaid,
+                        shape = RoundedCornerShape(8.dp),
+                        color = if (transaction.paid) 
+                            Color(0xFF2E7D32).copy(alpha = 0.12f) 
+                        else 
+                            Color(0xFFE65100).copy(alpha = 0.12f),
+                        border = BorderStroke(
+                            1.dp,
+                            if (transaction.paid) 
+                                Color(0xFF2E7D32).copy(alpha = 0.35f) 
+                            else 
+                                Color(0xFFE65100).copy(alpha = 0.35f)
+                        ),
+                        modifier = Modifier.testTag("status_badge_${transaction.id}")
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Icon(
+                                imageVector = if (transaction.paid) Icons.Default.CheckCircle else Icons.Default.Schedule,
+                                contentDescription = if (transaction.paid) "Status: Paid. Tap to mark unpaid" else "Status: Unpaid. Tap to mark paid",
+                                tint = if (transaction.paid) Color(0xFF2E7D32) else Color(0xFFE65100),
+                                modifier = Modifier.size(12.dp)
+                            )
+                            Text(
+                                text = if (transaction.paid) "Paid" else "Unpaid",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = if (transaction.paid) Color(0xFF2E7D32) else Color(0xFFE65100)
+                            )
+                        }
+                    }
                 }
             }
 

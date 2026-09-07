@@ -11,6 +11,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CloudDone
 import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.Fingerprint
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.OfflineBolt
 import androidx.compose.material.icons.filled.TrendingUp
@@ -400,6 +401,69 @@ fun LoginScreen(
                                 color = MaterialTheme.colorScheme.onSurface,
                                 fontSize = 16.sp
                             )
+                        }
+                    }
+
+                    val isBiometricEnabled by viewModel.isBiometricEnabled.collectAsState()
+                    if (isBiometricEnabled) {
+                        Spacer(modifier = Modifier.height(12.dp))
+                        FilledTonalButton(
+                            onClick = {
+                                val activity = (context as? android.content.ContextWrapper)?.let {
+                                    var ctx: android.content.Context = it
+                                    while (ctx is android.content.ContextWrapper) {
+                                        if (ctx is androidx.fragment.app.FragmentActivity) return@let ctx
+                                        ctx = ctx.baseContext
+                                    }
+                                    null
+                                } ?: (context as? androidx.fragment.app.FragmentActivity)
+
+                                if (activity != null) {
+                                    com.example.security.BiometricAuthManager.showBiometricPrompt(
+                                        activity = activity,
+                                        title = "Quick Unlock",
+                                        subtitle = "Authenticate to access your financial data",
+                                        negativeButtonText = "Cancel",
+                                        onSuccess = {
+                                            viewModel.loginWithBiometrics()
+                                        },
+                                        onError = {
+                                            // Silently handled
+                                        }
+                                    )
+                                } else {
+                                    viewModel.loginWithBiometrics()
+                                }
+                            },
+                            enabled = !isAuthLoading,
+                            shape = RoundedCornerShape(16.dp),
+                            colors = ButtonDefaults.filledTonalButtonColors(
+                                containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f),
+                                contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                            ),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(52.dp)
+                                .testTag("biometric_login_button")
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Fingerprint,
+                                    contentDescription = "Biometric Icon",
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Spacer(modifier = Modifier.width(10.dp))
+                                Text(
+                                    text = "Unlock with Biometrics",
+                                    style = MaterialTheme.typography.labelLarge,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 16.sp
+                                )
+                            }
                         }
                     }
                 }
