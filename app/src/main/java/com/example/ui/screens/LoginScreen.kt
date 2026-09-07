@@ -13,6 +13,7 @@ import androidx.compose.material.icons.filled.CloudDone
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Fingerprint
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.LockOpen
 import androidx.compose.material.icons.filled.OfflineBolt
 import androidx.compose.material.icons.filled.TrendingUp
 import androidx.compose.material.icons.filled.Visibility
@@ -405,44 +406,51 @@ fun LoginScreen(
                     }
 
                     val isBiometricEnabled by viewModel.isBiometricEnabled.collectAsState()
-                    if (isBiometricEnabled) {
-                        Spacer(modifier = Modifier.height(12.dp))
-                        FilledTonalButton(
-                            onClick = {
-                                val activity = (context as? android.content.ContextWrapper)?.let {
-                                    var ctx: android.content.Context = it
-                                    while (ctx is android.content.ContextWrapper) {
-                                        if (ctx is androidx.fragment.app.FragmentActivity) return@let ctx
-                                        ctx = ctx.baseContext
-                                    }
-                                    null
-                                } ?: (context as? androidx.fragment.app.FragmentActivity)
+                    val triggerBiometricAuth: () -> Unit = {
+                        val activity = (context as? android.content.ContextWrapper)?.let {
+                            var ctx: android.content.Context = it
+                            while (ctx is android.content.ContextWrapper) {
+                                if (ctx is androidx.fragment.app.FragmentActivity) return@let ctx
+                                ctx = ctx.baseContext
+                            }
+                            null
+                        } ?: (context as? androidx.fragment.app.FragmentActivity)
 
-                                if (activity != null) {
-                                    com.example.security.BiometricAuthManager.showBiometricPrompt(
-                                        activity = activity,
-                                        title = "Quick Unlock",
-                                        subtitle = "Authenticate to access your financial data",
-                                        negativeButtonText = "Cancel",
-                                        onSuccess = {
-                                            viewModel.loginWithBiometrics()
-                                        },
-                                        onError = {
-                                            // Silently handled
-                                        }
-                                    )
-                                } else {
+                        if (activity != null) {
+                            com.example.security.BiometricAuthManager.showBiometricPrompt(
+                                activity = activity,
+                                title = "Quick Unlock",
+                                subtitle = "Authenticate to access your financial data",
+                                negativeButtonText = "Cancel",
+                                onSuccess = {
                                     viewModel.loginWithBiometrics()
+                                },
+                                onError = {
+                                    // Silently handled
                                 }
-                            },
+                            )
+                        } else {
+                            viewModel.loginWithBiometrics()
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        FilledTonalButton(
+                            onClick = { triggerBiometricAuth() },
                             enabled = !isAuthLoading,
                             shape = RoundedCornerShape(16.dp),
+                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp),
                             colors = ButtonDefaults.filledTonalButtonColors(
                                 containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f),
                                 contentColor = MaterialTheme.colorScheme.onPrimaryContainer
                             ),
                             modifier = Modifier
-                                .fillMaxWidth()
+                                .weight(1f)
                                 .height(52.dp)
                                 .testTag("biometric_login_button")
                         ) {
@@ -456,15 +464,48 @@ fun LoginScreen(
                                     tint = MaterialTheme.colorScheme.primary,
                                     modifier = Modifier.size(20.dp)
                                 )
-                                Spacer(modifier = Modifier.width(10.dp))
+                                Spacer(modifier = Modifier.width(8.dp))
                                 Text(
                                     text = "Unlock with Biometrics",
                                     style = MaterialTheme.typography.labelLarge,
                                     fontWeight = FontWeight.Bold,
-                                    fontSize = 16.sp
+                                    fontSize = 14.sp,
+                                    maxLines = 1,
+                                    softWrap = false
                                 )
                             }
                         }
+
+                        // Dedicated 'Unlock' icon button for manual authentication trigger
+                        FilledTonalIconButton(
+                            onClick = { triggerBiometricAuth() },
+                            enabled = !isAuthLoading,
+                            shape = RoundedCornerShape(16.dp),
+                            colors = IconButtonDefaults.filledTonalIconButtonColors(
+                                containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.85f),
+                                contentColor = MaterialTheme.colorScheme.primary
+                            ),
+                            modifier = Modifier
+                                .size(52.dp)
+                                .testTag("manual_unlock_icon_button")
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.LockOpen,
+                                contentDescription = "Manual Unlock Trigger",
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
+                    }
+
+                    if (!isBiometricEnabled) {
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Text(
+                            text = "Tap Unlock to authenticate manually or enable auto-lock in Settings",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.75f),
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.fillMaxWidth()
+                        )
                     }
                 }
             }

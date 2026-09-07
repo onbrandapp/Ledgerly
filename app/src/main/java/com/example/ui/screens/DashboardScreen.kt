@@ -561,17 +561,21 @@ fun DashboardScreen(
                 },
                 actions = {
                     val isBiometricEnabled by viewModel.isBiometricEnabled.collectAsState()
-                    if (isBiometricEnabled) {
-                        IconButton(
-                            onClick = { viewModel.lockApp() },
-                            modifier = Modifier.testTag("lock_app_button")
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Lock,
-                                contentDescription = "Lock App",
-                                tint = MaterialTheme.colorScheme.primary
-                            )
-                        }
+                    IconButton(
+                        onClick = { 
+                            if (isBiometricEnabled) {
+                                viewModel.lockApp()
+                            } else {
+                                showBudgetDialog = true
+                            }
+                        },
+                        modifier = Modifier.testTag("lock_app_button")
+                    ) {
+                        Icon(
+                            imageVector = if (isBiometricEnabled) Icons.Default.Lock else Icons.Default.Fingerprint,
+                            contentDescription = if (isBiometricEnabled) "Lock App" else "Biometric Security Settings",
+                            tint = if (isBiometricEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primary
+                        )
                     }
                     IconButton(
                         onClick = { showBudgetDialog = true },
@@ -1881,6 +1885,24 @@ fun DashboardScreen(
                     HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f))
 
                     Text(
+                        text = "Security & Privacy",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.padding(top = 4.dp, bottom = 4.dp)
+                    )
+
+                    BiometricSettingsCard(
+                        viewModel = viewModel,
+                        onDismissParent = { showBudgetDialog = false }
+                    )
+
+                    HorizontalDivider(
+                        modifier = Modifier.padding(vertical = 12.dp),
+                        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
+                    )
+
+                    Text(
                         text = "Theme Customization",
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold,
@@ -1910,24 +1932,6 @@ fun DashboardScreen(
                         colorHex = tempAccentHex,
                         onClick = { activeColorPickerTarget = "accent" },
                         modifier = Modifier.testTag("accent_color_selector_card")
-                    )
-
-                    HorizontalDivider(
-                        modifier = Modifier.padding(vertical = 12.dp),
-                        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
-                    )
-
-                    Text(
-                        text = "Security & Privacy",
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.padding(top = 4.dp, bottom = 4.dp)
-                    )
-
-                    BiometricSettingsCard(
-                        viewModel = viewModel,
-                        onDismissParent = { showBudgetDialog = false }
                     )
                 }
 

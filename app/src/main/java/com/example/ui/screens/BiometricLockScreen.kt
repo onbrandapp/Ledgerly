@@ -7,12 +7,14 @@ import androidx.compose.animation.core.*
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.Fingerprint
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.LockOpen
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -125,21 +127,25 @@ fun BiometricLockScreen(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
-                // Shield / Fingerprint Pulsing Avatar
+                // Shield / Fingerprint Pulsing Avatar (Tap to trigger authentication)
                 Box(
                     contentAlignment = Alignment.Center,
                     modifier = Modifier
-                        .size(100.dp)
+                        .size(108.dp)
                         .scale(pulseScale)
                         .background(
                             color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
                             shape = CircleShape
                         )
+                        .clickable {
+                            promptTriggerCount++
+                            triggerPrompt()
+                        }
                 ) {
                     Box(
                         contentAlignment = Alignment.Center,
                         modifier = Modifier
-                            .size(76.dp)
+                            .size(80.dp)
                             .background(
                                 color = MaterialTheme.colorScheme.primary.copy(alpha = 0.22f),
                                 shape = CircleShape
@@ -147,7 +153,7 @@ fun BiometricLockScreen(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Fingerprint,
-                            contentDescription = "Biometric Lock",
+                            contentDescription = "Biometric Lock - Tap to Unlock",
                             tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(44.dp)
                         )
@@ -195,6 +201,37 @@ fun BiometricLockScreen(
                     modifier = Modifier.padding(horizontal = 8.dp)
                 )
 
+                // Descriptive manual trigger helper next to the biometric prompt text
+                Surface(
+                    shape = RoundedCornerShape(20.dp),
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.08f),
+                    modifier = Modifier
+                        .padding(top = 10.dp)
+                        .clickable {
+                            promptTriggerCount++
+                            triggerPrompt()
+                        }
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.LockOpen,
+                            contentDescription = "Unlock prompt",
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(14.dp)
+                        )
+                        Text(
+                            text = "Tap here if prompt didn't appear automatically",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
+
                 AnimatedVisibility(visible = authErrorMessage != null) {
                     authErrorMessage?.let { err ->
                         Surface(
@@ -216,39 +253,100 @@ fun BiometricLockScreen(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(28.dp))
+                Spacer(modifier = Modifier.height(24.dp))
 
-                // Unlock Button
-                Button(
-                    onClick = {
-                        promptTriggerCount++
-                        triggerPrompt()
-                    },
-                    shape = RoundedCornerShape(16.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.primary,
-                        contentColor = MaterialTheme.colorScheme.onPrimary
-                    ),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(52.dp)
-                        .testTag("biometric_unlock_button")
+                // Unlock Button row with dedicated Unlock icon button for manual trigger
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    Button(
+                        onClick = {
+                            promptTriggerCount++
+                            triggerPrompt()
+                        },
+                        shape = RoundedCornerShape(16.dp),
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primary,
+                            contentColor = MaterialTheme.colorScheme.onPrimary
+                        ),
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(52.dp)
+                            .testTag("biometric_unlock_button")
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Fingerprint,
+                                contentDescription = null,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "Unlock with Biometrics",
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 14.sp,
+                                maxLines = 1,
+                                softWrap = false
+                            )
+                        }
+                    }
+
+                    // Dedicated 'Unlock' icon button for manual authentication trigger
+                    FilledTonalIconButton(
+                        onClick = {
+                            promptTriggerCount++
+                            triggerPrompt()
+                        },
+                        shape = RoundedCornerShape(16.dp),
+                        colors = IconButtonDefaults.filledTonalIconButtonColors(
+                            containerColor = MaterialTheme.colorScheme.primaryContainer,
+                            contentColor = MaterialTheme.colorScheme.primary
+                        ),
+                        modifier = Modifier
+                            .size(52.dp)
+                            .testTag("biometric_manual_unlock_icon_button")
                     ) {
                         Icon(
-                            imageVector = Icons.Default.Fingerprint,
-                            contentDescription = null,
-                            modifier = Modifier.size(20.dp)
+                            imageVector = Icons.Default.LockOpen,
+                            contentDescription = "Manual Unlock Trigger",
+                            modifier = Modifier.size(22.dp)
                         )
-                        Text(
-                            text = "Unlock with Biometrics",
-                            style = MaterialTheme.typography.labelLarge,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 16.sp
-                        )
+                    }
+                }
+
+                if (biometricStatus != BiometricStatus.READY) {
+                    Spacer(modifier = Modifier.height(10.dp))
+                    TextButton(
+                        onClick = {
+                            viewModel.unlockWithBiometric()
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("bypass_biometric_button")
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.LockOpen,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp),
+                                tint = MaterialTheme.colorScheme.secondary
+                            )
+                            Text(
+                                text = "Unlock Without Biometrics (Sensor Unavailable)",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.secondary
+                            )
+                        }
                     }
                 }
 
