@@ -97,8 +97,19 @@ object CategoryConstants {
 
     fun parseColor(hex: String, fallback: Color = Color(0xFF00897B)): Color {
         return try {
-            val formatted = if (hex.startsWith("#")) hex else "#$hex"
-            Color(android.graphics.Color.parseColor(formatted))
+            val cleanHex = hex.trim().removePrefix("#")
+            val argbLong = when (cleanHex.length) {
+                6 -> 0xFF000000L or cleanHex.toLong(16)
+                8 -> cleanHex.toLong(16)
+                3 -> {
+                    val r = cleanHex[0].toString().repeat(2)
+                    val g = cleanHex[1].toString().repeat(2)
+                    val b = cleanHex[2].toString().repeat(2)
+                    0xFF000000L or "$r$g$b".toLong(16)
+                }
+                else -> return fallback
+            }
+            Color(argbLong)
         } catch (e: Exception) {
             fallback
         }

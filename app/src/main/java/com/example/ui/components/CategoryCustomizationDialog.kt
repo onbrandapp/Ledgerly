@@ -72,6 +72,7 @@ fun CategoryCustomizationDialog(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Row(
+                    modifier = Modifier.weight(1f),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
@@ -88,22 +89,27 @@ fun CategoryCustomizationDialog(
                             modifier = Modifier.size(20.dp)
                         )
                     }
-                    Column {
+                    Column(modifier = Modifier.weight(1f, fill = false)) {
                         Text(
                             text = "Custom Categories",
                             style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                         Text(
                             text = "Vector icons & custom colors",
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                     }
                 }
 
                 if (!showForm && editingCatId == null) {
-                    FilledTonalButton(
+                    Spacer(modifier = Modifier.width(8.dp))
+                    FilledTonalIconButton(
                         onClick = {
                             showForm = true
                             newCategoryName = ""
@@ -111,16 +117,16 @@ fun CategoryCustomizationDialog(
                             selectedColorHex = "#00897B"
                             customHexInput = "#00897B"
                         },
-                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
-                        modifier = Modifier.testTag("add_new_category_button")
+                        shape = CircleShape,
+                        modifier = Modifier
+                            .size(38.dp)
+                            .testTag("add_new_category_button")
                     ) {
                         Icon(
                             imageVector = Icons.Default.Add,
-                            contentDescription = "Add",
-                            modifier = Modifier.size(16.dp)
+                            contentDescription = "Add New Category",
+                            modifier = Modifier.size(22.dp)
                         )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text("Add", fontSize = 12.sp, fontWeight = FontWeight.Bold)
                     }
                 }
             }
@@ -547,7 +553,7 @@ fun CategoryCustomizationDialog(
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                                 Text(
-                                    text = "Tap '+ Add' above to create customized categories with vector icons and colors.",
+                                    text = "Tap the '+' button above to create customized categories with vector icons and colors.",
                                     style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                                     textAlign = androidx.compose.ui.text.style.TextAlign.Center
