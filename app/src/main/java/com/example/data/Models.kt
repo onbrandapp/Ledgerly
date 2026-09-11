@@ -31,10 +31,13 @@ data class RecurringTransaction(
 data class CustomCategory(
     val id: String = "",
     val name: String = "",
-    val userEmail: String = ""
+    val userEmail: String = "",
+    val iconName: String = "category",
+    val colorHex: String = "#00897B",
+    val type: String = "EXPENSE"
 ) {
     // Zero-argument constructor required for Firestore deserialization
-    constructor() : this("", "", "")
+    constructor() : this("", "", "", "category", "#00897B", "EXPENSE")
 }
 
 data class ForecastIncome(

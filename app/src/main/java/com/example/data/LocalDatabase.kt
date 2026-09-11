@@ -89,19 +89,28 @@ data class LocalRecurringTransaction(
 data class LocalCategory(
     @PrimaryKey val id: String,
     val name: String,
-    val userEmail: String
+    val userEmail: String,
+    val iconName: String = "category",
+    val colorHex: String = "#00897B",
+    val type: String = "EXPENSE"
 ) {
     fun toDomain(): CustomCategory = CustomCategory(
         id = id,
         name = name,
-        userEmail = userEmail
+        userEmail = userEmail,
+        iconName = iconName,
+        colorHex = colorHex,
+        type = type
     )
 
     companion object {
         fun fromDomain(c: CustomCategory): LocalCategory = LocalCategory(
             id = c.id.ifEmpty { java.util.UUID.randomUUID().toString() },
             name = c.name,
-            userEmail = c.userEmail
+            userEmail = c.userEmail,
+            iconName = c.iconName.ifEmpty { "category" },
+            colorHex = c.colorHex.ifEmpty { "#00897B" },
+            type = c.type.ifEmpty { "EXPENSE" }
         )
     }
 }
@@ -288,7 +297,7 @@ interface TransactionDao {
         LocalForecastIncome::class,
         LocalFutureIncomeNote::class
     ],
-    version = 8,
+    version = 9,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {

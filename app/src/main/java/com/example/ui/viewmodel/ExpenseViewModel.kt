@@ -536,27 +536,44 @@ class ExpenseViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    fun addCustomCategory(name: String) {
+    fun addCustomCategory(
+        name: String,
+        iconName: String = "category",
+        colorHex: String = "#00897B",
+        type: String = "EXPENSE"
+    ) {
         val email = currentUserEmail.value ?: return
         if (name.isBlank()) return
         viewModelScope.launch {
             val newCat = CustomCategory(
                 id = java.util.UUID.randomUUID().toString(),
                 name = name.trim(),
-                userEmail = email
+                userEmail = email,
+                iconName = iconName,
+                colorHex = colorHex,
+                type = type
             )
             transactionRepository.addCustomCategory(email, newCat)
         }
     }
 
-    fun updateCustomCategory(id: String, newName: String) {
+    fun updateCustomCategory(
+        id: String,
+        newName: String,
+        iconName: String = "category",
+        colorHex: String = "#00897B",
+        type: String = "EXPENSE"
+    ) {
         val email = currentUserEmail.value ?: return
         if (newName.isBlank()) return
         viewModelScope.launch {
             val updatedCat = CustomCategory(
                 id = id,
                 name = newName.trim(),
-                userEmail = email
+                userEmail = email,
+                iconName = iconName,
+                colorHex = colorHex,
+                type = type
             )
             transactionRepository.addCustomCategory(email, updatedCat)
         }

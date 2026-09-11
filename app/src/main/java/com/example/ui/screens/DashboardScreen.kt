@@ -60,6 +60,9 @@ import java.util.Calendar
 import com.example.data.Transaction
 import com.example.data.CustomCategory
 import com.example.ui.components.BiometricSettingsCard
+import com.example.ui.components.CategoryCustomizationDialog
+import com.example.ui.theme.CategoryConstants
+import com.example.ui.theme.CategoryStyle
 import com.example.ui.viewmodel.ExpenseViewModel
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -85,6 +88,8 @@ fun DashboardScreen(
     val monthlyBudget by viewModel.monthlyBudget.collectAsState()
     val recurringTransactions by viewModel.recurringTransactions.collectAsState()
     val forecastSummary by viewModel.forecastSummary.collectAsState()
+    val customCategoriesList by viewModel.customCategories.collectAsState()
+    var showGlobalCategoryDialog by remember { mutableStateOf(false) }
 
     val primaryColorHex by viewModel.primaryColor.collectAsState()
     val secondaryColorHex by viewModel.secondaryColor.collectAsState()
@@ -584,6 +589,16 @@ fun DashboardScreen(
                         Icon(
                             imageVector = Icons.Default.Settings,
                             contentDescription = "Budget Settings",
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                    IconButton(
+                        onClick = { showGlobalCategoryDialog = true },
+                        modifier = Modifier.testTag("manage_categories_top_button")
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Palette,
+                            contentDescription = "Manage Custom Categories",
                             tint = MaterialTheme.colorScheme.primary
                         )
                     }
@@ -1256,7 +1271,10 @@ fun DashboardScreen(
                 }
 
                 // --- 3. DATA VISUALIZATION SECTION ---
-                VisualAnalyticsSection(transactions = transactions)
+                VisualAnalyticsSection(
+                    transactions = transactions,
+                    customCategories = customCategoriesList
+                )
 
                 // --- 4. TRANSACTION / RECURRING / FORECAST SWITCH HEADER ---
                 Column(
@@ -1578,7 +1596,8 @@ fun DashboardScreen(
                                     },
                                     onTogglePaid = {
                                         viewModel.toggleTransactionPaid(tx.id)
-                                    }
+                                    },
+                                    customCategories = customCategoriesList
                                 )
                             }
                         }
@@ -1658,7 +1677,8 @@ fun DashboardScreen(
                                     },
                                     onTogglePaid = {
                                         viewModel.toggleTransactionPaid(tx.id)
-                                    }
+                                    },
+                                    customCategories = customCategoriesList
                                 )
                             }
                         }
@@ -1713,7 +1733,8 @@ fun DashboardScreen(
                                         editingTransaction = null
                                         showManualAddForm = true
                                     },
-                                    onDelete = { viewModel.deleteRecurringTransaction(rec.id) }
+                                    onDelete = { viewModel.deleteRecurringTransaction(rec.id) },
+                                    customCategories = customCategoriesList
                                 )
                             }
                         }
@@ -1814,6 +1835,13 @@ fun DashboardScreen(
             }
         )
     }
+
+    // --- CUSTOM CATEGORIES MANAGEMENT DIALOG ---
+    CategoryCustomizationDialog(
+        isOpen = showGlobalCategoryDialog,
+        onDismiss = { showGlobalCategoryDialog = false },
+        viewModel = viewModel
+    )
 
     // --- SETTINGS & BUDGET CONFIGURATION BOTTOM DRAWER ---
     if (showBudgetDialog) {
@@ -1933,6 +1961,78 @@ fun DashboardScreen(
                         onClick = { activeColorPickerTarget = "accent" },
                         modifier = Modifier.testTag("accent_color_selector_card")
                     )
+
+                    HorizontalDivider(
+                        modifier = Modifier.padding(vertical = 10.dp),
+                        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
+                    )
+
+                    Text(
+                        text = "Categories & Icons",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.padding(top = 4.dp, bottom = 4.dp)
+                    )
+
+                    Card(
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                        ),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                showBudgetDialog = false
+                                showGlobalCategoryDialog = true
+                            }
+                            .testTag("manage_categories_settings_card")
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(14.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(36.dp)
+                                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f), CircleShape),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Category,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                                Column {
+                                    Text(
+                                        text = "Custom Categories & Icons",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Text(
+                                        text = "${customCategoriesList.size} categories • Tap to customize",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                            Icon(
+                                imageVector = Icons.Default.ChevronRight,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+                    }
                 }
 
                 Row(
@@ -3147,159 +3247,11 @@ fun ManualAddForm(
     }
     var showCategoryDialog by remember { mutableStateOf(false) }
 
-    if (showCategoryDialog) {
-        var newCategoryName by remember { mutableStateOf("") }
-        var editingCatId by remember { mutableStateOf<String?>(null) }
-
-        AlertDialog(
-            onDismissRequest = { showCategoryDialog = false },
-            title = {
-                Text(
-                    text = "Manage Custom Categories",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
-            },
-            text = {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(max = 350.dp)
-                ) {
-                    // Input to Add/Edit Category
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(bottom = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        OutlinedTextField(
-                            value = newCategoryName,
-                            onValueChange = { newCategoryName = it },
-                            label = { Text(if (editingCatId == null) "New Category" else "Edit Category") },
-                            singleLine = true,
-                            shape = RoundedCornerShape(8.dp),
-                            modifier = Modifier
-                                .weight(1f)
-                                .testTag("category_input_field")
-                        )
-                        Button(
-                            onClick = {
-                                if (newCategoryName.isNotBlank()) {
-                                    val catId = editingCatId
-                                    if (catId == null) {
-                                        viewModel.addCustomCategory(newCategoryName)
-                                    } else {
-                                        viewModel.updateCustomCategory(catId, newCategoryName)
-                                        editingCatId = null
-                                    }
-                                    newCategoryName = ""
-                                }
-                            },
-                            shape = RoundedCornerShape(8.dp),
-                            modifier = Modifier.testTag("save_category_button")
-                        ) {
-                            Text(if (editingCatId == null) "Add" else "Save")
-                        }
-                    }
-
-                    // Divider
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(1.dp)
-                            .background(MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
-                            .padding(vertical = 8.dp)
-                    )
-
-                    if (customCategoriesList.isEmpty()) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 24.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = "No custom categories yet",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-                            )
-                        }
-                    } else {
-                        LazyColumn(
-                            verticalArrangement = Arrangement.spacedBy(8.dp),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            items(customCategoriesList) { cat ->
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .background(
-                                            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
-                                            RoundedCornerShape(8.dp)
-                                        )
-                                        .padding(horizontal = 12.dp, vertical = 6.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.SpaceBetween
-                                ) {
-                                    Text(
-                                        text = cat.name,
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        fontWeight = FontWeight.Medium,
-                                        color = MaterialTheme.colorScheme.onSurface
-                                    )
-                                    Row(
-                                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                                    ) {
-                                        IconButton(
-                                            onClick = {
-                                                newCategoryName = cat.name
-                                                editingCatId = cat.id
-                                            },
-                                            modifier = Modifier.size(28.dp).testTag("edit_category_${cat.id}")
-                                        ) {
-                                            Icon(
-                                                imageVector = Icons.Default.Edit,
-                                                contentDescription = "Edit category",
-                                                tint = MaterialTheme.colorScheme.primary,
-                                                modifier = Modifier.size(16.dp)
-                                            )
-                                        }
-                                        IconButton(
-                                            onClick = {
-                                                viewModel.deleteCustomCategory(cat.id)
-                                                if (editingCatId == cat.id) {
-                                                    editingCatId = null
-                                                    newCategoryName = ""
-                                                }
-                                            },
-                                            modifier = Modifier.size(28.dp).testTag("delete_category_${cat.id}")
-                                        ) {
-                                            Icon(
-                                                imageVector = Icons.Default.DeleteOutline,
-                                                contentDescription = "Delete category",
-                                                tint = MaterialTheme.colorScheme.error,
-                                                modifier = Modifier.size(16.dp)
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = { showCategoryDialog = false },
-                    modifier = Modifier.testTag("close_category_dialog_button")
-                ) {
-                    Text("Close")
-                }
-            }
-        )
-    }
+    CategoryCustomizationDialog(
+        isOpen = showCategoryDialog,
+        onDismiss = { showCategoryDialog = false },
+        viewModel = viewModel
+    )
 
     Card(
         colors = CardDefaults.cardColors(
@@ -3415,7 +3367,7 @@ fun ManualAddForm(
                     ) {
                         rowItems.forEach { cat ->
                             val isSelected = category == cat
-                            val style = getCategoryStyle(cat)
+                            val style = getCategoryStyle(cat, customCategoriesList)
                             
                             Surface(
                                 onClick = { category = cat },
@@ -3648,55 +3600,107 @@ fun ExpenseReconciliationHeader(
     val isFullyReconciled = unpaidExpenses.isEmpty()
 
     Card(
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)
         ),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f)),
         modifier = modifier
             .fillMaxWidth()
             .testTag("expense_reconciliation_header")
     ) {
-        Column(modifier = Modifier.padding(14.dp)) {
+        Column(
+            modifier = Modifier.padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            // Header Row: Icon + Title/Subtitle + Settled Badge
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Row(
+                    modifier = Modifier.weight(1f, fill = false),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    Icon(
-                        imageVector = if (isFullyReconciled) Icons.Default.CheckCircle else Icons.Default.Receipt,
-                        contentDescription = null,
-                        tint = if (isFullyReconciled) Color(0xFF2E7D32) else MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Text(
-                        text = "Expense Reconciliation",
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .background(
+                                if (isFullyReconciled) Color(0xFF2E7D32).copy(alpha = 0.15f)
+                                else MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
+                                CircleShape
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = if (isFullyReconciled) Icons.Default.CheckCircle else Icons.Default.Receipt,
+                            contentDescription = null,
+                            tint = if (isFullyReconciled) Color(0xFF2E7D32) else MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+
+                    Column {
+                        Text(
+                            text = "Expense Reconciliation",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            maxLines = 1,
+                            softWrap = false,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Text(
+                            text = if (isFullyReconciled) "All expenses cleared"
+                            else "${paidExpenses.size} of ${expenseTransactions.size} settled",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            softWrap = false
+                        )
+                    }
                 }
 
+                Spacer(modifier = Modifier.width(8.dp))
+
                 Surface(
-                    color = if (isFullyReconciled) Color(0xFF2E7D32).copy(alpha = 0.12f) else MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
-                    shape = RoundedCornerShape(8.dp)
+                    color = if (isFullyReconciled) Color(0xFF2E7D32).copy(alpha = 0.15f)
+                    else MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
+                    border = BorderStroke(
+                        1.dp,
+                        if (isFullyReconciled) Color(0xFF2E7D32).copy(alpha = 0.35f)
+                        else MaterialTheme.colorScheme.primary.copy(alpha = 0.35f)
+                    ),
+                    shape = RoundedCornerShape(10.dp)
                 ) {
-                    Text(
-                        text = if (isFullyReconciled) "100% Reconciled" else "$reconciliationPercent% Reconciled",
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = if (isFullyReconciled) Color(0xFF2E7D32) else MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
-                    )
+                    Row(
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        if (isFullyReconciled) {
+                            Icon(
+                                imageVector = Icons.Default.CheckCircle,
+                                contentDescription = null,
+                                tint = Color(0xFF2E7D32),
+                                modifier = Modifier.size(12.dp)
+                            )
+                        }
+                        Text(
+                            text = if (isFullyReconciled) "100% Settled" else "$reconciliationPercent% Settled",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = if (isFullyReconciled) Color(0xFF2E7D32) else MaterialTheme.colorScheme.primary,
+                            maxLines = 1,
+                            softWrap = false
+                        )
+                    }
                 }
             }
 
-            Spacer(modifier = Modifier.height(10.dp))
-
+            // Animated Progress Indicator
             val animatedProgress by animateFloatAsState(
                 targetValue = reconciliationRatio,
                 animationSpec = tween(durationMillis = 400),
@@ -3713,59 +3717,103 @@ fun ExpenseReconciliationHeader(
                 trackColor = MaterialTheme.colorScheme.surfaceVariant
             )
 
-            Spacer(modifier = Modifier.height(10.dp))
-
+            // Two distinct structured tiles for Paid and Unpaid (Item names & amounts cleanly separated)
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                // Paid breakdown
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                // Paid Metric Tile
+                Surface(
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(12.dp),
+                    color = Color(0xFF2E7D32).copy(alpha = 0.08f),
+                    border = BorderStroke(1.dp, Color(0xFF2E7D32).copy(alpha = 0.22f))
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .size(8.dp)
-                            .background(Color(0xFF2E7D32), CircleShape)
-                    )
-                    Text(
-                        text = "Paid (${paidExpenses.size}):",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Text(
-                        text = "$${String.format("%,.2f", paidTotal)}",
-                        style = MaterialTheme.typography.bodySmall,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = Color(0xFF2E7D32),
-                        modifier = Modifier.testTag("reconciliation_paid_amount")
-                    )
+                    Column(
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                        verticalArrangement = Arrangement.spacedBy(2.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(7.dp)
+                                    .background(Color(0xFF2E7D32), CircleShape)
+                            )
+                            Text(
+                                text = "Paid (${paidExpenses.size})",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1,
+                                softWrap = false
+                            )
+                        }
+                        Text(
+                            text = "$${String.format("%,.2f", paidTotal)}",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Black,
+                            fontSize = 15.sp,
+                            color = Color(0xFF2E7D32),
+                            maxLines = 1,
+                            softWrap = false,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.testTag("reconciliation_paid_amount")
+                        )
+                    }
                 }
 
-                // Unpaid breakdown
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                // Unpaid Metric Tile
+                Surface(
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(12.dp),
+                    color = if (unpaidExpenses.isEmpty()) MaterialTheme.colorScheme.surface.copy(alpha = 0.3f)
+                            else Color(0xFFE65100).copy(alpha = 0.08f),
+                    border = BorderStroke(
+                        1.dp,
+                        if (unpaidExpenses.isEmpty()) MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
+                        else Color(0xFFE65100).copy(alpha = 0.22f)
+                    )
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .size(8.dp)
-                            .background(Color(0xFFE65100), CircleShape)
-                    )
-                    Text(
-                        text = "Unpaid (${unpaidExpenses.size}):",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Text(
-                        text = "$${String.format("%,.2f", unpaidTotal)}",
-                        style = MaterialTheme.typography.bodySmall,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = Color(0xFFE65100),
-                        modifier = Modifier.testTag("reconciliation_unpaid_amount")
-                    )
+                    Column(
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                        verticalArrangement = Arrangement.spacedBy(2.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(7.dp)
+                                    .background(
+                                        if (unpaidExpenses.isEmpty()) Color(0xFF757575) else Color(0xFFE65100),
+                                        CircleShape
+                                    )
+                            )
+                            Text(
+                                text = "Unpaid (${unpaidExpenses.size})",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1,
+                                softWrap = false
+                            )
+                        }
+                        Text(
+                            text = "$${String.format("%,.2f", unpaidTotal)}",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Black,
+                            fontSize = 15.sp,
+                            color = if (unpaidExpenses.isEmpty()) Color(0xFF757575) else Color(0xFFE65100),
+                            maxLines = 1,
+                            softWrap = false,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.testTag("reconciliation_unpaid_amount")
+                        )
+                    }
                 }
             }
         }
@@ -3778,9 +3826,10 @@ fun TransactionRowItem(
     onEdit: () -> Unit,
     onDelete: () -> Unit,
     onTogglePaid: (() -> Unit)? = null,
+    customCategories: List<CustomCategory> = emptyList(),
     modifier: Modifier = Modifier
 ) {
-    val categoryStyle = getCategoryStyle(transaction.category)
+    val categoryStyle = getCategoryStyle(transaction.category, customCategories)
     val formatter = remember { SimpleDateFormat("MMM d, yyyy", Locale.getDefault()) }
     val isExpense = transaction.type == "EXPENSE"
 
@@ -3826,6 +3875,7 @@ fun TransactionRowItem(
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 1,
+                    softWrap = false,
                     overflow = TextOverflow.Ellipsis
                 )
                 Row(
@@ -3836,7 +3886,10 @@ fun TransactionRowItem(
                         text = transaction.category,
                         style = MaterialTheme.typography.labelSmall,
                         color = categoryStyle.color,
-                        fontWeight = FontWeight.SemiBold
+                        fontWeight = FontWeight.SemiBold,
+                        maxLines = 1,
+                        softWrap = false,
+                        overflow = TextOverflow.Ellipsis
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Box(
@@ -3851,7 +3904,9 @@ fun TransactionRowItem(
                     Text(
                         text = formatter.format(Date(transaction.date)),
                         style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                        maxLines = 1,
+                        softWrap = false
                     )
                 }
 
@@ -3910,7 +3965,9 @@ fun TransactionRowItem(
                     text = "$valSign$${String.format("%.2f", transaction.amount)}",
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.ExtraBold,
-                    color = valColor
+                    color = valColor,
+                    maxLines = 1,
+                    softWrap = false
                 )
                 
                 Row(
@@ -3949,38 +4006,11 @@ fun TransactionRowItem(
     }
 }
 
-data class CategoryStyle(
-    val icon: ImageVector,
-    val color: Color
-)
-
-fun getCategoryStyle(category: String): CategoryStyle {
-    val clean = category.trim().lowercase(Locale.getDefault())
-    return when (clean) {
-        "food" -> CategoryStyle(Icons.Default.Restaurant, Color(0xFFE65100))
-        "transport" -> CategoryStyle(Icons.Default.DirectionsCar, Color(0xFF1565C0))
-        "utilities" -> CategoryStyle(Icons.Default.Lightbulb, Color(0xFFF57F17))
-        "entertainment" -> CategoryStyle(Icons.Default.ConfirmationNumber, Color(0xFF6A1B9A))
-        "shopping" -> CategoryStyle(Icons.Default.ShoppingBag, Color(0xFFC2185B))
-        "salary" -> CategoryStyle(Icons.Default.AttachMoney, Color(0xFF2E7D32))
-        "investment" -> CategoryStyle(Icons.Default.ShowChart, Color(0xFF00695C))
-        "housing" -> CategoryStyle(Icons.Default.Home, Color(0xFF0277BD))
-        else -> {
-            val colors = listOf(
-                Color(0xFF8D6E63), // Brown
-                Color(0xFF78909C), // Blue Grey
-                Color(0xFFEC407A), // Pink
-                Color(0xFFAB47BC), // Purple
-                Color(0xFF7E57C2), // Deep Purple
-                Color(0xFF5C6BC0), // Indigo
-                Color(0xFF26A69A), // Teal
-                Color(0xFF9CCC65), // Light Green
-                Color(0xFFD4E157)  // Lime
-            )
-            val index = Math.abs(category.hashCode()) % colors.size
-            CategoryStyle(Icons.Default.Category, colors[index])
-        }
-    }
+fun getCategoryStyle(
+    category: String,
+    customCategories: List<CustomCategory> = emptyList()
+): CategoryStyle {
+    return CategoryConstants.resolveCategoryStyle(category, customCategories)
 }
 
 @Composable
@@ -4057,9 +4087,10 @@ fun RecurringRowItem(
     recurring: com.example.data.RecurringTransaction,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
+    customCategories: List<CustomCategory> = emptyList(),
     modifier: Modifier = Modifier
 ) {
-    val categoryStyle = getCategoryStyle(recurring.category)
+    val categoryStyle = getCategoryStyle(recurring.category, customCategories)
     val isExpense = recurring.type == "EXPENSE"
     val formatter = remember { SimpleDateFormat("MMM d, yyyy", Locale.getDefault()) }
 
@@ -4202,6 +4233,7 @@ fun RecurringRowItem(
 @Composable
 fun VisualAnalyticsSection(
     transactions: List<Transaction>,
+    customCategories: List<CustomCategory> = emptyList(),
     modifier: Modifier = Modifier
 ) {
     // Current Month Spending Distribution (Pie Chart)
@@ -4352,7 +4384,7 @@ fun VisualAnalyticsSection(
                         } else {
                             spendingByCategory.forEach { (cat, amt) ->
                                 val angle = (360f * amt / totalCurrentMonthSpent).toFloat()
-                                val style = getCategoryStyle(cat)
+                                val style = getCategoryStyle(cat, customCategories)
                                 drawArc(
                                     color = style.color,
                                     startAngle = startAngle,
@@ -4400,7 +4432,7 @@ fun VisualAnalyticsSection(
                         val categoriesToShow = if (isCategoryShareExpanded) sortedCategories else sortedCategories.take(3)
                         categoriesToShow.forEach { (cat, amt) ->
                             val pct = (amt / totalCurrentMonthSpent * 100).toInt()
-                            val style = getCategoryStyle(cat)
+                            val style = getCategoryStyle(cat, customCategories)
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(6.dp),
