@@ -241,7 +241,7 @@ fun DashboardScreen(
                     val totalExpense = expenses.sumOf { it.amount }
                     val totalLeftToPay = expenses.filter { !it.paid }.sumOf { it.amount }
                     val netBalance = totalIncome - totalExpense
-                    val currentBalance = totalIncome - totalLeftToPay
+                    val currentBalance = totalLeftToReceive - totalLeftToPay
 
                     append("\n")
                     append("--- Summary ---\n")
@@ -493,7 +493,7 @@ fun DashboardScreen(
                 }
                 canvas.drawText("Net Balance: $${String.format(Locale.US, "%.2f", netBalance)}", 45f, yPosition, balancePaint)
 
-                val currentBalance = totalIncome - totalLeftToPay
+                val currentBalance = totalLeftToReceive - totalLeftToPay
                 val currentBalancePaint = android.graphics.Paint().apply {
                     textSize = 12f
                     isFakeBoldText = true
@@ -3043,6 +3043,8 @@ fun DashboardScreen(
                         )
 
                         val netBalance = totalIncome - totalExpense
+                        val uiCurrentBalance = totalLeftToReceive - totalLeftToPay
+                        
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
@@ -3089,6 +3091,61 @@ fun DashboardScreen(
                                 }
                                 Text(
                                     text = "${if (netBalance >= 0) "+" else ""}$${String.format("%,.2f", netBalance)}",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Black,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(8.dp))
+                        
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "Current Balance",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                val isPositive = uiCurrentBalance >= 0
+                                Box(
+                                    modifier = Modifier
+                                        .background(
+                                            if (isPositive) MaterialTheme.colorScheme.tertiary.copy(alpha = 0.15f) else MaterialTheme.colorScheme.error.copy(alpha = 0.15f),
+                                            RoundedCornerShape(8.dp)
+                                        )
+                                        .padding(horizontal = 8.dp, vertical = 3.dp)
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = if (isPositive) Icons.Default.TrendingUp else Icons.Default.TrendingDown,
+                                            contentDescription = null,
+                                            tint = if (isPositive) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.error,
+                                            modifier = Modifier.size(12.dp)
+                                        )
+                                        Text(
+                                            text = if (isPositive) "ACTUAL" else "ACTUAL",
+                                            style = MaterialTheme.typography.labelSmall.copy(
+                                                fontWeight = FontWeight.Bold,
+                                                letterSpacing = 0.5.sp
+                                            ),
+                                            color = if (isPositive) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.error
+                                        )
+                                    }
+                                }
+                                Text(
+                                    text = "${if (uiCurrentBalance >= 0) "+" else ""}$${String.format("%,.2f", uiCurrentBalance)}",
                                     style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.Black,
                                     color = MaterialTheme.colorScheme.onSurface
