@@ -240,8 +240,8 @@ fun DashboardScreen(
                     val totalLeftToReceive = incomes.filter { !it.paid && !it.category.trim().equals("cash", ignoreCase = true) }.sumOf { it.amount }
                     val totalExpense = expenses.sumOf { it.amount }
                     val totalLeftToPay = expenses.filter { !it.paid }.sumOf { it.amount }
-                    val netBalance = totalIncome - totalExpense
-                    val currentBalance = totalLeftToReceive - totalLeftToPay
+                    val netBalance = totalIncome + cashOnHand - totalExpense
+                    val currentBalance = totalLeftToReceive + cashOnHand - totalLeftToPay
 
                     append("\n")
                     append("--- Summary ---\n")
@@ -422,7 +422,7 @@ fun DashboardScreen(
                 val totalLeftToReceive = incomes.filter { !it.paid && !it.category.trim().equals("cash", ignoreCase = true) }.sumOf { it.amount }
                 val totalExpense = expenses.sumOf { it.amount }
                 val totalLeftToPay = expenses.filter { !it.paid }.sumOf { it.amount }
-                val netBalance = totalIncome - totalExpense
+                val netBalance = totalIncome + cashOnHand - totalExpense
                 
                 if (yPosition > 670f) {
                     pdfDocument.finishPage(page)
@@ -493,7 +493,7 @@ fun DashboardScreen(
                 }
                 canvas.drawText("Net Balance: $${String.format(Locale.US, "%.2f", netBalance)}", 45f, yPosition, balancePaint)
 
-                val currentBalance = totalLeftToReceive - totalLeftToPay
+                val currentBalance = totalLeftToReceive + cashOnHand - totalLeftToPay
                 val currentBalancePaint = android.graphics.Paint().apply {
                     textSize = 12f
                     isFakeBoldText = true
@@ -3042,8 +3042,8 @@ fun DashboardScreen(
                             color = MaterialTheme.colorScheme.outlineVariant
                         )
 
-                        val netBalance = totalIncome - totalExpense
-                        val uiCurrentBalance = totalLeftToReceive - totalLeftToPay
+                        val netBalance = totalIncome + cashOnHand - totalExpense
+                        val uiCurrentBalance = totalLeftToReceive + cashOnHand - totalLeftToPay
                         
                         Row(
                             modifier = Modifier.fillMaxWidth(),
