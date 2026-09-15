@@ -240,8 +240,8 @@ fun DashboardScreen(
                     val totalLeftToReceive = incomes.filter { !it.paid && !it.category.trim().equals("cash", ignoreCase = true) }.sumOf { it.amount }
                     val totalExpense = expenses.sumOf { it.amount }
                     val totalLeftToPay = expenses.filter { !it.paid }.sumOf { it.amount }
-                    val netBalance = totalIncome + cashOnHand - totalExpense
-                    val currentBalance = totalLeftToReceive + cashOnHand - totalLeftToPay
+                    val netBalance = cashOnHand + (totalIncome - totalExpense)
+                    val currentBalance = cashOnHand + totalLeftToReceive - totalLeftToPay
 
                     append("\n")
                     append("--- Summary ---\n")
@@ -422,7 +422,7 @@ fun DashboardScreen(
                 val totalLeftToReceive = incomes.filter { !it.paid && !it.category.trim().equals("cash", ignoreCase = true) }.sumOf { it.amount }
                 val totalExpense = expenses.sumOf { it.amount }
                 val totalLeftToPay = expenses.filter { !it.paid }.sumOf { it.amount }
-                val netBalance = totalIncome + cashOnHand - totalExpense
+                val netBalance = cashOnHand + (totalIncome - totalExpense)
                 
                 if (yPosition > 670f) {
                     pdfDocument.finishPage(page)
@@ -493,7 +493,7 @@ fun DashboardScreen(
                 }
                 canvas.drawText("Net Balance: $${String.format(Locale.US, "%.2f", netBalance)}", 45f, yPosition, balancePaint)
 
-                val currentBalance = totalLeftToReceive + cashOnHand - totalLeftToPay
+                val currentBalance = cashOnHand + totalLeftToReceive - totalLeftToPay
                 val currentBalancePaint = android.graphics.Paint().apply {
                     textSize = 12f
                     isFakeBoldText = true
@@ -3042,8 +3042,8 @@ fun DashboardScreen(
                             color = MaterialTheme.colorScheme.outlineVariant
                         )
 
-                        val netBalance = totalIncome + cashOnHand - totalExpense
-                        val uiCurrentBalance = totalLeftToReceive + cashOnHand - totalLeftToPay
+                        val netBalance = cashOnHand + (totalIncome - totalExpense)
+                        val uiCurrentBalance = cashOnHand + totalLeftToReceive - totalLeftToPay
                         
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -4608,19 +4608,46 @@ fun VisualAnalyticsSection(
                 }
             }
 
-            Row(
+            var hoveredTrend by remember { mutableStateOf<MonthTrend?>(null) }
+            
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(160.dp)
-                    .testTag("bar_chart_trend"),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.Bottom
+                    .height(230.dp)
             ) {
-                monthlyTrends.forEach { trend ->
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        modifier = Modifier.weight(1f)
-                    ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(160.dp)
+                        .align(Alignment.BottomCenter)
+                        .testTag("bar_chart_trend"),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.Bottom
+                ) {
+                    monthlyTrends.forEach { trend ->
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            modifier = Modifier
+                                .weight(1f)
+                                .pointerInput(trend) {
+                                    awaitPointerEventScope {
+                                        while (true) {
+                                            val event = awaitPointerEvent()
+                                            when (event.type) {
+                                                androidx.compose.ui.input.pointer.PointerEventType.Enter,
+                                                androidx.compose.ui.input.pointer.PointerEventType.Move,
+                                                androidx.compose.ui.input.pointer.PointerEventType.Press -> {
+                                                    hoveredTrend = trend
+                                                }
+                                                androidx.compose.ui.input.pointer.PointerEventType.Exit,
+                                                androidx.compose.ui.input.pointer.PointerEventType.Release -> {
+                                                    hoveredTrend = null
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                        ) {
                         Text(
                             text = if (trend.expenseAmount > 0) "$${trend.expenseAmount.toInt()}" else "$0",
                             style = MaterialTheme.typography.labelSmall,
@@ -4686,6 +4713,53 @@ fun VisualAnalyticsSection(
                     }
                 }
             }
+
+            // Tooltip overlay
+            androidx.compose.animation.AnimatedVisibility(
+                visible = hoveredTrend != null,
+                enter = androidx.compose.animation.fadeIn() + androidx.compose.animation.slideInVertically(initialOffsetY = { 20 }),
+                exit = androidx.compose.animation.fadeOut() + androidx.compose.animation.slideOutVertically(targetOffsetY = { 20 }),
+                modifier = Modifier.align(Alignment.TopCenter)
+            ) {
+                hoveredTrend?.let { trend ->
+                    val net = trend.incomeAmount - trend.expenseAmount
+                    val netColor = if (net >= 0) Color(0xFF10B981) else MaterialTheme.colorScheme.error
+                    
+                    Card(
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant
+                        ),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.padding(bottom = 16.dp)
+                    ) {
+                        Column(modifier = Modifier.padding(12.dp)) {
+                            Text(
+                                text = "${trend.label} ${trend.year}",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.width(140.dp)) {
+                                Text("Income:", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text("+$${String.format(java.util.Locale.US, "%,.2f", trend.incomeAmount)}", style = MaterialTheme.typography.labelSmall, color = Color(0xFF10B981), fontWeight = FontWeight.Bold)
+                            }
+                            Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.width(140.dp)) {
+                                Text("Expense:", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text("-$${String.format(java.util.Locale.US, "%,.2f", trend.expenseAmount)}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+                            }
+                            HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                            Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.width(140.dp)) {
+                                Text("Net:", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                val netSign = if (net >= 0) "+" else "-"
+                                Text("$netSign$${String.format(java.util.Locale.US, "%,.2f", kotlin.math.abs(net))}", style = MaterialTheme.typography.labelMedium, color = netColor, fontWeight = FontWeight.ExtraBold)
+                            }
+                        }
+                    }
+                }
+            }
+            } // End of Box
         }
     }
 }

@@ -35,6 +35,15 @@ import com.example.ui.viewmodel.ExpenseViewModel
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import com.example.R
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInWindow
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
 import androidx.credentials.CredentialManager
 import androidx.credentials.GetCredentialRequest
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption
@@ -508,6 +517,108 @@ fun LoginScreen(
                         )
                     }
                 }
+            }
+            
+            // --- Features Section with Bento Cards ---
+            Spacer(modifier = Modifier.height(48.dp))
+            Text(
+                text = "Why Ledgerly?",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Black,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(bottom = 16.dp)
+            )
+            
+            FeatureBentoCard(
+                title = "AI Parsing",
+                description = "Just type naturally. Gemini AI categorizes and extracts amounts instantly.",
+                icon = Icons.Default.TrendingUp,
+                delayMillis = 0
+            )
+            
+            FeatureBentoCard(
+                title = "Offline First",
+                description = "Local SQLite database ensures your data is always accessible, even without internet.",
+                icon = Icons.Default.OfflineBolt,
+                delayMillis = 150
+            )
+            
+            FeatureBentoCard(
+                title = "Biometric Security",
+                description = "Keep your financial data secure with on-device fingerprint unlocking.",
+                icon = Icons.Default.Fingerprint,
+                delayMillis = 300
+            )
+            
+            Spacer(modifier = Modifier.height(40.dp))
+        }
+    }
+}
+
+@Composable
+fun FeatureBentoCard(
+    title: String,
+    description: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    delayMillis: Int,
+    modifier: Modifier = Modifier
+) {
+    var isVisible by remember { mutableStateOf(false) }
+    val configuration = LocalConfiguration.current
+    val screenHeightPx = with(LocalDensity.current) { configuration.screenHeightDp.dp.toPx() }
+    
+    val alpha by animateFloatAsState(
+        targetValue = if (isVisible) 1f else 0f,
+        animationSpec = tween(durationMillis = 800, delayMillis = delayMillis, easing = FastOutSlowInEasing),
+        label = "alpha"
+    )
+    val offsetY by animateDpAsState(
+        targetValue = if (isVisible) 0.dp else 60.dp,
+        animationSpec = tween(durationMillis = 800, delayMillis = delayMillis, easing = FastOutSlowInEasing),
+        label = "offsetY"
+    )
+
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp)
+            .graphicsLayer {
+                this.alpha = alpha
+                this.translationY = offsetY.toPx()
+            }
+            .onGloballyPositioned { coordinates ->
+                val yPos = coordinates.positionInWindow().y
+                if (yPos < screenHeightPx * 0.95f) {
+                    isVisible = true
+                }
+            },
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f)),
+        shape = RoundedCornerShape(24.dp)
+    ) {
+        Row(
+            modifier = Modifier.padding(20.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = title,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(40.dp)
+            )
+            Spacer(modifier = Modifier.width(16.dp))
+            Column {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = description,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.8f)
+                )
             }
         }
     }
