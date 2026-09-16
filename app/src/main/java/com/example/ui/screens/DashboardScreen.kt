@@ -4569,20 +4569,25 @@ fun VisualAnalyticsSection(
             )
 
             // BAR CHART SECTION (6-MONTH INCOME VS SPENDING TRENDS / MONTHLY OVERVIEW)
-            Row(
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(bottom = 12.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text(
-                        text = "Monthly Overview: Income vs Spending",
-                        style = MaterialTheme.typography.labelMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                Text(
+                    text = "Monthly Overview: Income vs Spending",
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                // Controls Row: Legend on the left, Formatted Grouped/Stacked toggle moved to this line
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     // Legend
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(14.dp),
@@ -4621,54 +4626,58 @@ fun VisualAnalyticsSection(
                             )
                         }
                     }
-                }
 
-                // Grouped / Stacked View Mode Toggle
-                Surface(
-                    shape = RoundedCornerShape(20.dp),
-                    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.7f),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)),
-                    modifier = Modifier.testTag("chart_view_toggle")
-                ) {
-                    Row(
-                        modifier = Modifier.padding(3.dp),
-                        horizontalArrangement = Arrangement.spacedBy(2.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                    // Grouped / Stacked View Mode Toggle
+                    Surface(
+                        shape = RoundedCornerShape(10.dp),
+                        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.7f),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)),
+                        modifier = Modifier.testTag("chart_view_toggle")
                     ) {
-                        val isGroupedActive = chartViewType == ChartViewType.GROUPED
-                        Surface(
-                            shape = RoundedCornerShape(16.dp),
-                            color = if (isGroupedActive) MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(16.dp))
-                                .clickable { chartViewType = ChartViewType.GROUPED }
-                                .testTag("toggle_grouped_view")
+                        Row(
+                            modifier = Modifier.padding(3.dp),
+                            horizontalArrangement = Arrangement.spacedBy(2.dp),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text(
-                                text = "Grouped",
-                                style = MaterialTheme.typography.labelSmall,
-                                fontWeight = if (isGroupedActive) FontWeight.ExtraBold else FontWeight.Medium,
-                                color = if (isGroupedActive) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.padding(horizontal = 9.dp, vertical = 4.dp)
-                            )
-                        }
+                            val isGroupedActive = chartViewType == ChartViewType.GROUPED
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = if (isGroupedActive) MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .clickable { chartViewType = ChartViewType.GROUPED }
+                                    .testTag("toggle_grouped_view")
+                            ) {
+                                Text(
+                                    text = "Grouped",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = if (isGroupedActive) FontWeight.ExtraBold else FontWeight.Medium,
+                                    color = if (isGroupedActive) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.padding(horizontal = 9.dp, vertical = 4.dp),
+                                    maxLines = 1,
+                                    softWrap = false
+                                )
+                            }
 
-                        val isStackedActive = chartViewType == ChartViewType.STACKED
-                        Surface(
-                            shape = RoundedCornerShape(16.dp),
-                            color = if (isStackedActive) MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(16.dp))
-                                .clickable { chartViewType = ChartViewType.STACKED }
-                                .testTag("toggle_stacked_view")
-                        ) {
-                            Text(
-                                text = "Stacked",
-                                style = MaterialTheme.typography.labelSmall,
-                                fontWeight = if (isStackedActive) FontWeight.ExtraBold else FontWeight.Medium,
-                                color = if (isStackedActive) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.padding(horizontal = 9.dp, vertical = 4.dp)
-                            )
+                            val isStackedActive = chartViewType == ChartViewType.STACKED
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = if (isStackedActive) MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .clickable { chartViewType = ChartViewType.STACKED }
+                                    .testTag("toggle_stacked_view")
+                            ) {
+                                Text(
+                                    text = "Stacked",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = if (isStackedActive) FontWeight.ExtraBold else FontWeight.Medium,
+                                    color = if (isStackedActive) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.padding(horizontal = 9.dp, vertical = 4.dp),
+                                    maxLines = 1,
+                                    softWrap = false
+                                )
+                            }
                         }
                     }
                 }
