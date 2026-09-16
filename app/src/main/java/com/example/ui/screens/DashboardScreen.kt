@@ -4409,7 +4409,7 @@ fun VisualAnalyticsSection(
                 style = MaterialTheme.typography.labelMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(bottom = 12.dp)
+                modifier = Modifier.padding(bottom = 20.dp)
             )
 
             Row(
@@ -4573,7 +4573,7 @@ fun VisualAnalyticsSection(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(bottom = 12.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 Text(
                     text = "Monthly Overview: Income vs Spending",
@@ -4582,7 +4582,7 @@ fun VisualAnalyticsSection(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
-                // Controls Row: Legend on the left, Formatted Grouped/Stacked toggle moved to this line
+                // Controls Row: Legend on the left, Grouped / Stacked toggle aligned on the right or on its own line
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -4635,7 +4635,7 @@ fun VisualAnalyticsSection(
                         modifier = Modifier.testTag("chart_view_toggle")
                     ) {
                         Row(
-                            modifier = Modifier.padding(3.dp),
+                            modifier = Modifier.padding(2.dp),
                             horizontalArrangement = Arrangement.spacedBy(2.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
@@ -4653,7 +4653,7 @@ fun VisualAnalyticsSection(
                                     style = MaterialTheme.typography.labelSmall,
                                     fontWeight = if (isGroupedActive) FontWeight.ExtraBold else FontWeight.Medium,
                                     color = if (isGroupedActive) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.padding(horizontal = 9.dp, vertical = 4.dp),
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                                     maxLines = 1,
                                     softWrap = false
                                 )
@@ -4673,7 +4673,7 @@ fun VisualAnalyticsSection(
                                     style = MaterialTheme.typography.labelSmall,
                                     fontWeight = if (isStackedActive) FontWeight.ExtraBold else FontWeight.Medium,
                                     color = if (isStackedActive) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.padding(horizontal = 9.dp, vertical = 4.dp),
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                                     maxLines = 1,
                                     softWrap = false
                                 )
