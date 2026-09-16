@@ -185,6 +185,18 @@ class ExpenseViewModel(application: Application) : AndroidViewModel(application)
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    // Audit Deleted Items State Flow (Transactions, Forecasting Entries, Notes)
+    val auditDeletedItems: StateFlow<List<AuditDeletedItem>> = currentUserEmail
+        .flatMapLatest { email ->
+            if (email != null) {
+                transactionRepository.getAuditDeletedItems(email)
+                    .catch { emit(emptyList()) }
+            } else {
+                flowOf(emptyList())
+            }
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
     // Forecast Summary Pipeline Calculation
     val forecastSummary: StateFlow<ForecastSummary> = forecastIncomes.map { list ->
         val activeList = list.filter { !it.isRealized && !it.status.equals("RECEIVED", ignoreCase = true) }
@@ -423,9 +435,26 @@ class ExpenseViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    fun deleteTransaction(id: String) {
+    fun deleteTransaction(id: String, source: String = "User Action") {
         val email = currentUserEmail.value ?: return
         viewModelScope.launch {
+            val existingTx = transactions.value.find { it.id == id }
+            if (existingTx != null) {
+                val auditItem = AuditDeletedItem(
+                    id = java.util.UUID.randomUUID().toString(),
+                    originalId = existingTx.id,
+                    itemType = "TRANSACTION",
+                    title = existingTx.description.ifBlank { "${existingTx.category} Transaction" },
+                    amount = existingTx.amount,
+                    categoryOrStatus = "${existingTx.type} • ${existingTx.category}",
+                    details = "Type: ${existingTx.type}, Category: ${existingTx.category}, Paid: ${existingTx.paid}",
+                    sourceOrDeletedBy = source,
+                    deletedAt = System.currentTimeMillis(),
+                    originalDate = existingTx.date,
+                    userEmail = email
+                )
+                transactionRepository.recordAuditDeletedItem(email, auditItem)
+            }
             transactionRepository.deleteTransaction(email, id)
                 .onFailure { error ->
                     _transactionsError.value = "Failed to delete transaction: ${error.message}"
@@ -512,9 +541,26 @@ class ExpenseViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    fun deleteRecurringTransaction(id: String) {
+    fun deleteRecurringTransaction(id: String, source: String = "User Action") {
         val email = currentUserEmail.value ?: return
         viewModelScope.launch {
+            val existingRec = recurringTransactions.value.find { it.id == id }
+            if (existingRec != null) {
+                val auditItem = AuditDeletedItem(
+                    id = java.util.UUID.randomUUID().toString(),
+                    originalId = existingRec.id,
+                    itemType = "RECURRING",
+                    title = existingRec.description.ifBlank { "${existingRec.category} Recurring Rule" },
+                    amount = existingRec.amount,
+                    categoryOrStatus = "${existingRec.frequency} • ${existingRec.category}",
+                    details = "Rule Frequency: ${existingRec.frequency}, Type: ${existingRec.type}",
+                    sourceOrDeletedBy = source,
+                    deletedAt = System.currentTimeMillis(),
+                    originalDate = existingRec.startDate,
+                    userEmail = email
+                )
+                transactionRepository.recordAuditDeletedItem(email, auditItem)
+            }
             transactionRepository.deleteRecurringTransaction(email, id)
                 .onFailure { error ->
                     _transactionsError.value = "Failed to delete recurring transaction: ${error.message}"
@@ -522,16 +568,33 @@ class ExpenseViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    fun deleteRecurringSeries(recurringId: String) {
+    fun deleteRecurringSeries(recurringId: String, source: String = "User Action (Series Purge)") {
         val email = currentUserEmail.value ?: return
         viewModelScope.launch {
+            val existingRec = recurringTransactions.value.find { it.id == recurringId }
+            if (existingRec != null) {
+                val auditItem = AuditDeletedItem(
+                    id = java.util.UUID.randomUUID().toString(),
+                    originalId = existingRec.id,
+                    itemType = "RECURRING",
+                    title = existingRec.description.ifBlank { "${existingRec.category} Recurring Series" },
+                    amount = existingRec.amount,
+                    categoryOrStatus = "${existingRec.frequency} • ${existingRec.category}",
+                    details = "Series deleted along with generated instances",
+                    sourceOrDeletedBy = source,
+                    deletedAt = System.currentTimeMillis(),
+                    originalDate = existingRec.startDate,
+                    userEmail = email
+                )
+                transactionRepository.recordAuditDeletedItem(email, auditItem)
+            }
             transactionRepository.deleteRecurringTransaction(email, recurringId)
                 .onFailure { error ->
                     _transactionsError.value = "Failed to delete recurring transaction: ${error.message}"
                 }
             val seriesTxs = transactions.value.filter { it.recurringId == recurringId }
             seriesTxs.forEach { tx ->
-                transactionRepository.deleteTransaction(email, tx.id)
+                deleteTransaction(tx.id, source = "Series Cleanup ($recurringId)")
             }
         }
     }
@@ -765,9 +828,26 @@ class ExpenseViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    fun deleteForecastIncome(id: String) {
+    fun deleteForecastIncome(id: String, source: String = "User Action") {
         val email = currentUserEmail.value ?: return
         viewModelScope.launch {
+            val existingForecast = forecastIncomes.value.find { it.id == id }
+            if (existingForecast != null) {
+                val auditItem = AuditDeletedItem(
+                    id = java.util.UUID.randomUUID().toString(),
+                    originalId = existingForecast.id,
+                    itemType = "FORECAST",
+                    title = existingForecast.title.ifBlank { "Forecast Entry" },
+                    amount = existingForecast.amount,
+                    categoryOrStatus = "${existingForecast.status} • ${existingForecast.category}",
+                    details = "Notes: ${existingForecast.notes.ifBlank { "None" }}, Realized: ${existingForecast.isRealized}",
+                    sourceOrDeletedBy = source,
+                    deletedAt = System.currentTimeMillis(),
+                    originalDate = existingForecast.expectedDate,
+                    userEmail = email
+                )
+                transactionRepository.recordAuditDeletedItem(email, auditItem)
+            }
             transactionRepository.deleteForecastIncome(email, id)
         }
     }
@@ -847,10 +927,62 @@ class ExpenseViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    fun deleteFutureIncomeNote(id: String) {
+    fun deleteFutureIncomeNote(id: String, source: String = "User Action") {
         val email = currentUserEmail.value ?: return
         viewModelScope.launch {
+            val existingNote = futureIncomeNotes.value.find { it.id == id }
+            if (existingNote != null) {
+                val bulletPreview = if (existingNote.bulletPoints.isNotEmpty()) " (${existingNote.bulletPoints.size} bullets)" else ""
+                val auditItem = AuditDeletedItem(
+                    id = java.util.UUID.randomUUID().toString(),
+                    originalId = existingNote.id,
+                    itemType = "NOTE",
+                    title = existingNote.title.ifBlank { "Future Income Note" },
+                    amount = 0.0,
+                    categoryOrStatus = "Income Note$bulletPreview",
+                    details = existingNote.content.ifBlank { "No content description" },
+                    sourceOrDeletedBy = source,
+                    deletedAt = System.currentTimeMillis(),
+                    originalDate = existingNote.createdAt,
+                    userEmail = email
+                )
+                transactionRepository.recordAuditDeletedItem(email, auditItem)
+            }
             transactionRepository.deleteFutureIncomeNote(email, id)
+        }
+    }
+
+    fun recordExternalDeletion(
+        itemType: String,
+        title: String,
+        amount: Double = 0.0,
+        categoryOrStatus: String = "",
+        details: String = "",
+        sourceOrDeletedBy: String = "External Source"
+    ) {
+        val email = currentUserEmail.value ?: return
+        viewModelScope.launch {
+            val auditItem = AuditDeletedItem(
+                id = java.util.UUID.randomUUID().toString(),
+                originalId = "ext-${System.currentTimeMillis()}",
+                itemType = itemType,
+                title = title,
+                amount = amount,
+                categoryOrStatus = categoryOrStatus,
+                details = details,
+                sourceOrDeletedBy = sourceOrDeletedBy,
+                deletedAt = System.currentTimeMillis(),
+                originalDate = System.currentTimeMillis() - 86400000L,
+                userEmail = email
+            )
+            transactionRepository.recordAuditDeletedItem(email, auditItem)
+        }
+    }
+
+    fun clearAuditDeletedItems() {
+        val email = currentUserEmail.value ?: return
+        viewModelScope.launch {
+            transactionRepository.clearAuditDeletedItems(email)
         }
     }
 

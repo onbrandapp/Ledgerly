@@ -74,3 +74,20 @@ data class FutureIncomeNote(
     constructor() : this("", "", "", emptyList(), emptyList(), "", "#FFD97D", System.currentTimeMillis(), System.currentTimeMillis())
 }
 
+data class AuditDeletedItem(
+    val id: String = "",
+    val originalId: String = "",
+    val itemType: String = "", // "TRANSACTION", "FORECAST", "NOTE", "RECURRING"
+    val title: String = "",
+    val amount: Double = 0.0,
+    val categoryOrStatus: String = "",
+    val details: String = "",
+    val sourceOrDeletedBy: String = "User Action", // e.g. "User Action", "Series Cleanup", "Remote Sync", "Automatic Cleanup"
+    val deletedAt: Long = System.currentTimeMillis(),
+    val originalDate: Long = 0L,
+    val userEmail: String = ""
+) {
+    // Zero-argument constructor required for Firestore deserialization
+    constructor() : this("", "", "", "", 0.0, "", "", "User Action", System.currentTimeMillis(), 0L, "")
+}
+

@@ -205,6 +205,58 @@ data class LocalFutureIncomeNote(
     }
 }
 
+@Entity(tableName = "local_audit_deleted_items")
+data class LocalAuditDeletedItem(
+    @PrimaryKey val id: String,
+    val originalId: String,
+    val itemType: String,
+    val title: String,
+    val amount: Double,
+    val categoryOrStatus: String,
+    val details: String,
+    val sourceOrDeletedBy: String,
+    val deletedAt: Long,
+    val originalDate: Long,
+    val userEmail: String
+) {
+    fun toDomain(): AuditDeletedItem = AuditDeletedItem(
+        id = id,
+        originalId = originalId,
+        itemType = itemType,
+        title = title,
+        amount = amount,
+        categoryOrStatus = categoryOrStatus,
+        details = details,
+        sourceOrDeletedBy = sourceOrDeletedBy,
+        deletedAt = deletedAt,
+        originalDate = originalDate,
+        userEmail = userEmail
+    )
+
+    companion object {
+        fun fromDomain(item: AuditDeletedItem): LocalAuditDeletedItem = LocalAuditDeletedItem(
+            id = item.id.ifEmpty { java.util.UUID.randomUUID().toString() },
+            originalId = item.originalId,
+            itemType = itemTypeSafe(item.itemType),
+            title = item.title,
+            amount = item.amount,
+            categoryOrStatus = item.categoryOrStatus,
+            details = item.details,
+            sourceOrDeletedBy = item.sourceOrDeletedBy.ifBlank { "User Action" },
+            deletedAt = item.deletedAt,
+            originalDate = item.originalDate,
+            userEmail = item.userEmail
+        )
+
+        private fun itemTypeSafe(type: String): String = when (type.uppercase()) {
+            "FORECAST", "FORECAST_INCOME" -> "FORECAST"
+            "NOTE", "INCOME_NOTE", "FUTURE_INCOME_NOTE" -> "NOTE"
+            "RECURRING" -> "RECURRING"
+            else -> "TRANSACTION"
+        }
+    }
+}
+
 object JsonListHelper {
     fun stringListToJson(list: List<String>): String {
         val arr = org.json.JSONArray()
@@ -287,6 +339,19 @@ interface TransactionDao {
 
     @Query("DELETE FROM local_future_income_notes WHERE id = :id")
     suspend fun deleteFutureIncomeNoteById(id: String)
+
+    // Audit Deleted Items Queries
+    @Query("SELECT * FROM local_audit_deleted_items WHERE userEmail = :userEmail ORDER BY deletedAt DESC")
+    fun getAuditDeletedItems(userEmail: String): Flow<List<LocalAuditDeletedItem>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAuditDeletedItem(item: LocalAuditDeletedItem)
+
+    @Query("DELETE FROM local_audit_deleted_items WHERE id = :id")
+    suspend fun deleteAuditDeletedItemById(id: String)
+
+    @Query("DELETE FROM local_audit_deleted_items WHERE userEmail = :userEmail")
+    suspend fun clearAuditDeletedItems(userEmail: String)
 }
 
 @Database(
@@ -295,9 +360,10 @@ interface TransactionDao {
         LocalRecurringTransaction::class,
         LocalCategory::class,
         LocalForecastIncome::class,
-        LocalFutureIncomeNote::class
+        LocalFutureIncomeNote::class,
+        LocalAuditDeletedItem::class
     ],
-    version = 9,
+    version = 10,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {

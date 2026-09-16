@@ -31,6 +31,10 @@ interface TransactionRepository {
     fun getFutureIncomeNotes(userEmail: String): Flow<List<FutureIncomeNote>>
     suspend fun addFutureIncomeNote(userEmail: String, note: FutureIncomeNote): Result<Unit>
     suspend fun deleteFutureIncomeNote(userEmail: String, id: String): Result<Unit>
+
+    fun getAuditDeletedItems(userEmail: String): Flow<List<AuditDeletedItem>>
+    suspend fun recordAuditDeletedItem(userEmail: String, item: AuditDeletedItem): Result<Unit>
+    suspend fun clearAuditDeletedItems(userEmail: String): Result<Unit>
 }
 
 class FirebaseTransactionRepository : TransactionRepository {
@@ -295,6 +299,67 @@ class FirebaseTransactionRepository : TransactionRepository {
                 if (continuation.isActive) continuation.resume(Result.failure(exception))
             }
     }
+
+    override fun getAuditDeletedItems(userEmail: String): Flow<List<AuditDeletedItem>> = callbackFlow {
+        val query = firestore.collection("users")
+            .document(userEmail)
+            .collection("audit_deleted_items")
+            .orderBy("deletedAt", Query.Direction.DESCENDING)
+
+        val registration = query.addSnapshotListener { snapshot, error ->
+            if (error != null) {
+                close(error)
+                return@addSnapshotListener
+            }
+            if (snapshot != null) {
+                val list = snapshot.documents.mapNotNull { doc ->
+                    doc.toObject(AuditDeletedItem::class.java)?.copy(id = doc.id)
+                }
+                trySend(list)
+            }
+        }
+        awaitClose { registration.remove() }
+    }
+
+    override suspend fun recordAuditDeletedItem(userEmail: String, item: AuditDeletedItem): Result<Unit> = suspendCancellableCoroutine { continuation ->
+        val collection = firestore.collection("users")
+            .document(userEmail)
+            .collection("audit_deleted_items")
+
+        val docRef = if (item.id.isEmpty()) collection.document() else collection.document(item.id)
+        val finalItem = item.copy(id = docRef.id, userEmail = userEmail)
+
+        docRef.set(finalItem)
+            .addOnSuccessListener {
+                if (continuation.isActive) continuation.resume(Result.success(Unit))
+            }
+            .addOnFailureListener { exception ->
+                if (continuation.isActive) continuation.resume(Result.failure(exception))
+            }
+    }
+
+    override suspend fun clearAuditDeletedItems(userEmail: String): Result<Unit> = suspendCancellableCoroutine { continuation ->
+        firestore.collection("users")
+            .document(userEmail)
+            .collection("audit_deleted_items")
+            .get()
+            .addOnSuccessListener { snapshot ->
+                val batch = firestore.batch()
+                for (doc in snapshot.documents) {
+                    batch.delete(doc.reference)
+                }
+                batch.commit()
+                    .addOnSuccessListener {
+                        if (continuation.isActive) continuation.resume(Result.success(Unit))
+                    }
+                    .addOnFailureListener { exception ->
+                        if (continuation.isActive) continuation.resume(Result.failure(exception))
+                    }
+            }
+            .addOnFailureListener { exception ->
+                if (continuation.isActive) continuation.resume(Result.failure(exception))
+            }
+    }
 }
 
 class RoomTransactionRepository(context: Context) : TransactionRepository {
@@ -419,6 +484,31 @@ class RoomTransactionRepository(context: Context) : TransactionRepository {
     override suspend fun deleteFutureIncomeNote(userEmail: String, id: String): Result<Unit> {
         return try {
             dao.deleteFutureIncomeNoteById(id)
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    override fun getAuditDeletedItems(userEmail: String): Flow<List<AuditDeletedItem>> {
+        return dao.getAuditDeletedItems(userEmail).map { list ->
+            list.map { it.toDomain() }
+        }
+    }
+
+    override suspend fun recordAuditDeletedItem(userEmail: String, item: AuditDeletedItem): Result<Unit> {
+        return try {
+            val localItem = LocalAuditDeletedItem.fromDomain(item.copy(userEmail = userEmail))
+            dao.insertAuditDeletedItem(localItem)
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun clearAuditDeletedItems(userEmail: String): Result<Unit> {
+        return try {
+            dao.clearAuditDeletedItems(userEmail)
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)

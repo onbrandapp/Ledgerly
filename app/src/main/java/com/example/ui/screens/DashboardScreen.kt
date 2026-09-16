@@ -61,6 +61,7 @@ import com.example.data.Transaction
 import com.example.data.CustomCategory
 import com.example.ui.components.BiometricSettingsCard
 import com.example.ui.components.CategoryCustomizationDialog
+import com.example.ui.components.AuditReportSheet
 import com.example.ui.theme.CategoryConstants
 import com.example.ui.theme.CategoryStyle
 import com.example.ui.viewmodel.ExpenseViewModel
@@ -101,6 +102,32 @@ fun DashboardScreen(
     val parseSuccessMessage by viewModel.parseSuccessMessage.collectAsState()
     val transactionsError by viewModel.transactionsError.collectAsState()
 
+    // Safety Simulation Mode: Live Syncing status between Room and Firestore
+    var isLiveSyncEnabled by remember { mutableStateOf(true) }
+    var isSyncingNow by remember { mutableStateOf(false) }
+    var lastSyncTimestamp by remember { mutableStateOf(SimpleDateFormat("h:mm a", Locale.getDefault()).format(Date())) }
+    val syncRotationAnimatable = remember { Animatable(0f) }
+    val coroutineScope = rememberCoroutineScope()
+
+    val triggerLiveSync: () -> Unit = {
+        if (!isSyncingNow) {
+            coroutineScope.launch {
+                isSyncingNow = true
+                // Brief rotation animation
+                syncRotationAnimatable.snapTo(0f)
+                launch {
+                    syncRotationAnimatable.animateTo(
+                        targetValue = 360f * 2,
+                        animationSpec = tween(durationMillis = 1400, easing = LinearEasing)
+                    )
+                }
+                delay(1400)
+                isSyncingNow = false
+                lastSyncTimestamp = SimpleDateFormat("h:mm a", Locale.getDefault()).format(Date())
+            }
+        }
+    }
+
     var showBudgetDialog by remember { mutableStateOf(false) }
     var tempPrimaryHex by remember(primaryColorHex) { mutableStateOf(primaryColorHex) }
     var tempSecondaryHex by remember(secondaryColorHex) { mutableStateOf(secondaryColorHex) }
@@ -118,6 +145,7 @@ fun DashboardScreen(
 
     var showLedgerSheet by remember { mutableStateOf(false) }
     var showForecastSheet by remember { mutableStateOf(false) }
+    var showAuditSheet by remember { mutableStateOf(false) }
     val context = LocalContext.current
 
     var ledgerStartDate by remember { mutableStateOf<Long?>(null) }
@@ -602,6 +630,31 @@ fun DashboardScreen(
                             tint = MaterialTheme.colorScheme.primary
                         )
                     }
+                    IconButton(
+                        onClick = {
+                            isLiveSyncEnabled = !isLiveSyncEnabled
+                            if (isLiveSyncEnabled) {
+                                triggerLiveSync()
+                            }
+                        },
+                        modifier = Modifier.testTag("toggle_live_sync_button")
+                    ) {
+                        Icon(
+                            imageVector = if (isLiveSyncEnabled) Icons.Default.CloudSync else Icons.Default.CloudOff,
+                            contentDescription = if (isLiveSyncEnabled) "Disable Live Cloud Sync" else "Enable Live Cloud Sync",
+                            tint = if (isLiveSyncEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                        )
+                    }
+                    IconButton(
+                        onClick = { showAuditSheet = true },
+                        modifier = Modifier.testTag("audit_report_top_button")
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Assessment,
+                            contentDescription = "Audit Deletion Report & PDF Export",
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
                     Spacer(modifier = Modifier.width(6.dp))
                     
                     IconButton(
@@ -656,6 +709,137 @@ fun DashboardScreen(
                     .padding(horizontal = 16.dp)
                     .verticalScroll(rememberScrollState())
             ) {
+
+                // --- LIVE SYNC STATUS & SIMULATION BANNER ---
+                Surface(
+                    shape = RoundedCornerShape(16.dp),
+                    color = if (isLiveSyncEnabled) {
+                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                    } else {
+                        MaterialTheme.colorScheme.surface.copy(alpha = 0.7f)
+                    },
+                    border = BorderStroke(
+                        1.dp,
+                        if (isSyncingNow) MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)
+                        else MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
+                    ),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 8.dp, bottom = 4.dp)
+                        .testTag("live_sync_status_card")
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 12.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Box(
+                                contentAlignment = Alignment.Center,
+                                modifier = Modifier
+                                    .size(32.dp)
+                                    .clip(CircleShape)
+                                    .background(
+                                        if (!isLiveSyncEnabled) MaterialTheme.colorScheme.surface
+                                        else if (isSyncingNow) MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+                                        else Color(0xFF43A047).copy(alpha = 0.15f)
+                                    )
+                                    .clickable(enabled = isLiveSyncEnabled) { triggerLiveSync() }
+                            ) {
+                                if (isSyncingNow) {
+                                    Icon(
+                                        imageVector = Icons.Default.Sync,
+                                        contentDescription = "Syncing with Firestore",
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier
+                                            .size(18.dp)
+                                            .rotate(syncRotationAnimatable.value)
+                                    )
+                                } else if (isLiveSyncEnabled) {
+                                    Icon(
+                                        imageVector = Icons.Default.CloudDone,
+                                        contentDescription = "Synced to Firestore",
+                                        tint = Color(0xFF43A047),
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                } else {
+                                    Icon(
+                                        imageVector = Icons.Default.CloudOff,
+                                        contentDescription = "Live Sync Paused",
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                            }
+
+                            Column {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    Text(
+                                        text = if (!isLiveSyncEnabled) "Sync Paused"
+                                        else if (isSyncingNow) "Syncing Room ⇄ Firestore..."
+                                        else "Live Sync Active",
+                                        style = MaterialTheme.typography.labelMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = if (!isLiveSyncEnabled) MaterialTheme.colorScheme.onSurfaceVariant
+                                        else if (isSyncingNow) MaterialTheme.colorScheme.primary
+                                        else MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Surface(
+                                        shape = RoundedCornerShape(6.dp),
+                                        color = MaterialTheme.colorScheme.surface,
+                                        border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.25f))
+                                    ) {
+                                        Text(
+                                            text = "Simulation Mode",
+                                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+                                        )
+                                    }
+                                }
+
+                                Text(
+                                    text = if (!isLiveSyncEnabled) "Local Room only • Cloud updates paused"
+                                    else if (isSyncingNow) "Updating remote Firestore collections..."
+                                    else "Local Room ⇄ Firestore • Synced at $lastSyncTimestamp",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.75f),
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                        }
+
+                        // Switch toggle
+                        Switch(
+                            checked = isLiveSyncEnabled,
+                            onCheckedChange = { checked ->
+                                isLiveSyncEnabled = checked
+                                if (checked) {
+                                    triggerLiveSync()
+                                }
+                            },
+                            modifier = Modifier
+                                .testTag("live_sync_toggle_switch")
+                                .padding(start = 4.dp),
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
+                                checkedTrackColor = MaterialTheme.colorScheme.primary,
+                                uncheckedThumbColor = MaterialTheme.colorScheme.outline,
+                                uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant
+                            )
+                        )
+                    }
+                }
 
                 // --- 1. AI CHAT INPUT BOX AT THE TOP ---
                 Card(
@@ -1264,6 +1448,31 @@ fun DashboardScreen(
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
                             text = "Forecast",
+                            fontWeight = FontWeight.Bold,
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+
+                    OutlinedButton(
+                        onClick = { showAuditSheet = true },
+                        modifier = Modifier
+                            .weight(1f)
+                            .testTag("audit_report_quick_button"),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = MaterialTheme.colorScheme.tertiary
+                        ),
+                        border = BorderStroke(1.5.dp, MaterialTheme.colorScheme.tertiary.copy(alpha = 0.5f)),
+                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 10.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Assessment,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = "Audit",
                             fontWeight = FontWeight.Bold,
                             style = MaterialTheme.typography.bodyMedium
                         )
@@ -2178,6 +2387,15 @@ fun DashboardScreen(
                 }
             },
             onDismiss = { activeColorPickerTarget = null }
+        )
+    }
+
+    // --- AUDIT DELETION REPORT BOTTOM SHEET ---
+    if (showAuditSheet) {
+        AuditReportSheet(
+            viewModel = viewModel,
+            userEmail = currentUserEmail ?: "user@example.com",
+            onDismiss = { showAuditSheet = false }
         )
     }
 
