@@ -4544,13 +4544,13 @@ fun VisualAnalyticsSection(
                 }
             }
 
-            // Divider
-            Box(
+            // Divider with generous vertical margins to move the entire section down
+            HorizontalDivider(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(1.dp)
-                    .background(MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
-                    .padding(vertical = 12.dp)
+                    .padding(top = 16.dp, bottom = 20.dp),
+                color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f),
+                thickness = 1.dp
             )
 
             val maxGroupedAmount = remember(monthlyTrends) {
@@ -4572,8 +4572,8 @@ fun VisualAnalyticsSection(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(bottom = 12.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
+                    .padding(bottom = 6.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Text(
                     text = "Monthly Overview: Income vs Spending",
@@ -4582,7 +4582,7 @@ fun VisualAnalyticsSection(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
-                // Controls Row: Legend on the left, Grouped / Stacked toggle aligned on the right or on its own line
+                // Controls Row: Legend on the left, Grouped / Stacked toggle aligned on the right
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -4688,13 +4688,11 @@ fun VisualAnalyticsSection(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(230.dp)
+                    .height(176.dp)
             ) {
                 Row(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .height(160.dp)
-                        .align(Alignment.BottomCenter)
+                        .fillMaxSize()
                         .testTag("bar_chart_trend"),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.Bottom
