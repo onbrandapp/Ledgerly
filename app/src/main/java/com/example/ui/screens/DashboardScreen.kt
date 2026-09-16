@@ -4347,8 +4347,7 @@ fun VisualAnalyticsSection(
                 val txCal = Calendar.getInstance().apply { timeInMillis = tx.date }
                 txCal.get(Calendar.MONTH) == targetMonth && 
                 txCal.get(Calendar.YEAR) == targetYear &&
-                tx.type == "INCOME" &&
-                !tx.category.trim().equals("cash", ignoreCase = true)
+                tx.type == "INCOME"
             }.sumOf { it.amount }
             
             trends.add(
@@ -4554,56 +4553,123 @@ fun VisualAnalyticsSection(
                     .padding(vertical = 12.dp)
             )
 
-            // BAR CHART SECTION (6-MONTH INCOME VS SPENDING TRENDS)
-            Column(
+            val maxGroupedAmount = remember(monthlyTrends) {
+                monthlyTrends.maxOfOrNull { maxOf(it.expenseAmount, it.incomeAmount) }?.takeIf { it > 0 } ?: 1.0
+            }
+            val maxStackedAmount = remember(monthlyTrends) {
+                monthlyTrends.maxOfOrNull { it.expenseAmount + it.incomeAmount }?.takeIf { it > 0 } ?: 1.0
+            }
+
+            var chartViewType by remember { mutableStateOf(ChartViewType.GROUPED) }
+            val isStacked = chartViewType == ChartViewType.STACKED
+            val stackTransition by animateFloatAsState(
+                targetValue = if (isStacked) 1f else 0f,
+                animationSpec = tween(durationMillis = 550, easing = FastOutSlowInEasing),
+                label = "chartStackTransition"
+            )
+
+            // BAR CHART SECTION (6-MONTH INCOME VS SPENDING TRENDS / MONTHLY OVERVIEW)
+            Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(bottom = 12.dp),
-                verticalArrangement = Arrangement.spacedBy(6.dp)
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = "6-Month Income vs Spending",
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                // Legend on its own line
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(
+                        text = "Monthly Overview: Income vs Spending",
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    // Legend
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(14.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(10.dp)
+                                    .clip(RoundedCornerShape(3.dp))
+                                    .background(Color(0xFF10B981))
+                            )
+                            Text(
+                                text = "Income",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(10.dp)
+                                    .clip(RoundedCornerShape(3.dp))
+                                    .background(MaterialTheme.colorScheme.primary)
+                            )
+                            Text(
+                                text = "Expenses",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+
+                // Grouped / Stacked View Mode Toggle
+                Surface(
+                    shape = RoundedCornerShape(20.dp),
+                    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.7f),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)),
+                    modifier = Modifier.testTag("chart_view_toggle")
                 ) {
                     Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        modifier = Modifier.padding(3.dp),
+                        horizontalArrangement = Arrangement.spacedBy(2.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Box(
+                        val isGroupedActive = chartViewType == ChartViewType.GROUPED
+                        Surface(
+                            shape = RoundedCornerShape(16.dp),
+                            color = if (isGroupedActive) MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
                             modifier = Modifier
-                                .size(10.dp)
-                                .clip(RoundedCornerShape(3.dp))
-                                .background(Color(0xFF10B981))
-                        )
-                        Text(
-                            text = "Income",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        Box(
+                                .clip(RoundedCornerShape(16.dp))
+                                .clickable { chartViewType = ChartViewType.GROUPED }
+                                .testTag("toggle_grouped_view")
+                        ) {
+                            Text(
+                                text = "Grouped",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = if (isGroupedActive) FontWeight.ExtraBold else FontWeight.Medium,
+                                color = if (isGroupedActive) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(horizontal = 9.dp, vertical = 4.dp)
+                            )
+                        }
+
+                        val isStackedActive = chartViewType == ChartViewType.STACKED
+                        Surface(
+                            shape = RoundedCornerShape(16.dp),
+                            color = if (isStackedActive) MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
                             modifier = Modifier
-                                .size(10.dp)
-                                .clip(RoundedCornerShape(3.dp))
-                                .background(MaterialTheme.colorScheme.primary)
-                        )
-                        Text(
-                            text = "Expenses",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                                .clip(RoundedCornerShape(16.dp))
+                                .clickable { chartViewType = ChartViewType.STACKED }
+                                .testTag("toggle_stacked_view")
+                        ) {
+                            Text(
+                                text = "Stacked",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = if (isStackedActive) FontWeight.ExtraBold else FontWeight.Medium,
+                                color = if (isStackedActive) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(horizontal = 9.dp, vertical = 4.dp)
+                            )
+                        }
                     }
                 }
             }
@@ -4625,143 +4691,251 @@ fun VisualAnalyticsSection(
                     verticalAlignment = Alignment.Bottom
                 ) {
                     monthlyTrends.forEach { trend ->
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            modifier = Modifier
-                                .weight(1f)
-                                .pointerInput(trend) {
-                                    awaitPointerEventScope {
-                                        while (true) {
-                                            val event = awaitPointerEvent()
-                                            when (event.type) {
-                                                androidx.compose.ui.input.pointer.PointerEventType.Enter,
-                                                androidx.compose.ui.input.pointer.PointerEventType.Move,
-                                                androidx.compose.ui.input.pointer.PointerEventType.Press -> {
-                                                    hoveredTrend = trend
-                                                }
-                                                androidx.compose.ui.input.pointer.PointerEventType.Exit,
-                                                androidx.compose.ui.input.pointer.PointerEventType.Release -> {
-                                                    hoveredTrend = null
-                                                }
-                                            }
-                                        }
+                        MonthlyTrendBarItem(
+                            trend = trend,
+                            isStacked = isStacked,
+                            maxGroupedAmount = maxGroupedAmount,
+                            maxStackedAmount = maxStackedAmount,
+                            stackTransition = stackTransition,
+                            isHovered = hoveredTrend == trend,
+                            onHoverChange = { hovered ->
+                                hoveredTrend = if (hovered) trend else null
+                            },
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                }
+
+                // Tooltip overlay
+                androidx.compose.animation.AnimatedVisibility(
+                    visible = hoveredTrend != null,
+                    enter = androidx.compose.animation.fadeIn() + androidx.compose.animation.slideInVertically(initialOffsetY = { 20 }),
+                    exit = androidx.compose.animation.fadeOut() + androidx.compose.animation.slideOutVertically(targetOffsetY = { 20 }),
+                    modifier = Modifier.align(Alignment.TopCenter)
+                ) {
+                    hoveredTrend?.let { trend ->
+                        val net = trend.incomeAmount - trend.expenseAmount
+                        val netColor = if (net >= 0) Color(0xFF10B981) else MaterialTheme.colorScheme.error
+                        
+                        Card(
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceVariant
+                            ),
+                            elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier.padding(bottom = 16.dp)
+                        ) {
+                            Column(modifier = Modifier.padding(12.dp)) {
+                                Text(
+                                    text = "${trend.label} ${trend.year}",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.width(140.dp)) {
+                                    Text("Income:", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Text("+$${String.format(java.util.Locale.US, "%,.2f", trend.incomeAmount)}", style = MaterialTheme.typography.labelSmall, color = Color(0xFF10B981), fontWeight = FontWeight.Bold)
+                                }
+                                Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.width(140.dp)) {
+                                    Text("Expense:", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Text("-$${String.format(java.util.Locale.US, "%,.2f", trend.expenseAmount)}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+                                }
+                                if (isStacked) {
+                                    Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.width(140.dp)) {
+                                        Text("Total:", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                        Text("$${String.format(java.util.Locale.US, "%,.2f", trend.incomeAmount + trend.expenseAmount)}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold)
                                     }
                                 }
-                        ) {
-                        Text(
-                            text = if (trend.expenseAmount > 0) "$${trend.expenseAmount.toInt()}" else "$0",
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Box(
-                            modifier = Modifier
-                                .weight(1f)
-                                .fillMaxWidth()
-                                .padding(horizontal = 2.dp),
-                            contentAlignment = Alignment.BottomCenter
-                        ) {
-                            Row(
-                                modifier = Modifier.fillMaxHeight(),
-                                horizontalArrangement = Arrangement.spacedBy(3.dp),
-                                verticalAlignment = Alignment.Bottom
-                            ) {
-                                // Income Bar (Green)
-                                val incomeHeightPct = if (maxAmount > 0) (trend.incomeAmount / maxAmount).toFloat() else 0f
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxHeight(incomeHeightPct.coerceAtLeast(0.03f))
-                                        .width(7.dp)
-                                        .clip(RoundedCornerShape(4.dp))
-                                        .background(
-                                            Brush.verticalGradient(
-                                                colors = listOf(
-                                                    Color(0xFF34D399),
-                                                    Color(0xFF059669)
-                                                )
-                                            )
-                                        )
-                                )
-                                // Expense Bar (Primary)
-                                val expenseHeightPct = if (maxAmount > 0) (trend.expenseAmount / maxAmount).toFloat() else 0f
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxHeight(expenseHeightPct.coerceAtLeast(0.03f))
-                                        .width(7.dp)
-                                        .clip(RoundedCornerShape(4.dp))
-                                        .background(
-                                            Brush.verticalGradient(
-                                                colors = listOf(
-                                                    MaterialTheme.colorScheme.primary,
-                                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)
-                                                )
-                                            )
-                                        )
-                                )
-                            }
-                        }
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = trend.label,
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                    }
-                }
-            }
-
-            // Tooltip overlay
-            androidx.compose.animation.AnimatedVisibility(
-                visible = hoveredTrend != null,
-                enter = androidx.compose.animation.fadeIn() + androidx.compose.animation.slideInVertically(initialOffsetY = { 20 }),
-                exit = androidx.compose.animation.fadeOut() + androidx.compose.animation.slideOutVertically(targetOffsetY = { 20 }),
-                modifier = Modifier.align(Alignment.TopCenter)
-            ) {
-                hoveredTrend?.let { trend ->
-                    val net = trend.incomeAmount - trend.expenseAmount
-                    val netColor = if (net >= 0) Color(0xFF10B981) else MaterialTheme.colorScheme.error
-                    
-                    Card(
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceVariant
-                        ),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
-                        shape = RoundedCornerShape(8.dp),
-                        modifier = Modifier.padding(bottom = 16.dp)
-                    ) {
-                        Column(modifier = Modifier.padding(12.dp)) {
-                            Text(
-                                text = "${trend.label} ${trend.year}",
-                                style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.width(140.dp)) {
-                                Text("Income:", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                Text("+$${String.format(java.util.Locale.US, "%,.2f", trend.incomeAmount)}", style = MaterialTheme.typography.labelSmall, color = Color(0xFF10B981), fontWeight = FontWeight.Bold)
-                            }
-                            Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.width(140.dp)) {
-                                Text("Expense:", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                Text("-$${String.format(java.util.Locale.US, "%,.2f", trend.expenseAmount)}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
-                            }
-                            HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-                            Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.width(140.dp)) {
-                                Text("Net:", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                val netSign = if (net >= 0) "+" else "-"
-                                Text("$netSign$${String.format(java.util.Locale.US, "%,.2f", kotlin.math.abs(net))}", style = MaterialTheme.typography.labelMedium, color = netColor, fontWeight = FontWeight.ExtraBold)
+                                HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                                Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.width(140.dp)) {
+                                    Text("Net:", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    val netSign = if (net >= 0) "+" else "-"
+                                    Text("$netSign$${String.format(java.util.Locale.US, "%,.2f", kotlin.math.abs(net))}", style = MaterialTheme.typography.labelMedium, color = netColor, fontWeight = FontWeight.ExtraBold)
+                                }
                             }
                         }
                     }
                 }
-            }
             } // End of Box
         }
     }
+}
+
+@Composable
+fun MonthlyTrendBarItem(
+    trend: MonthTrend,
+    isStacked: Boolean,
+    maxGroupedAmount: Double,
+    maxStackedAmount: Double,
+    stackTransition: Float,
+    isHovered: Boolean,
+    onHoverChange: (Boolean) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val targetIncomePct = if (isStacked) {
+        if (maxStackedAmount > 0) (trend.incomeAmount / maxStackedAmount).toFloat().coerceIn(0f, 1f) else 0f
+    } else {
+        if (maxGroupedAmount > 0) (trend.incomeAmount / maxGroupedAmount).toFloat().coerceIn(0f, 1f) else 0f
+    }
+
+    val targetExpensePct = if (isStacked) {
+        if (maxStackedAmount > 0) (trend.expenseAmount / maxStackedAmount).toFloat().coerceIn(0f, 1f) else 0f
+    } else {
+        if (maxGroupedAmount > 0) (trend.expenseAmount / maxGroupedAmount).toFloat().coerceIn(0f, 1f) else 0f
+    }
+
+    val animatedIncomePct by animateFloatAsState(
+        targetValue = targetIncomePct,
+        animationSpec = tween(durationMillis = 650, easing = FastOutSlowInEasing),
+        label = "incomePct_${trend.month}_${trend.year}"
+    )
+
+    val animatedExpensePct by animateFloatAsState(
+        targetValue = targetExpensePct,
+        animationSpec = tween(durationMillis = 650, easing = FastOutSlowInEasing),
+        label = "expensePct_${trend.month}_${trend.year}"
+    )
+
+    val primaryColor = MaterialTheme.colorScheme.primary
+
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = modifier
+            .pointerInput(trend) {
+                awaitPointerEventScope {
+                    while (true) {
+                        val event = awaitPointerEvent()
+                        when (event.type) {
+                            androidx.compose.ui.input.pointer.PointerEventType.Enter,
+                            androidx.compose.ui.input.pointer.PointerEventType.Move,
+                            androidx.compose.ui.input.pointer.PointerEventType.Press -> {
+                                onHoverChange(true)
+                            }
+                            androidx.compose.ui.input.pointer.PointerEventType.Exit,
+                            androidx.compose.ui.input.pointer.PointerEventType.Release -> {
+                                onHoverChange(false)
+                            }
+                        }
+                    }
+                }
+            }
+            .clickable(
+                interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                indication = null
+            ) {
+                onHoverChange(!isHovered)
+            }
+    ) {
+        val totalVolume = (trend.incomeAmount + trend.expenseAmount).toInt()
+        val topLabelText = if (isStacked) {
+            if (totalVolume > 0) "$$totalVolume" else "$0"
+        } else {
+            if (trend.expenseAmount > 0) "$${trend.expenseAmount.toInt()}" else "$0"
+        }
+
+        Text(
+            text = topLabelText,
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        Box(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth()
+                .padding(horizontal = 2.dp),
+            contentAlignment = Alignment.BottomCenter
+        ) {
+            Canvas(
+                modifier = Modifier.fillMaxSize()
+            ) {
+                val w = size.width
+                val h = size.height
+
+                val barWidthGrouped = 7.dp.toPx()
+                val barWidthStacked = 14.dp.toPx()
+                val gap = 3.dp.toPx()
+                val currentBarWidth = barWidthGrouped + (barWidthStacked - barWidthGrouped) * stackTransition
+                val cornerRadius = CornerRadius(4.dp.toPx(), 4.dp.toPx())
+
+                val centerX = w / 2f
+
+                // Income Bar geometry
+                val groupedIncomeCenterX = centerX - (barWidthGrouped + gap) / 2f
+                val incomeCenterX = groupedIncomeCenterX + (centerX - groupedIncomeCenterX) * stackTransition
+                val incomeHeight = if (trend.incomeAmount > 0) {
+                    maxOf(h * animatedIncomePct, 4.dp.toPx())
+                } else {
+                    0f
+                }
+                val incomeLeft = incomeCenterX - currentBarWidth / 2f
+                val incomeTop = h - incomeHeight
+
+                // Expense Bar geometry
+                val groupedExpenseCenterX = centerX + (barWidthGrouped + gap) / 2f
+                val expenseCenterX = groupedExpenseCenterX + (centerX - groupedExpenseCenterX) * stackTransition
+                val expenseHeight = if (trend.expenseAmount > 0) {
+                    maxOf(h * animatedExpensePct, 4.dp.toPx())
+                } else {
+                    0f
+                }
+                val expenseLeft = expenseCenterX - currentBarWidth / 2f
+
+                // Baseline for expense: in grouped mode rests on floor h, in stacked mode rests on top of income bar
+                val gapStacked = 1.5.dp.toPx() * stackTransition
+                val stackedBaseY = if (incomeHeight > 0f) (h - incomeHeight - gapStacked) else h
+                val expenseBaseY = h + (stackedBaseY - h) * stackTransition
+                val expenseTop = (expenseBaseY - expenseHeight).coerceAtLeast(0f)
+
+                // Draw Income Bar
+                if (incomeHeight > 0f) {
+                    drawRoundRect(
+                        brush = Brush.verticalGradient(
+                            colors = listOf(Color(0xFF34D399), Color(0xFF059669)),
+                            startY = incomeTop,
+                            endY = h
+                        ),
+                        topLeft = Offset(incomeLeft, incomeTop),
+                        size = Size(currentBarWidth, incomeHeight),
+                        cornerRadius = cornerRadius
+                    )
+                }
+
+                // Draw Expense Bar
+                if (expenseHeight > 0f) {
+                    drawRoundRect(
+                        brush = Brush.verticalGradient(
+                            colors = listOf(
+                                primaryColor,
+                                primaryColor.copy(alpha = 0.65f)
+                            ),
+                            startY = expenseTop,
+                            endY = expenseBaseY
+                        ),
+                        topLeft = Offset(expenseLeft, expenseTop),
+                        size = Size(currentBarWidth, (expenseBaseY - expenseTop).coerceAtLeast(0f)),
+                        cornerRadius = cornerRadius
+                    )
+                }
+            }
+        }
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = trend.label,
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.Bold,
+            color = if (isHovered) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+        )
+    }
+}
+
+enum class ChartViewType {
+    GROUPED,
+    STACKED
 }
 
 data class MonthTrend(
