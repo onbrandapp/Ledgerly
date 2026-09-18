@@ -100,18 +100,21 @@ fun AuditReportSheet(
                 .fillMaxSize()
                 .padding(horizontal = 16.dp)
         ) {
-            // Header Row
+            // Header Section
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(bottom = 12.dp),
+                    .padding(bottom = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.weight(1f)
+                ) {
                     Box(
                         modifier = Modifier
-                            .size(40.dp)
+                            .size(38.dp)
                             .clip(CircleShape)
                             .background(MaterialTheme.colorScheme.primaryContainer),
                         contentAlignment = Alignment.Center
@@ -119,74 +122,101 @@ fun AuditReportSheet(
                         Icon(
                             imageVector = Icons.Default.Assessment,
                             contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onPrimaryContainer
+                            tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                            modifier = Modifier.size(20.dp)
                         )
                     }
-                    Spacer(modifier = Modifier.width(12.dp))
+                    Spacer(modifier = Modifier.width(10.dp))
                     Column {
                         Text(
                             text = "Audit Deletion Report",
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.ExtraBold
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Black,
+                            maxLines = 1,
+                            softWrap = false,
+                            overflow = TextOverflow.Ellipsis
                         )
                         Text(
-                            text = "Audit log for compliance & forensics",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            text = "Compliance & forensics audit log",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            softWrap = false
                         )
                     }
                 }
 
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    // Export to PDF button
-                    FilledTonalButton(
-                        onClick = {
-                            isExporting = true
-                            AuditPdfExporter.generateAndShareAuditPdf(
-                                context = context,
-                                userEmail = userEmail,
-                                deletedItems = filteredItems,
-                                onSuccess = {
-                                    isExporting = false
-                                    Toast.makeText(context, "Audit PDF generated successfully", Toast.LENGTH_SHORT).show()
-                                },
-                                onError = { err ->
-                                    isExporting = false
-                                    Toast.makeText(context, "Export error: $err", Toast.LENGTH_LONG).show()
-                                }
-                            )
-                        },
-                        enabled = !isExporting,
-                        shape = RoundedCornerShape(12.dp),
-                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
-                        modifier = Modifier.testTag("export_pdf_button")
-                    ) {
-                        if (isExporting) {
-                            CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
-                        } else {
-                            Icon(
-                                imageVector = Icons.Default.PictureAsPdf,
-                                contentDescription = "Export to PDF",
-                                modifier = Modifier.size(18.dp)
-                            )
-                        }
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            text = "Export PDF",
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 13.sp
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.width(4.dp))
-                    IconButton(
-                        onClick = onDismiss,
-                        modifier = Modifier.testTag("close_audit_sheet_button")
-                    ) {
-                        Icon(imageVector = Icons.Default.Close, contentDescription = "Close")
-                    }
+                IconButton(
+                    onClick = onDismiss,
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                        .testTag("close_audit_sheet_button")
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = "Close",
+                        modifier = Modifier.size(18.dp)
+                    )
                 }
             }
+
+            // Export to PDF Action Bar
+            FilledTonalButton(
+                onClick = {
+                    isExporting = true
+                    AuditPdfExporter.generateAndShareAuditPdf(
+                        context = context,
+                        userEmail = userEmail,
+                        deletedItems = filteredItems,
+                        onSuccess = {
+                            isExporting = false
+                            Toast.makeText(context, "Audit PDF generated successfully", Toast.LENGTH_SHORT).show()
+                        },
+                        onError = { err ->
+                            isExporting = false
+                            Toast.makeText(context, "Export error: $err", Toast.LENGTH_LONG).show()
+                        }
+                    )
+                },
+                enabled = !isExporting,
+                shape = RoundedCornerShape(12.dp),
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(42.dp)
+                    .padding(bottom = 4.dp)
+                    .testTag("export_pdf_button")
+            ) {
+                if (isExporting) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(16.dp),
+                        strokeWidth = 2.dp,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Generating Audit PDF...",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 13.sp
+                    )
+                } else {
+                    Icon(
+                        imageVector = Icons.Default.PictureAsPdf,
+                        contentDescription = "Export to PDF",
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Export Official Audit PDF Report",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 13.sp
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(6.dp))
 
             // Summary Bento Cards Grid
             Row(
@@ -262,13 +292,14 @@ fun AuditReportSheet(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState())
                     .padding(bottom = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 // Source segmented toggle
                 Row(
-                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
@@ -300,6 +331,8 @@ fun AuditReportSheet(
                         )
                     }
                 }
+
+                Spacer(modifier = Modifier.width(12.dp))
 
                 // Simulation: Test External Deletion trigger button
                 TextButton(

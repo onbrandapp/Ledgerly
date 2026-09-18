@@ -102,31 +102,7 @@ fun DashboardScreen(
     val parseSuccessMessage by viewModel.parseSuccessMessage.collectAsState()
     val transactionsError by viewModel.transactionsError.collectAsState()
 
-    // Safety Simulation Mode: Live Syncing status between Room and Firestore
-    var isLiveSyncEnabled by remember { mutableStateOf(true) }
-    var isSyncingNow by remember { mutableStateOf(false) }
-    var lastSyncTimestamp by remember { mutableStateOf(SimpleDateFormat("h:mm a", Locale.getDefault()).format(Date())) }
-    val syncRotationAnimatable = remember { Animatable(0f) }
     val coroutineScope = rememberCoroutineScope()
-
-    val triggerLiveSync: () -> Unit = {
-        if (!isSyncingNow) {
-            coroutineScope.launch {
-                isSyncingNow = true
-                // Brief rotation animation
-                syncRotationAnimatable.snapTo(0f)
-                launch {
-                    syncRotationAnimatable.animateTo(
-                        targetValue = 360f * 2,
-                        animationSpec = tween(durationMillis = 1400, easing = LinearEasing)
-                    )
-                }
-                delay(1400)
-                isSyncingNow = false
-                lastSyncTimestamp = SimpleDateFormat("h:mm a", Locale.getDefault()).format(Date())
-            }
-        }
-    }
 
     var showBudgetDialog by remember { mutableStateOf(false) }
     var tempPrimaryHex by remember(primaryColorHex) { mutableStateOf(primaryColorHex) }
@@ -577,97 +553,110 @@ fun DashboardScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Column {
+                    Column(
+                        modifier = Modifier.padding(start = 2.dp),
+                        verticalArrangement = Arrangement.Center
+                    ) {
                         Text(
                             text = currentMonthYear.uppercase(Locale.getDefault()),
-                            style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.2.sp),
-                            fontWeight = FontWeight.ExtraBold,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
+                            style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.1.sp, fontSize = 10.sp),
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary,
+                            maxLines = 1,
+                            softWrap = false,
+                            overflow = TextOverflow.Ellipsis
                         )
                         Text(
                             text = "Ledgerly",
-                            style = MaterialTheme.typography.titleLarge,
+                            style = MaterialTheme.typography.titleLarge.copy(fontSize = 19.sp),
                             fontWeight = FontWeight.Black,
-                            color = MaterialTheme.colorScheme.onBackground
+                            color = MaterialTheme.colorScheme.onBackground,
+                            maxLines = 1,
+                            softWrap = false
                         )
                     }
                 },
                 actions = {
-                    val isBiometricEnabled by viewModel.isBiometricEnabled.collectAsState()
-                    IconButton(
-                        onClick = { 
-                            if (isBiometricEnabled) {
-                                viewModel.lockApp()
-                            } else {
-                                showBudgetDialog = true
-                            }
-                        },
-                        modifier = Modifier.testTag("lock_app_button")
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        modifier = Modifier.padding(end = 8.dp)
                     ) {
-                        Icon(
-                            imageVector = if (isBiometricEnabled) Icons.Default.Lock else Icons.Default.Fingerprint,
-                            contentDescription = if (isBiometricEnabled) "Lock App" else "Biometric Security Settings",
-                            tint = if (isBiometricEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primary
-                        )
-                    }
-                    IconButton(
-                        onClick = { showBudgetDialog = true },
-                        modifier = Modifier.testTag("edit_budget_button")
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Settings,
-                            contentDescription = "Budget Settings",
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                    }
-                    IconButton(
-                        onClick = { showGlobalCategoryDialog = true },
-                        modifier = Modifier.testTag("manage_categories_top_button")
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Palette,
-                            contentDescription = "Manage Custom Categories",
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                    }
-                    IconButton(
-                        onClick = {
-                            isLiveSyncEnabled = !isLiveSyncEnabled
-                            if (isLiveSyncEnabled) {
-                                triggerLiveSync()
-                            }
-                        },
-                        modifier = Modifier.testTag("toggle_live_sync_button")
-                    ) {
-                        Icon(
-                            imageVector = if (isLiveSyncEnabled) Icons.Default.CloudSync else Icons.Default.CloudOff,
-                            contentDescription = if (isLiveSyncEnabled) "Disable Live Cloud Sync" else "Enable Live Cloud Sync",
-                            tint = if (isLiveSyncEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
-                        )
-                    }
-                    IconButton(
-                        onClick = { showAuditSheet = true },
-                        modifier = Modifier.testTag("audit_report_top_button")
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Assessment,
-                            contentDescription = "Audit Deletion Report & PDF Export",
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(6.dp))
-                    
-                    IconButton(
-                        onClick = { viewModel.logout() },
-                        modifier = Modifier
-                            .padding(end = 12.dp)
-                            .testTag("logout_button")
-                    ) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.Logout,
-                            contentDescription = "Logout",
-                            tint = MaterialTheme.colorScheme.primary
-                        )
+                        // 1. Settings (Budget, Biometrics, Preferences)
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f))
+                                .border(BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)), CircleShape)
+                                .clickable { showBudgetDialog = true }
+                                .testTag("edit_budget_button"),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Settings,
+                                contentDescription = "Budget Settings",
+                                tint = MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+
+                        // 2. Custom Categories
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f))
+                                .border(BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)), CircleShape)
+                                .clickable { showGlobalCategoryDialog = true }
+                                .testTag("manage_categories_top_button"),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Palette,
+                                contentDescription = "Manage Custom Categories",
+                                tint = MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+
+                        // 3. Audit Deletion Report
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.35f))
+                                .border(BorderStroke(1.dp, MaterialTheme.colorScheme.tertiary.copy(alpha = 0.35f)), CircleShape)
+                                .clickable { showAuditSheet = true }
+                                .testTag("audit_report_top_button"),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Assessment,
+                                contentDescription = "Audit Deletion Report & PDF Export",
+                                tint = MaterialTheme.colorScheme.tertiary,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+
+                        // 5. Logout
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.25f))
+                                .border(BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.35f)), CircleShape)
+                                .clickable { viewModel.logout() }
+                                .testTag("logout_button"),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.Logout,
+                                contentDescription = "Logout",
+                                tint = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.size(17.dp)
+                            )
+                        }
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -709,137 +698,6 @@ fun DashboardScreen(
                     .padding(horizontal = 16.dp)
                     .verticalScroll(rememberScrollState())
             ) {
-
-                // --- LIVE SYNC STATUS & SIMULATION BANNER ---
-                Surface(
-                    shape = RoundedCornerShape(16.dp),
-                    color = if (isLiveSyncEnabled) {
-                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                    } else {
-                        MaterialTheme.colorScheme.surface.copy(alpha = 0.7f)
-                    },
-                    border = BorderStroke(
-                        1.dp,
-                        if (isSyncingNow) MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)
-                        else MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
-                    ),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 8.dp, bottom = 4.dp)
-                        .testTag("live_sync_status_card")
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 12.dp, vertical = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(10.dp),
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Box(
-                                contentAlignment = Alignment.Center,
-                                modifier = Modifier
-                                    .size(32.dp)
-                                    .clip(CircleShape)
-                                    .background(
-                                        if (!isLiveSyncEnabled) MaterialTheme.colorScheme.surface
-                                        else if (isSyncingNow) MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
-                                        else Color(0xFF43A047).copy(alpha = 0.15f)
-                                    )
-                                    .clickable(enabled = isLiveSyncEnabled) { triggerLiveSync() }
-                            ) {
-                                if (isSyncingNow) {
-                                    Icon(
-                                        imageVector = Icons.Default.Sync,
-                                        contentDescription = "Syncing with Firestore",
-                                        tint = MaterialTheme.colorScheme.primary,
-                                        modifier = Modifier
-                                            .size(18.dp)
-                                            .rotate(syncRotationAnimatable.value)
-                                    )
-                                } else if (isLiveSyncEnabled) {
-                                    Icon(
-                                        imageVector = Icons.Default.CloudDone,
-                                        contentDescription = "Synced to Firestore",
-                                        tint = Color(0xFF43A047),
-                                        modifier = Modifier.size(18.dp)
-                                    )
-                                } else {
-                                    Icon(
-                                        imageVector = Icons.Default.CloudOff,
-                                        contentDescription = "Live Sync Paused",
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
-                                        modifier = Modifier.size(18.dp)
-                                    )
-                                }
-                            }
-
-                            Column {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                                ) {
-                                    Text(
-                                        text = if (!isLiveSyncEnabled) "Sync Paused"
-                                        else if (isSyncingNow) "Syncing Room ⇄ Firestore..."
-                                        else "Live Sync Active",
-                                        style = MaterialTheme.typography.labelMedium,
-                                        fontWeight = FontWeight.Bold,
-                                        color = if (!isLiveSyncEnabled) MaterialTheme.colorScheme.onSurfaceVariant
-                                        else if (isSyncingNow) MaterialTheme.colorScheme.primary
-                                        else MaterialTheme.colorScheme.onSurface
-                                    )
-                                    Surface(
-                                        shape = RoundedCornerShape(6.dp),
-                                        color = MaterialTheme.colorScheme.surface,
-                                        border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.25f))
-                                    ) {
-                                        Text(
-                                            text = "Simulation Mode",
-                                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
-                                        )
-                                    }
-                                }
-
-                                Text(
-                                    text = if (!isLiveSyncEnabled) "Local Room only • Cloud updates paused"
-                                    else if (isSyncingNow) "Updating remote Firestore collections..."
-                                    else "Local Room ⇄ Firestore • Synced at $lastSyncTimestamp",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.75f),
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                            }
-                        }
-
-                        // Switch toggle
-                        Switch(
-                            checked = isLiveSyncEnabled,
-                            onCheckedChange = { checked ->
-                                isLiveSyncEnabled = checked
-                                if (checked) {
-                                    triggerLiveSync()
-                                }
-                            },
-                            modifier = Modifier
-                                .testTag("live_sync_toggle_switch")
-                                .padding(start = 4.dp),
-                            colors = SwitchDefaults.colors(
-                                checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
-                                checkedTrackColor = MaterialTheme.colorScheme.primary,
-                                uncheckedThumbColor = MaterialTheme.colorScheme.outline,
-                                uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant
-                            )
-                        )
-                    }
-                }
 
                 // --- 1. AI CHAT INPUT BOX AT THE TOP ---
                 Card(
@@ -1402,31 +1260,40 @@ fun DashboardScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(vertical = 8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
                     OutlinedButton(
                         onClick = { showLedgerSheet = true },
                         modifier = Modifier
                             .weight(1f)
+                            .height(44.dp)
                             .testTag("complete_ledger_button"),
-                        shape = RoundedCornerShape(16.dp),
+                        shape = RoundedCornerShape(14.dp),
                         colors = ButtonDefaults.outlinedButtonColors(
                             contentColor = MaterialTheme.colorScheme.primary
                         ),
-                        border = BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)),
-                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 10.dp)
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.4f)),
+                        contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp)
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.ReceiptLong,
-                            contentDescription = null,
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            text = "Ledger",
-                            fontWeight = FontWeight.Bold,
-                            style = MaterialTheme.typography.bodyMedium
-                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.ReceiptLong,
+                                contentDescription = null,
+                                modifier = Modifier.size(15.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = "Ledger",
+                                fontWeight = FontWeight.Bold,
+                                style = MaterialTheme.typography.labelLarge.copy(fontSize = 12.5.sp),
+                                maxLines = 1,
+                                softWrap = false
+                            )
+                        }
                     }
 
                     FilledTonalButton(
@@ -1435,47 +1302,63 @@ fun DashboardScreen(
                             showForecastSheet = true
                         },
                         modifier = Modifier
-                            .weight(1f)
+                            .weight(1.15f)
+                            .height(44.dp)
                             .testTag("forecast_quick_button"),
-                        shape = RoundedCornerShape(16.dp),
-                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 10.dp)
+                        shape = RoundedCornerShape(14.dp),
+                        contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp)
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Timeline,
-                            contentDescription = null,
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            text = "Forecast",
-                            fontWeight = FontWeight.Bold,
-                            style = MaterialTheme.typography.bodyMedium
-                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Timeline,
+                                contentDescription = null,
+                                modifier = Modifier.size(15.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = "Forecast",
+                                fontWeight = FontWeight.Bold,
+                                style = MaterialTheme.typography.labelLarge.copy(fontSize = 12.5.sp),
+                                maxLines = 1,
+                                softWrap = false
+                            )
+                        }
                     }
 
                     OutlinedButton(
                         onClick = { showAuditSheet = true },
                         modifier = Modifier
                             .weight(1f)
+                            .height(44.dp)
                             .testTag("audit_report_quick_button"),
-                        shape = RoundedCornerShape(16.dp),
+                        shape = RoundedCornerShape(14.dp),
                         colors = ButtonDefaults.outlinedButtonColors(
                             contentColor = MaterialTheme.colorScheme.tertiary
                         ),
-                        border = BorderStroke(1.5.dp, MaterialTheme.colorScheme.tertiary.copy(alpha = 0.5f)),
-                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 10.dp)
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.tertiary.copy(alpha = 0.4f)),
+                        contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp)
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Assessment,
-                            contentDescription = null,
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            text = "Audit",
-                            fontWeight = FontWeight.Bold,
-                            style = MaterialTheme.typography.bodyMedium
-                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Assessment,
+                                contentDescription = null,
+                                modifier = Modifier.size(15.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = "Audit",
+                                fontWeight = FontWeight.Bold,
+                                style = MaterialTheme.typography.labelLarge.copy(fontSize = 12.5.sp),
+                                maxLines = 1,
+                                softWrap = false
+                            )
+                        }
                     }
                 }
 
