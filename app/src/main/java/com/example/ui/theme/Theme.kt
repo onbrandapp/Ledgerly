@@ -1,66 +1,85 @@
 package com.example.ui.theme
 
-import android.os.Build
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.dynamicDarkColorScheme
-import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
+
+val LocalAppAccent = compositionLocalOf { Color(0xFF4F46E5) }
 
 @Composable
 fun MyApplicationTheme(
-  primaryHex: String = "#FFD97D",
-  secondaryHex: String = "#A78BFA",
-  accentHex: String = "#D9F99D",
+  primaryHex: String = "#4F46E5",
+  secondaryHex: String = "#4F46E5",
+  accentHex: String = "#4F46E5",
   content: @Composable () -> Unit,
 ) {
-  // Parse colors dynamically with graceful fallback
-  val customPrimary = remember(primaryHex) {
-    try { Color(android.graphics.Color.parseColor(primaryHex)) } catch (e: Exception) { Color(0xFFFFD97D) }
-  }
-  val customSecondary = remember(secondaryHex) {
-    try { Color(android.graphics.Color.parseColor(secondaryHex)) } catch (e: Exception) { Color(0xFFA78BFA) }
-  }
-  val customAccent = remember(accentHex) {
-    try { Color(android.graphics.Color.parseColor(accentHex)) } catch (e: Exception) { Color(0xFFD9F99D) }
+  // Resolve the 1 unified accent color from incoming parameters
+  // Prioritizes accentHex or primaryHex if customized from legacy defaults
+  val effectiveHex = when {
+    accentHex.isNotBlank() && accentHex != "#D9F99D" -> accentHex
+    primaryHex.isNotBlank() && primaryHex != "#FFD97D" -> primaryHex
+    secondaryHex.isNotBlank() && secondaryHex != "#A78BFA" -> secondaryHex
+    else -> "#4F46E5"
   }
 
-  // Premium Dark Charcoal/Slate scheme as requested
-  val colorScheme = darkColorScheme(
-    primary = customPrimary,
-    onPrimary = Color(0xFF121214),       // high contrast dark text on light primary
-    primaryContainer = customPrimary,
-    onPrimaryContainer = Color(0xFF121214),
+  // Parse accent color with graceful fallback to signature Indigo (#4F46E5)
+  val customAccent = remember(effectiveHex) {
+    try {
+      Color(android.graphics.Color.parseColor(effectiveHex))
+    } catch (e: Exception) {
+      Color(0xFF4F46E5)
+    }
+  }
 
-    secondary = customSecondary,
-    onSecondary = Color(0xFF121214),
-    secondaryContainer = customSecondary,
-    onSecondaryContainer = Color(0xFF121214),
+  // Calculate contrast luminance on the selected accent
+  val isLightAccent = remember(customAccent) {
+    val luminance = (0.299 * customAccent.red + 0.587 * customAccent.green + 0.114 * customAccent.blue)
+    luminance > 0.65
+  }
+  val onAccentColor = if (isLightAccent) Color(0xFF0F172A) else Color.White
+
+  // Minimalist Light Theme matching the web overhaul
+  val colorScheme = lightColorScheme(
+    primary = customAccent,
+    onPrimary = onAccentColor,
+    primaryContainer = customAccent.copy(alpha = 0.12f),
+    onPrimaryContainer = if (isLightAccent) Color(0xFF0F172A) else customAccent,
+
+    secondary = customAccent,
+    onSecondary = onAccentColor,
+    secondaryContainer = customAccent.copy(alpha = 0.08f),
+    onSecondaryContainer = if (isLightAccent) Color(0xFF0F172A) else customAccent,
 
     tertiary = customAccent,
-    onTertiary = Color(0xFF121214),
-    tertiaryContainer = customAccent,
-    onTertiaryContainer = Color(0xFF121214),
+    onTertiary = onAccentColor,
+    tertiaryContainer = customAccent.copy(alpha = 0.15f),
+    onTertiaryContainer = if (isLightAccent) Color(0xFF0F172A) else customAccent,
 
-    // Polysure style Slate Charcoal Palette
-    background = Color(0xFF0C0C0E),      // Extremely dark charcoal
-    onBackground = Color(0xFFF1F1F5),    // Bright warm white
+    // Minimalist Clean Canvas Palette
+    background = Color(0xFFF8FAFC),       // Clean soft off-white background (slate-50)
+    onBackground = Color(0xFF0F172A),     // Crisp deep slate text (slate-900)
+
+    surface = Color(0xFFFFFFFF),          // Pure white card surfaces
+    onSurface = Color(0xFF0F172A),        // Deep slate text on surfaces
+
+    surfaceVariant = Color(0xFFF1F5F9),   // Light slate input / chip container (slate-100)
+    onSurfaceVariant = Color(0xFF475569), // Muted slate for subtitles/secondary text (slate-600)
+
+    outline = Color(0xFFE2E8F0),          // Clean light divider border (slate-200)
+    outlineVariant = Color(0xFFEDF2F7),   // Subtle secondary divider
     
-    surface = Color(0xFF16161A),         // Solid slate card background
-    onSurface = Color(0xFFEDEDED),       // Very light gray
-    
-    surfaceVariant = Color(0xFF222226),  // Slightly lighter gray for input container
-    onSurfaceVariant = Color(0xFFC4C4C8),// Medium grey for subtitles/secondary text
-    
-    outline = Color(0xFF2A2A2F),         // Clean dark divider border
-    error = Color(0xFFFF8A80),
-    onError = Color(0xFF121214)
+    error = Color(0xFFEF4444),
+    onError = Color.White,
+    errorContainer = Color(0xFFFEE2E2),
+    onErrorContainer = Color(0xFF991B1B)
   )
 
-  MaterialTheme(colorScheme = colorScheme, typography = Typography, content = content)
+  CompositionLocalProvider(LocalAppAccent provides customAccent) {
+    MaterialTheme(colorScheme = colorScheme, typography = Typography, content = content)
+  }
 }
+

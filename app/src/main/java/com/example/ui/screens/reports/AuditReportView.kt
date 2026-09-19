@@ -46,6 +46,7 @@ fun AuditReportView(
     var selectedSourceFilter by remember { mutableStateOf("ALL") }
     var isExporting by remember { mutableStateOf(false) }
     var showClearDialog by remember { mutableStateOf(false) }
+    var itemToRestore by remember { mutableStateOf<AuditDeletedItem?>(null) }
 
     val filteredItems = remember(deletedItems, searchQuery, selectedTypeFilter, selectedSourceFilter) {
         deletedItems.filter { item ->
@@ -400,6 +401,51 @@ fun AuditReportView(
                                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
                                 )
                             }
+
+                            // Restore Action Row
+                            Spacer(modifier = Modifier.height(8.dp))
+                            HorizontalDivider(
+                                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f),
+                                thickness = 0.5.dp
+                            )
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "Ref: ${item.originalId.take(8).ifBlank { item.id.take(8) }}",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                                    fontSize = 10.sp
+                                )
+
+                                FilledTonalButton(
+                                    onClick = { itemToRestore = item },
+                                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 2.dp),
+                                    shape = RoundedCornerShape(8.dp),
+                                    colors = ButtonDefaults.filledTonalButtonColors(
+                                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                                    ),
+                                    modifier = Modifier
+                                        .height(30.dp)
+                                        .testTag("restore_button_${item.id}")
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Restore,
+                                        contentDescription = "Restore ${item.title}",
+                                        modifier = Modifier.size(14.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(
+                                        text = "Restore",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                            }
                         }
                     }
                 }
@@ -425,6 +471,42 @@ fun AuditReportView(
             },
             dismissButton = {
                 TextButton(onClick = { showClearDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    itemToRestore?.let { target ->
+        AlertDialog(
+            onDismissRequest = { itemToRestore = null },
+            title = {
+                Text(
+                    text = "Restore Deleted ${target.itemType.lowercase().replaceFirstChar { it.uppercase() }}?",
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Text(
+                    text = "Restore \"${target.title}\"${if (target.amount > 0) " ($${String.format(Locale.US, "%,.2f", target.amount)})" else ""} back to your active ${target.itemType.lowercase()}s? This record will be moved out of the audit log."
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val toRestore = target
+                        itemToRestore = null
+                        viewModel.restoreDeletedItem(toRestore) { success, msg ->
+                            Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                        }
+                    },
+                    modifier = Modifier.testTag("confirm_restore_dialog_button")
+                ) {
+                    Text("Restore")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { itemToRestore = null }) {
                     Text("Cancel")
                 }
             }

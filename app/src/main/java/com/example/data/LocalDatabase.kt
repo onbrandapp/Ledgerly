@@ -217,7 +217,8 @@ data class LocalAuditDeletedItem(
     val sourceOrDeletedBy: String,
     val deletedAt: Long,
     val originalDate: Long,
-    val userEmail: String
+    val userEmail: String,
+    val payloadJson: String = ""
 ) {
     fun toDomain(): AuditDeletedItem = AuditDeletedItem(
         id = id,
@@ -230,7 +231,8 @@ data class LocalAuditDeletedItem(
         sourceOrDeletedBy = sourceOrDeletedBy,
         deletedAt = deletedAt,
         originalDate = originalDate,
-        userEmail = userEmail
+        userEmail = userEmail,
+        payloadJson = payloadJson
     )
 
     companion object {
@@ -245,7 +247,8 @@ data class LocalAuditDeletedItem(
             sourceOrDeletedBy = item.sourceOrDeletedBy.ifBlank { "User Action" },
             deletedAt = item.deletedAt,
             originalDate = item.originalDate,
-            userEmail = item.userEmail
+            userEmail = item.userEmail,
+            payloadJson = item.payloadJson
         )
 
         private fun itemTypeSafe(type: String): String = when (type.uppercase()) {
@@ -363,7 +366,7 @@ interface TransactionDao {
         LocalFutureIncomeNote::class,
         LocalAuditDeletedItem::class
     ],
-    version = 10,
+    version = 11,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {

@@ -85,9 +85,10 @@ data class AuditDeletedItem(
     val sourceOrDeletedBy: String = "User Action", // e.g. "User Action", "Series Cleanup", "Remote Sync", "Automatic Cleanup"
     val deletedAt: Long = System.currentTimeMillis(),
     val originalDate: Long = 0L,
-    val userEmail: String = ""
+    val userEmail: String = "",
+    val payloadJson: String = ""
 ) {
     // Zero-argument constructor required for Firestore deserialization
-    constructor() : this("", "", "", "", 0.0, "", "", "User Action", System.currentTimeMillis(), 0L, "")
+    constructor() : this("", "", "", "", 0.0, "", "", "User Action", System.currentTimeMillis(), 0L, "", "")
 }
 

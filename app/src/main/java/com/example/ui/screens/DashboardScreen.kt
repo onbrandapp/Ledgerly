@@ -61,6 +61,7 @@ import com.example.data.Transaction
 import com.example.data.CustomCategory
 import com.example.ui.components.BiometricSettingsCard
 import com.example.ui.components.CategoryCustomizationDialog
+import com.example.ui.theme.AppAccentPresets
 import com.example.ui.theme.CategoryConstants
 import com.example.ui.theme.CategoryStyle
 import com.example.ui.viewmodel.ExpenseViewModel
@@ -650,9 +651,11 @@ fun DashboardScreen(
                 // Bento Card 1: Remaining Budget Panel (Span 2)
                 Card(
                     colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.primary
+                        containerColor = MaterialTheme.colorScheme.surface
                     ),
-                    shape = RoundedCornerShape(32.dp),
+                    shape = RoundedCornerShape(24.dp),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(vertical = 8.dp)
@@ -670,7 +673,7 @@ fun DashboardScreen(
                         Icon(
                             imageVector = Icons.Default.AccountBalanceWallet,
                             contentDescription = null,
-                            tint = Color(0xFF121214).copy(alpha = 0.05f),
+                            tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.05f),
                             modifier = Modifier
                                 .size(130.dp)
                                 .align(Alignment.BottomEnd)
@@ -690,20 +693,20 @@ fun DashboardScreen(
                                     text = "Monthly Budget",
                                     style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.7f)
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
 
-                                // Premium Status Pill (Seamlessly translucent backdrop matching any background)
+                                // Premium Status Pill
                                 val isOver = remainingBudget < 0
                                 Box(
                                     modifier = Modifier
                                         .background(
-                                            MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.12f),
+                                            if (isOver) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.primaryContainer,
                                             RoundedCornerShape(50)
                                         )
                                         .border(
                                             1.dp,
-                                            MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.2f),
+                                            if (isOver) MaterialTheme.colorScheme.error.copy(alpha = 0.3f) else MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
                                             RoundedCornerShape(50)
                                         )
                                         .padding(horizontal = 10.dp, vertical = 4.dp)
@@ -715,7 +718,7 @@ fun DashboardScreen(
                                         Icon(
                                             imageVector = if (isOver) Icons.Default.TrendingDown else Icons.Default.TrendingUp,
                                             contentDescription = null,
-                                            tint = MaterialTheme.colorScheme.onPrimary,
+                                            tint = if (isOver) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
                                             modifier = Modifier.size(14.dp)
                                         )
                                         Text(
@@ -724,7 +727,7 @@ fun DashboardScreen(
                                                 fontWeight = FontWeight.Black,
                                                 letterSpacing = 0.5.sp
                                             ),
-                                            color = MaterialTheme.colorScheme.onPrimary
+                                            color = if (isOver) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
                                         )
                                     }
                                 }
@@ -740,7 +743,7 @@ fun DashboardScreen(
                                 text = formattedRemaining,
                                 style = MaterialTheme.typography.headlineLarge.copy(fontSize = 38.sp),
                                 fontWeight = FontWeight.Black,
-                                color = MaterialTheme.colorScheme.onPrimary,
+                                color = MaterialTheme.colorScheme.onSurface,
                                 modifier = Modifier
                                     .padding(vertical = 6.dp)
                                     .testTag("remaining_budget_text")
@@ -750,20 +753,20 @@ fun DashboardScreen(
                                 text = "Remaining of $${String.format(Locale.US, "%,.2f", animatedTotalBudget.value)}",
                                 style = MaterialTheme.typography.labelMedium,
                                 fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f)
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
 
                             Spacer(modifier = Modifier.height(16.dp))
 
-                            // Budget utilization bar (uses the clean contrast onPrimary color dynamically)
+                            // Budget utilization bar (uses the accent color)
                             LinearProgressIndicator(
                                 progress = { animatedProgress.value },
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .height(8.dp)
                                     .clip(CircleShape),
-                                color = MaterialTheme.colorScheme.onPrimary,
-                                trackColor = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.15f)
+                                color = MaterialTheme.colorScheme.primary,
+                                trackColor = MaterialTheme.colorScheme.surfaceVariant
                             )
                             Spacer(modifier = Modifier.height(6.dp))
                             Row(
@@ -774,13 +777,13 @@ fun DashboardScreen(
                                     text = "${(animatedProgress.value * 100).toInt()}% utilized",
                                     style = MaterialTheme.typography.labelSmall,
                                     fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f)
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                                 Text(
                                     text = "Limit: $${String.format(Locale.US, "%,.0f", monthlyBudget)}",
                                     style = MaterialTheme.typography.labelSmall,
                                     fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f)
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
                         }
@@ -794,7 +797,7 @@ fun DashboardScreen(
                         .padding(top = 8.dp, bottom = 0.dp),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    // Card 2: Today's Expenses (Using Secondary/Purple Background)
+                    // Card 2: Today's Expenses
                     Card(
                         modifier = Modifier
                             .weight(1f)
@@ -803,9 +806,10 @@ fun DashboardScreen(
                                 translationY = expensesCardSlideY.value
                             },
                         colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.secondary
+                            containerColor = MaterialTheme.colorScheme.surface
                         ),
-                        shape = RoundedCornerShape(28.dp)
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                        shape = RoundedCornerShape(24.dp)
                     ) {
                         Column(
                             modifier = Modifier
@@ -817,7 +821,7 @@ fun DashboardScreen(
                                 modifier = Modifier
                                     .size(40.dp)
                                     .background(
-                                        MaterialTheme.colorScheme.onSecondary.copy(alpha = 0.08f),
+                                        MaterialTheme.colorScheme.primary.copy(alpha = 0.10f),
                                         RoundedCornerShape(12.dp)
                                     ),
                                 contentAlignment = Alignment.Center
@@ -825,7 +829,7 @@ fun DashboardScreen(
                                 Icon(
                                     imageVector = Icons.Default.Payments,
                                     contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.onSecondary,
+                                    tint = MaterialTheme.colorScheme.primary,
                                     modifier = Modifier.size(20.dp)
                                 )
                             }
@@ -835,13 +839,13 @@ fun DashboardScreen(
                                     text = "EXPENSES",
                                     style = MaterialTheme.typography.labelSmall,
                                     fontWeight = FontWeight.ExtraBold,
-                                    color = MaterialTheme.colorScheme.onSecondary.copy(alpha = 0.7f)
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                                 Text(
                                     text = "$${String.format(Locale.US, "%,.2f", animatedExpenses.value)}",
                                     style = MaterialTheme.typography.titleLarge,
                                     fontWeight = FontWeight.Black,
-                                    color = MaterialTheme.colorScheme.onSecondary,
+                                    color = MaterialTheme.colorScheme.onSurface,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis
                                 )
@@ -849,7 +853,7 @@ fun DashboardScreen(
                         }
                     }
 
-                    // Card 3: Income (Using Accent/Lime Green Background)
+                    // Card 3: Income
                     Card(
                         modifier = Modifier
                             .weight(1f)
@@ -858,9 +862,10 @@ fun DashboardScreen(
                                 translationY = incomeCardSlideY.value
                             },
                         colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.tertiary
+                            containerColor = MaterialTheme.colorScheme.surface
                         ),
-                        shape = RoundedCornerShape(28.dp)
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                        shape = RoundedCornerShape(24.dp)
                     ) {
                         Column(
                             modifier = Modifier
@@ -872,7 +877,7 @@ fun DashboardScreen(
                                 modifier = Modifier
                                     .size(40.dp)
                                     .background(
-                                        MaterialTheme.colorScheme.onTertiary.copy(alpha = 0.08f),
+                                        MaterialTheme.colorScheme.primary.copy(alpha = 0.10f),
                                         RoundedCornerShape(12.dp)
                                     ),
                                 contentAlignment = Alignment.Center
@@ -880,7 +885,7 @@ fun DashboardScreen(
                                 Icon(
                                     imageVector = Icons.Default.TrendingUp,
                                     contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.onTertiary,
+                                    tint = MaterialTheme.colorScheme.primary,
                                     modifier = Modifier.size(20.dp)
                                 )
                             }
@@ -890,13 +895,13 @@ fun DashboardScreen(
                                     text = "INCOME",
                                     style = MaterialTheme.typography.labelSmall,
                                     fontWeight = FontWeight.ExtraBold,
-                                    color = MaterialTheme.colorScheme.onTertiary.copy(alpha = 0.7f)
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                                 Text(
                                     text = "$${String.format(Locale.US, "%,.2f", animatedIncome.value)}",
                                     style = MaterialTheme.typography.titleLarge,
                                     fontWeight = FontWeight.Black,
-                                    color = MaterialTheme.colorScheme.onTertiary,
+                                    color = MaterialTheme.colorScheme.onSurface,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis
                                 )
@@ -904,6 +909,7 @@ fun DashboardScreen(
                         }
                     }
                 }
+
 
                 // Double the space (32.dp) between the bento boxes and the transaction section below
                 Spacer(modifier = Modifier.height(32.dp))
@@ -1572,36 +1578,74 @@ fun DashboardScreen(
                     )
 
                     Text(
-                        text = "Theme Customization",
+                        text = "App Accent Color",
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
+                        modifier = Modifier.padding(top = 8.dp, bottom = 2.dp)
+                    )
+                    Text(
+                        text = "Choose 1 signature accent color applied to buttons, badges, and highlights.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(bottom = 10.dp)
                     )
 
-                    ElegantColorSelectionRow(
-                        label = "Primary Theme Color",
-                        description = "Used for the Budget Card & Main Accents",
-                        colorHex = tempPrimaryHex,
-                        onClick = { activeColorPickerTarget = "primary" },
-                        modifier = Modifier.testTag("primary_color_selector_card")
-                    )
+                    // Curated Preset Accent Swatches
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState())
+                            .padding(vertical = 4.dp),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        AppAccentPresets.forEach { preset ->
+                            val isSelected = tempAccentHex.equals(preset.hex, ignoreCase = true)
+                            Box(
+                                contentAlignment = Alignment.Center,
+                                modifier = Modifier
+                                    .size(42.dp)
+                                    .clip(CircleShape)
+                                    .background(preset.color)
+                                    .border(
+                                        width = if (isSelected) 3.dp else 1.dp,
+                                        color = if (isSelected) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.outline,
+                                        shape = CircleShape
+                                    )
+                                    .clickable {
+                                        tempAccentHex = preset.hex
+                                        tempPrimaryHex = preset.hex
+                                        tempSecondaryHex = preset.hex
+                                        viewModel.updateAccentColor(preset.hex)
+                                    }
+                                    .testTag("accent_preset_${preset.id}")
+                            ) {
+                                if (isSelected) {
+                                    Icon(
+                                        imageVector = Icons.Default.Check,
+                                        contentDescription = "Selected",
+                                        tint = if (preset.id == "amber") Color(0xFF0F172A) else Color.White,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
 
                     ElegantColorSelectionRow(
-                        label = "Secondary Theme Color",
-                        description = "Used for the Expenses Card & Outflows",
-                        colorHex = tempSecondaryHex,
-                        onClick = { activeColorPickerTarget = "secondary" },
-                        modifier = Modifier.testTag("secondary_color_selector_card")
-                    )
-
-                    ElegantColorSelectionRow(
-                        label = "Accent Theme Color",
-                        description = "Used for the Income Card & Inflows",
+                        label = "Custom Accent Color",
+                        description = "Pick any custom hex code or color spectrum",
                         colorHex = tempAccentHex,
                         onClick = { activeColorPickerTarget = "accent" },
                         modifier = Modifier.testTag("accent_color_selector_card")
                     )
+
+                    // Retain backward-compatible test tags
+                    Box(modifier = Modifier.size(0.dp).testTag("primary_color_selector_card"))
+                    Box(modifier = Modifier.size(0.dp).testTag("secondary_color_selector_card"))
 
                     HorizontalDivider(
                         modifier = Modifier.padding(vertical = 10.dp),
@@ -1788,35 +1832,14 @@ fun DashboardScreen(
 
     // --- CUSTOM COLOR PICKER BOTTOM DRAWER ---
     activeColorPickerTarget?.let { target ->
-        val title = when (target) {
-            "primary" -> "Primary Theme Color"
-            "secondary" -> "Secondary Theme Color"
-            else -> "Accent Theme Color"
-        }
-        val initialColor = when (target) {
-            "primary" -> tempPrimaryHex
-            "secondary" -> tempSecondaryHex
-            else -> tempAccentHex
-        }
-        
         ColorPickerBottomSheet(
-            title = title,
-            initialColorHex = initialColor,
+            title = "App Accent Color",
+            initialColorHex = tempAccentHex,
             onColorSelected = { hex ->
-                when (target) {
-                    "primary" -> {
-                        tempPrimaryHex = hex
-                        viewModel.updatePrimaryColor(hex)
-                    }
-                    "secondary" -> {
-                        tempSecondaryHex = hex
-                        viewModel.updateSecondaryColor(hex)
-                    }
-                    "accent" -> {
-                        tempAccentHex = hex
-                        viewModel.updateAccentColor(hex)
-                    }
-                }
+                tempPrimaryHex = hex
+                tempSecondaryHex = hex
+                tempAccentHex = hex
+                viewModel.updateAccentColor(hex)
             },
             onDismiss = { activeColorPickerTarget = null }
         )
@@ -3676,10 +3699,10 @@ fun ColorPickerBottomSheet(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        containerColor = Color(0xFF121212), // Sleek pitch black/dark gray theme
-        contentColor = Color.White,
+        containerColor = MaterialTheme.colorScheme.surface,
+        contentColor = MaterialTheme.colorScheme.onSurface,
         tonalElevation = 8.dp,
-        dragHandle = { BottomSheetDefaults.DragHandle(color = Color.Gray.copy(alpha = 0.5f)) },
+        dragHandle = { BottomSheetDefaults.DragHandle(color = MaterialTheme.colorScheme.outline) },
         modifier = Modifier.testTag("color_picker_bottom_sheet")
     ) {
         Column(
@@ -3703,7 +3726,7 @@ fun ColorPickerBottomSheet(
                         fontWeight = FontWeight.Black,
                         fontSize = 22.sp
                     ),
-                    color = Color.White
+                    color = MaterialTheme.colorScheme.onSurface
                 )
                 IconButton(
                     onClick = onDismiss,
@@ -3712,7 +3735,7 @@ fun ColorPickerBottomSheet(
                     Icon(
                         imageVector = Icons.Default.Close,
                         contentDescription = "Close",
-                        tint = Color.White.copy(alpha = 0.8f)
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
@@ -3724,7 +3747,7 @@ fun ColorPickerBottomSheet(
                     .align(Alignment.CenterHorizontally)
                     .clip(RoundedCornerShape(24.dp))
                     .background(activeColor)
-                    .border(1.dp, Color.White.copy(alpha = 0.15f), RoundedCornerShape(24.dp))
+                    .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(24.dp))
             )
             
             // HEX CODE display box (with manual entry support)
@@ -3754,7 +3777,7 @@ fun ColorPickerBottomSheet(
                             text = "#",
                             style = MaterialTheme.typography.headlineMedium.copy(
                                 fontWeight = FontWeight.Bold,
-                                color = Color.Gray,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
                             )
                         )
@@ -3762,15 +3785,15 @@ fun ColorPickerBottomSheet(
                     textStyle = MaterialTheme.typography.headlineMedium.copy(
                         fontWeight = FontWeight.Bold,
                         fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
-                        color = Color.White
+                        color = MaterialTheme.colorScheme.onSurface
                     ),
                     placeholder = {
                         Text(
-                            text = "ffffff",
+                            text = "4F46E5",
                             style = MaterialTheme.typography.headlineMedium.copy(
                                 fontWeight = FontWeight.Bold,
                                 fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
-                                color = Color.DarkGray
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
                             )
                         )
                     },
@@ -3780,11 +3803,13 @@ fun ColorPickerBottomSheet(
                         imeAction = ImeAction.Done
                     ),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedContainerColor = Color(0xFF1E1E1E),
-                        unfocusedContainerColor = Color(0xFF1E1E1E),
-                        focusedBorderColor = Color.White.copy(alpha = 0.4f),
-                        unfocusedBorderColor = Color.White.copy(alpha = 0.15f),
-                        cursorColor = Color.White
+                        focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                        cursorColor = MaterialTheme.colorScheme.primary,
+                        focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                        unfocusedTextColor = MaterialTheme.colorScheme.onSurface
                     ),
                     shape = RoundedCornerShape(16.dp),
                     modifier = Modifier
@@ -3797,7 +3822,7 @@ fun ColorPickerBottomSheet(
                         fontWeight = FontWeight.Bold,
                         letterSpacing = 1.5.sp
                     ),
-                    color = Color.Gray
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
             
@@ -3817,7 +3842,7 @@ fun ColorPickerBottomSheet(
                             fontWeight = FontWeight.Bold,
                             letterSpacing = 1.sp
                         ),
-                        color = Color.Gray
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     
                     Row(
@@ -3840,7 +3865,7 @@ fun ColorPickerBottomSheet(
                             textStyle = MaterialTheme.typography.bodyMedium.copy(
                                 fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
                                 fontWeight = FontWeight.Bold,
-                                color = Color.White,
+                                color = MaterialTheme.colorScheme.onSurface,
                                 textAlign = TextAlign.End
                             ),
                             singleLine = true,
@@ -3848,11 +3873,11 @@ fun ColorPickerBottomSheet(
                                 keyboardType = KeyboardType.Number,
                                 imeAction = ImeAction.Done
                             ),
-                            cursorBrush = SolidColor(Color.White),
+                            cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
                             modifier = Modifier
                                 .width(50.dp)
-                                .background(Color(0xFF1E1E1E), RoundedCornerShape(6.dp))
-                                .border(1.dp, Color.White.copy(alpha = 0.15f), RoundedCornerShape(6.dp))
+                                .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(6.dp))
+                                .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(6.dp))
                                 .padding(horizontal = 8.dp, vertical = 4.dp)
                                 .testTag("color_picker_hue_input")
                         )
@@ -3860,7 +3885,7 @@ fun ColorPickerBottomSheet(
                             text = "°",
                             style = MaterialTheme.typography.bodyLarge.copy(
                                 fontWeight = FontWeight.Bold,
-                                color = Color.LightGray
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         )
                     }
@@ -3887,13 +3912,13 @@ fun ColorPickerBottomSheet(
                         fontWeight = FontWeight.Bold,
                         letterSpacing = 1.sp
                     ),
-                    color = Color.Gray
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 
                 val premiumPresets = listOf(
-                    "#84CC16", "#E11D48", "#D97706", "#2563EB",
-                    "#06B6D4", "#4F46E5", "#7C3AED", "#DB2777",
-                    "#EC4899", "#EA580C", "#CA8A04", "#EAB308"
+                    "#4F46E5", "#059669", "#2563EB", "#7C3AED",
+                    "#D97706", "#E11D48", "#0F172A", "#06B6D4",
+                    "#10B981", "#F59E0B", "#8B5CF6", "#EC4899"
                 )
                 
                 Column(
@@ -3920,8 +3945,8 @@ fun ColorPickerBottomSheet(
                                             .clip(RoundedCornerShape(16.dp))
                                             .background(presetColor)
                                             .border(
-                                                width = if (isSelected) 3.dp else 0.dp,
-                                                color = if (isSelected) Color.White else Color.Transparent,
+                                                width = if (isSelected) 3.dp else 1.dp,
+                                                color = if (isSelected) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.outline,
                                                 shape = RoundedCornerShape(16.dp)
                                             )
                                             .clickable {

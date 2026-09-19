@@ -14,9 +14,11 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.*
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -285,10 +287,13 @@ fun LedgerReportView(
         ).show()
     }
 
+    val pageScrollState = rememberScrollState()
+
     Column(
         modifier = modifier
             .fillMaxSize()
-            .padding(horizontal = 14.dp, vertical = 8.dp)
+            .verticalScroll(pageScrollState)
+            .padding(horizontal = 14.dp, vertical = 6.dp)
     ) {
         // Date Filters Quick Selection Row
         Row(
@@ -296,7 +301,7 @@ fun LedgerReportView(
                 .fillMaxWidth()
                 .horizontalScroll(rememberScrollState())
                 .padding(vertical = 2.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             val filtersList = listOf("All Time", "Current Month", "Last 30 Days", "Last 60 Days", "Next 30 Days", "Custom")
@@ -307,11 +312,13 @@ fun LedgerReportView(
                     label = {
                         Text(
                             text = filter,
-                            fontWeight = FontWeight.Bold,
-                            style = MaterialTheme.typography.bodyMedium
+                            fontWeight = if (ledgerSelectedFilter == filter) FontWeight.Bold else FontWeight.Medium,
+                            style = MaterialTheme.typography.bodySmall
                         )
                     },
-                    modifier = Modifier.testTag("ledger_filter_${filter.lowercase().replace(" ", "_")}")
+                    modifier = Modifier
+                        .height(32.dp)
+                        .testTag("ledger_filter_${filter.lowercase().replace(" ", "_")}")
                 )
             }
         }
@@ -533,8 +540,8 @@ fun LedgerReportView(
         // Dual-Column Synchronized Layout
         Row(
             modifier = Modifier
-                .weight(1f)
                 .fillMaxWidth()
+                .height(540.dp)
                 .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(16.dp))
                 .clip(RoundedCornerShape(16.dp))
                 .background(MaterialTheme.colorScheme.surface),
@@ -551,15 +558,15 @@ fun LedgerReportView(
                     modifier = Modifier
                         .fillMaxWidth()
                         .background(MaterialTheme.colorScheme.tertiary.copy(alpha = 0.15f))
-                        .padding(vertical = 12.dp, horizontal = 16.dp),
+                        .padding(vertical = 6.dp, horizontal = 10.dp),
                     contentAlignment = Alignment.CenterStart
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
-                            imageVector = Icons.Default.TrendingUp,
+                            imageVector = Icons.AutoMirrored.Filled.TrendingUp,
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.tertiary,
-                            modifier = Modifier.size(16.dp)
+                            modifier = Modifier.size(14.dp)
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
@@ -727,15 +734,15 @@ fun LedgerReportView(
                     modifier = Modifier
                         .fillMaxWidth()
                         .background(MaterialTheme.colorScheme.error.copy(alpha = 0.12f))
-                        .padding(vertical = 12.dp, horizontal = 16.dp),
+                        .padding(vertical = 6.dp, horizontal = 10.dp),
                     contentAlignment = Alignment.CenterStart
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
-                            imageVector = Icons.Default.TrendingDown,
+                            imageVector = Icons.AutoMirrored.Filled.TrendingDown,
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.error,
-                            modifier = Modifier.size(16.dp)
+                            modifier = Modifier.size(14.dp)
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
@@ -995,7 +1002,7 @@ fun LedgerReportView(
                                 horizontalArrangement = Arrangement.spacedBy(4.dp)
                             ) {
                                 Icon(
-                                    imageVector = if (isPositive) Icons.Default.TrendingUp else Icons.Default.TrendingDown,
+                                    imageVector = if (isPositive) Icons.AutoMirrored.Filled.TrendingUp else Icons.AutoMirrored.Filled.TrendingDown,
                                     contentDescription = null,
                                     tint = if (isPositive) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.error,
                                     modifier = Modifier.size(12.dp)
@@ -1050,7 +1057,7 @@ fun LedgerReportView(
                                 horizontalArrangement = Arrangement.spacedBy(4.dp)
                             ) {
                                 Icon(
-                                    imageVector = if (isPositive) Icons.Default.TrendingUp else Icons.Default.TrendingDown,
+                                    imageVector = if (isPositive) Icons.AutoMirrored.Filled.TrendingUp else Icons.AutoMirrored.Filled.TrendingDown,
                                     contentDescription = null,
                                     tint = if (isPositive) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.error,
                                     modifier = Modifier.size(12.dp)
@@ -1075,5 +1082,7 @@ fun LedgerReportView(
                 }
             }
         }
+
+        Spacer(modifier = Modifier.height(32.dp))
     }
 }

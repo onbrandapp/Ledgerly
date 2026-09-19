@@ -7,6 +7,8 @@ import androidx.lifecycle.viewModelScope
 import com.example.data.*
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import org.json.JSONArray
+import org.json.JSONObject
 import java.util.Calendar
 
 @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
@@ -116,15 +118,20 @@ class ExpenseViewModel(application: Application) : AndroidViewModel(application)
     private val _monthlyBudget = MutableStateFlow(budgetPrefs.getFloat("limit", 2000f).toDouble())
     val monthlyBudget = _monthlyBudget.asStateFlow()
 
-    // Custom Theme Colors State (Polysure Theme defaults: Primary = Light Orange, Secondary = Purple, Accent = Lime Green)
-    private val _primaryColor = MutableStateFlow(budgetPrefs.getString("primary_color", "#FFD97D") ?: "#FFD97D")
+    // Custom Theme Accent Color State (Default signature Indigo #4F46E5 matching web overhaul)
+    private val savedAccent = budgetPrefs.getString("accent_color", null)
+        ?: budgetPrefs.getString("primary_color", "#4F46E5")
+        ?: "#4F46E5"
+    private val normalizedAccent = if (savedAccent == "#D9F99D" || savedAccent == "#FFD97D") "#4F46E5" else savedAccent
+
+    private val _accentColor = MutableStateFlow(normalizedAccent)
+    val accentColor = _accentColor.asStateFlow()
+
+    private val _primaryColor = MutableStateFlow(normalizedAccent)
     val primaryColor = _primaryColor.asStateFlow()
 
-    private val _secondaryColor = MutableStateFlow(budgetPrefs.getString("secondary_color", "#A78BFA") ?: "#A78BFA")
+    private val _secondaryColor = MutableStateFlow(normalizedAccent)
     val secondaryColor = _secondaryColor.asStateFlow()
-
-    private val _accentColor = MutableStateFlow(budgetPrefs.getString("accent_color", "#D9F99D") ?: "#D9F99D")
-    val accentColor = _accentColor.asStateFlow()
 
     // Transactions State
     private val _isTransactionsLoading = MutableStateFlow(false)
@@ -440,6 +447,19 @@ class ExpenseViewModel(application: Application) : AndroidViewModel(application)
         viewModelScope.launch {
             val existingTx = transactions.value.find { it.id == id }
             if (existingTx != null) {
+                val payload = try {
+                    JSONObject().apply {
+                        put("id", existingTx.id)
+                        put("amount", existingTx.amount)
+                        put("category", existingTx.category)
+                        put("description", existingTx.description)
+                        put("date", existingTx.date)
+                        put("type", existingTx.type)
+                        put("paid", existingTx.paid)
+                        put("recurringId", existingTx.recurringId ?: "")
+                    }.toString()
+                } catch (e: Exception) { "" }
+
                 val auditItem = AuditDeletedItem(
                     id = java.util.UUID.randomUUID().toString(),
                     originalId = existingTx.id,
@@ -451,7 +471,8 @@ class ExpenseViewModel(application: Application) : AndroidViewModel(application)
                     sourceOrDeletedBy = source,
                     deletedAt = System.currentTimeMillis(),
                     originalDate = existingTx.date,
-                    userEmail = email
+                    userEmail = email,
+                    payloadJson = payload
                 )
                 transactionRepository.recordAuditDeletedItem(email, auditItem)
             }
@@ -546,6 +567,18 @@ class ExpenseViewModel(application: Application) : AndroidViewModel(application)
         viewModelScope.launch {
             val existingRec = recurringTransactions.value.find { it.id == id }
             if (existingRec != null) {
+                val payload = try {
+                    JSONObject().apply {
+                        put("id", existingRec.id)
+                        put("amount", existingRec.amount)
+                        put("category", existingRec.category)
+                        put("description", existingRec.description)
+                        put("frequency", existingRec.frequency)
+                        put("startDate", existingRec.startDate)
+                        put("type", existingRec.type)
+                    }.toString()
+                } catch (e: Exception) { "" }
+
                 val auditItem = AuditDeletedItem(
                     id = java.util.UUID.randomUUID().toString(),
                     originalId = existingRec.id,
@@ -557,7 +590,8 @@ class ExpenseViewModel(application: Application) : AndroidViewModel(application)
                     sourceOrDeletedBy = source,
                     deletedAt = System.currentTimeMillis(),
                     originalDate = existingRec.startDate,
-                    userEmail = email
+                    userEmail = email,
+                    payloadJson = payload
                 )
                 transactionRepository.recordAuditDeletedItem(email, auditItem)
             }
@@ -573,6 +607,18 @@ class ExpenseViewModel(application: Application) : AndroidViewModel(application)
         viewModelScope.launch {
             val existingRec = recurringTransactions.value.find { it.id == recurringId }
             if (existingRec != null) {
+                val payload = try {
+                    JSONObject().apply {
+                        put("id", existingRec.id)
+                        put("amount", existingRec.amount)
+                        put("category", existingRec.category)
+                        put("description", existingRec.description)
+                        put("frequency", existingRec.frequency)
+                        put("startDate", existingRec.startDate)
+                        put("type", existingRec.type)
+                    }.toString()
+                } catch (e: Exception) { "" }
+
                 val auditItem = AuditDeletedItem(
                     id = java.util.UUID.randomUUID().toString(),
                     originalId = existingRec.id,
@@ -584,7 +630,8 @@ class ExpenseViewModel(application: Application) : AndroidViewModel(application)
                     sourceOrDeletedBy = source,
                     deletedAt = System.currentTimeMillis(),
                     originalDate = existingRec.startDate,
-                    userEmail = email
+                    userEmail = email,
+                    payloadJson = payload
                 )
                 transactionRepository.recordAuditDeletedItem(email, auditItem)
             }
@@ -729,30 +776,24 @@ class ExpenseViewModel(application: Application) : AndroidViewModel(application)
         _monthlyBudget.value = newLimit
     }
 
-    fun updatePrimaryColor(hex: String) {
-        budgetPrefs.edit().putString("primary_color", hex).apply()
-        _primaryColor.value = hex
-    }
-
-    fun updateSecondaryColor(hex: String) {
-        budgetPrefs.edit().putString("secondary_color", hex).apply()
-        _secondaryColor.value = hex
-    }
-
     fun updateAccentColor(hex: String) {
-        budgetPrefs.edit().putString("accent_color", hex).apply()
-        _accentColor.value = hex
+        val validHex = if (hex.startsWith("#")) hex else "#$hex"
+        budgetPrefs.edit()
+            .putString("accent_color", validHex)
+            .putString("primary_color", validHex)
+            .putString("secondary_color", validHex)
+            .apply()
+        _accentColor.value = validHex
+        _primaryColor.value = validHex
+        _secondaryColor.value = validHex
     }
+
+    fun updatePrimaryColor(hex: String) = updateAccentColor(hex)
+
+    fun updateSecondaryColor(hex: String) = updateAccentColor(hex)
 
     fun resetThemeToDefault() {
-        budgetPrefs.edit()
-            .putString("primary_color", "#FFD97D")
-            .putString("secondary_color", "#A78BFA")
-            .putString("accent_color", "#D9F99D")
-            .apply()
-        _primaryColor.value = "#FFD97D"
-        _secondaryColor.value = "#A78BFA"
-        _accentColor.value = "#D9F99D"
+        updateAccentColor("#4F46E5")
     }
 
     // Parse with Gemini
@@ -833,6 +874,22 @@ class ExpenseViewModel(application: Application) : AndroidViewModel(application)
         viewModelScope.launch {
             val existingForecast = forecastIncomes.value.find { it.id == id }
             if (existingForecast != null) {
+                val payload = try {
+                    JSONObject().apply {
+                        put("id", existingForecast.id)
+                        put("title", existingForecast.title)
+                        put("amount", existingForecast.amount)
+                        put("expectedDate", existingForecast.expectedDate)
+                        put("category", existingForecast.category)
+                        put("notes", existingForecast.notes)
+                        put("status", existingForecast.status)
+                        put("bulletPoints", JSONArray(existingForecast.bulletPoints))
+                        put("completedBullets", JSONArray(existingForecast.completedBullets))
+                        put("isRealized", existingForecast.isRealized)
+                        put("colorTag", existingForecast.colorTag)
+                    }.toString()
+                } catch (e: Exception) { "" }
+
                 val auditItem = AuditDeletedItem(
                     id = java.util.UUID.randomUUID().toString(),
                     originalId = existingForecast.id,
@@ -844,7 +901,8 @@ class ExpenseViewModel(application: Application) : AndroidViewModel(application)
                     sourceOrDeletedBy = source,
                     deletedAt = System.currentTimeMillis(),
                     originalDate = existingForecast.expectedDate,
-                    userEmail = email
+                    userEmail = email,
+                    payloadJson = payload
                 )
                 transactionRepository.recordAuditDeletedItem(email, auditItem)
             }
@@ -932,6 +990,19 @@ class ExpenseViewModel(application: Application) : AndroidViewModel(application)
         viewModelScope.launch {
             val existingNote = futureIncomeNotes.value.find { it.id == id }
             if (existingNote != null) {
+                val payload = try {
+                    JSONObject().apply {
+                        put("id", existingNote.id)
+                        put("title", existingNote.title)
+                        put("content", existingNote.content)
+                        put("bulletPoints", JSONArray(existingNote.bulletPoints))
+                        put("completedBullets", JSONArray(existingNote.completedBullets))
+                        put("colorTag", existingNote.colorTag)
+                        put("createdAt", existingNote.createdAt)
+                        put("updatedAt", existingNote.updatedAt)
+                    }.toString()
+                } catch (e: Exception) { "" }
+
                 val bulletPreview = if (existingNote.bulletPoints.isNotEmpty()) " (${existingNote.bulletPoints.size} bullets)" else ""
                 val auditItem = AuditDeletedItem(
                     id = java.util.UUID.randomUUID().toString(),
@@ -944,7 +1015,8 @@ class ExpenseViewModel(application: Application) : AndroidViewModel(application)
                     sourceOrDeletedBy = source,
                     deletedAt = System.currentTimeMillis(),
                     originalDate = existingNote.createdAt,
-                    userEmail = email
+                    userEmail = email,
+                    payloadJson = payload
                 )
                 transactionRepository.recordAuditDeletedItem(email, auditItem)
             }
@@ -983,6 +1055,241 @@ class ExpenseViewModel(application: Application) : AndroidViewModel(application)
         val email = currentUserEmail.value ?: return
         viewModelScope.launch {
             transactionRepository.clearAuditDeletedItems(email)
+        }
+    }
+
+    fun restoreDeletedItem(auditItem: AuditDeletedItem, onComplete: (Boolean, String) -> Unit = { _, _ -> }) {
+        val email = currentUserEmail.value ?: run {
+            onComplete(false, "User email not found")
+            return
+        }
+        viewModelScope.launch {
+            try {
+                var restoredName = auditItem.title.ifBlank { "Item" }
+                when (auditItem.itemType.uppercase()) {
+                    "TRANSACTION" -> {
+                        val tx = parseTransactionFromAudit(auditItem)
+                        restoredName = tx.description.ifBlank { tx.category }
+                        transactionRepository.addTransaction(email, tx)
+                            .onSuccess {
+                                transactionRepository.deleteAuditDeletedItem(email, auditItem.id)
+                                onComplete(true, "Restored \"$restoredName\" to transactions")
+                            }
+                            .onFailure { error ->
+                                onComplete(false, "Failed to restore: ${error.message}")
+                            }
+                    }
+                    "FORECAST" -> {
+                        val forecast = parseForecastFromAudit(auditItem, email)
+                        restoredName = forecast.title
+                        transactionRepository.addForecastIncome(email, forecast)
+                            .onSuccess {
+                                transactionRepository.deleteAuditDeletedItem(email, auditItem.id)
+                                onComplete(true, "Restored \"$restoredName\" to forecast income")
+                            }
+                            .onFailure { error ->
+                                onComplete(false, "Failed to restore: ${error.message}")
+                            }
+                    }
+                    "RECURRING" -> {
+                        val rec = parseRecurringFromAudit(auditItem)
+                        restoredName = rec.description.ifBlank { rec.category }
+                        transactionRepository.addRecurringTransaction(email, rec)
+                            .onSuccess {
+                                transactionRepository.deleteAuditDeletedItem(email, auditItem.id)
+                                onComplete(true, "Restored \"$restoredName\" recurring rule")
+                            }
+                            .onFailure { error ->
+                                onComplete(false, "Failed to restore: ${error.message}")
+                            }
+                    }
+                    "NOTE" -> {
+                        val note = parseNoteFromAudit(auditItem, email)
+                        restoredName = note.title
+                        transactionRepository.addFutureIncomeNote(email, note)
+                            .onSuccess {
+                                transactionRepository.deleteAuditDeletedItem(email, auditItem.id)
+                                onComplete(true, "Restored \"$restoredName\" note")
+                            }
+                            .onFailure { error ->
+                                onComplete(false, "Failed to restore: ${error.message}")
+                            }
+                    }
+                    else -> {
+                        val tx = parseTransactionFromAudit(auditItem)
+                        restoredName = tx.description.ifBlank { tx.category }
+                        transactionRepository.addTransaction(email, tx)
+                            .onSuccess {
+                                transactionRepository.deleteAuditDeletedItem(email, auditItem.id)
+                                onComplete(true, "Restored \"$restoredName\"")
+                            }
+                            .onFailure { error ->
+                                onComplete(false, "Failed to restore: ${error.message}")
+                            }
+                    }
+                }
+            } catch (e: Exception) {
+                onComplete(false, "Restore error: ${e.message}")
+            }
+        }
+    }
+
+    private fun parseTransactionFromAudit(item: AuditDeletedItem): Transaction {
+        if (item.payloadJson.isNotBlank()) {
+            try {
+                val json = JSONObject(item.payloadJson)
+                return Transaction(
+                    id = json.optString("id", if (item.originalId.isNotBlank()) item.originalId else java.util.UUID.randomUUID().toString()),
+                    amount = json.optDouble("amount", item.amount),
+                    category = json.optString("category", parseCategoryFromStatus(item.categoryOrStatus, "Other")),
+                    description = json.optString("description", item.title),
+                    date = json.optLong("date", if (item.originalDate > 0) item.originalDate else item.deletedAt),
+                    type = json.optString("type", parseTypeFromStatus(item.categoryOrStatus, "EXPENSE")),
+                    paid = json.optBoolean("paid", true),
+                    recurringId = json.optString("recurringId", "")
+                )
+            } catch (_: Exception) {}
+        }
+        val type = parseTypeFromStatus(item.categoryOrStatus, "EXPENSE")
+        val category = parseCategoryFromStatus(item.categoryOrStatus, "Other")
+        return Transaction(
+            id = if (item.originalId.isNotBlank()) item.originalId else java.util.UUID.randomUUID().toString(),
+            amount = item.amount,
+            category = category,
+            description = item.title,
+            date = if (item.originalDate > 0) item.originalDate else item.deletedAt,
+            type = type,
+            paid = true,
+            recurringId = ""
+        )
+    }
+
+    private fun parseForecastFromAudit(item: AuditDeletedItem, email: String): ForecastIncome {
+        if (item.payloadJson.isNotBlank()) {
+            try {
+                val json = JSONObject(item.payloadJson)
+                val bullets = mutableListOf<String>()
+                json.optJSONArray("bulletPoints")?.let { arr ->
+                    for (i in 0 until arr.length()) bullets.add(arr.optString(i))
+                }
+                val completed = mutableListOf<Int>()
+                json.optJSONArray("completedBullets")?.let { arr ->
+                    for (i in 0 until arr.length()) completed.add(arr.optInt(i))
+                }
+                return ForecastIncome(
+                    id = json.optString("id", if (item.originalId.isNotBlank()) item.originalId else java.util.UUID.randomUUID().toString()),
+                    title = json.optString("title", item.title.ifBlank { "Restored Forecast" }),
+                    amount = json.optDouble("amount", item.amount),
+                    expectedDate = json.optLong("expectedDate", if (item.originalDate > 0) item.originalDate else item.deletedAt),
+                    category = json.optString("category", parseCategoryFromStatus(item.categoryOrStatus, "Sales")),
+                    notes = json.optString("notes", item.details),
+                    status = json.optString("status", "PENDING"),
+                    bulletPoints = bullets,
+                    completedBullets = completed,
+                    isRealized = json.optBoolean("isRealized", false),
+                    userEmail = email,
+                    colorTag = json.optString("colorTag", "#4F46E5")
+                )
+            } catch (_: Exception) {}
+        }
+        return ForecastIncome(
+            id = if (item.originalId.isNotBlank()) item.originalId else java.util.UUID.randomUUID().toString(),
+            title = item.title.ifBlank { "Restored Forecast" },
+            amount = item.amount,
+            expectedDate = if (item.originalDate > 0) item.originalDate else item.deletedAt,
+            category = parseCategoryFromStatus(item.categoryOrStatus, "Sales"),
+            notes = item.details,
+            status = "PENDING",
+            bulletPoints = emptyList(),
+            completedBullets = emptyList(),
+            isRealized = false,
+            userEmail = email,
+            colorTag = "#4F46E5"
+        )
+    }
+
+    private fun parseRecurringFromAudit(item: AuditDeletedItem): RecurringTransaction {
+        if (item.payloadJson.isNotBlank()) {
+            try {
+                val json = JSONObject(item.payloadJson)
+                return RecurringTransaction(
+                    id = json.optString("id", if (item.originalId.isNotBlank()) item.originalId else java.util.UUID.randomUUID().toString()),
+                    amount = json.optDouble("amount", item.amount),
+                    category = json.optString("category", parseCategoryFromStatus(item.categoryOrStatus, "General")),
+                    type = json.optString("type", parseTypeFromStatus(item.categoryOrStatus, "EXPENSE")),
+                    description = json.optString("description", item.title),
+                    frequency = json.optString("frequency", "MONTHLY"),
+                    startDate = json.optLong("startDate", if (item.originalDate > 0) item.originalDate else item.deletedAt),
+                    lastLoggedDate = json.optLong("lastLoggedDate", 0L)
+                )
+            } catch (_: Exception) {}
+        }
+        return RecurringTransaction(
+            id = if (item.originalId.isNotBlank()) item.originalId else java.util.UUID.randomUUID().toString(),
+            amount = item.amount,
+            category = parseCategoryFromStatus(item.categoryOrStatus, "General"),
+            type = parseTypeFromStatus(item.categoryOrStatus, "EXPENSE"),
+            description = item.title,
+            frequency = "MONTHLY",
+            startDate = if (item.originalDate > 0) item.originalDate else item.deletedAt,
+            lastLoggedDate = 0L
+        )
+    }
+
+    private fun parseNoteFromAudit(item: AuditDeletedItem, email: String): FutureIncomeNote {
+        if (item.payloadJson.isNotBlank()) {
+            try {
+                val json = JSONObject(item.payloadJson)
+                val bullets = mutableListOf<String>()
+                json.optJSONArray("bulletPoints")?.let { arr ->
+                    for (i in 0 until arr.length()) bullets.add(arr.optString(i))
+                }
+                val completed = mutableListOf<Int>()
+                json.optJSONArray("completedBullets")?.let { arr ->
+                    for (i in 0 until arr.length()) completed.add(arr.optInt(i))
+                }
+                return FutureIncomeNote(
+                    id = json.optString("id", if (item.originalId.isNotBlank()) item.originalId else java.util.UUID.randomUUID().toString()),
+                    title = json.optString("title", item.title.ifBlank { "Restored Note" }),
+                    content = json.optString("content", item.details),
+                    bulletPoints = bullets,
+                    completedBullets = completed,
+                    userEmail = email,
+                    colorTag = json.optString("colorTag", "#4F46E5"),
+                    createdAt = json.optLong("createdAt", if (item.originalDate > 0) item.originalDate else item.deletedAt),
+                    updatedAt = System.currentTimeMillis()
+                )
+            } catch (_: Exception) {}
+        }
+        return FutureIncomeNote(
+            id = if (item.originalId.isNotBlank()) item.originalId else java.util.UUID.randomUUID().toString(),
+            title = item.title.ifBlank { "Restored Note" },
+            content = item.details,
+            bulletPoints = emptyList(),
+            completedBullets = emptyList(),
+            userEmail = email,
+            colorTag = "#4F46E5",
+            createdAt = if (item.originalDate > 0) item.originalDate else item.deletedAt,
+            updatedAt = System.currentTimeMillis()
+        )
+    }
+
+    private fun parseTypeFromStatus(catOrStatus: String, default: String): String {
+        return if (catOrStatus.contains("•")) {
+            val candidate = catOrStatus.substringBefore("•").trim().uppercase()
+            if (candidate == "EXPENSE" || candidate == "INCOME") candidate else default
+        } else {
+            default
+        }
+    }
+
+    private fun parseCategoryFromStatus(catOrStatus: String, default: String): String {
+        return if (catOrStatus.contains("•")) {
+            catOrStatus.substringAfter("•").trim().ifBlank { default }
+        } else if (catOrStatus.isNotBlank()) {
+            catOrStatus.trim()
+        } else {
+            default
         }
     }
 

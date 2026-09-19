@@ -34,6 +34,7 @@ interface TransactionRepository {
 
     fun getAuditDeletedItems(userEmail: String): Flow<List<AuditDeletedItem>>
     suspend fun recordAuditDeletedItem(userEmail: String, item: AuditDeletedItem): Result<Unit>
+    suspend fun deleteAuditDeletedItem(userEmail: String, id: String): Result<Unit>
     suspend fun clearAuditDeletedItems(userEmail: String): Result<Unit>
 }
 
@@ -338,6 +339,20 @@ class FirebaseTransactionRepository : TransactionRepository {
             }
     }
 
+    override suspend fun deleteAuditDeletedItem(userEmail: String, id: String): Result<Unit> = suspendCancellableCoroutine { continuation ->
+        firestore.collection("users")
+            .document(userEmail)
+            .collection("audit_deleted_items")
+            .document(id)
+            .delete()
+            .addOnSuccessListener {
+                if (continuation.isActive) continuation.resume(Result.success(Unit))
+            }
+            .addOnFailureListener { exception ->
+                if (continuation.isActive) continuation.resume(Result.failure(exception))
+            }
+    }
+
     override suspend fun clearAuditDeletedItems(userEmail: String): Result<Unit> = suspendCancellableCoroutine { continuation ->
         firestore.collection("users")
             .document(userEmail)
@@ -500,6 +515,15 @@ class RoomTransactionRepository(context: Context) : TransactionRepository {
         return try {
             val localItem = LocalAuditDeletedItem.fromDomain(item.copy(userEmail = userEmail))
             dao.insertAuditDeletedItem(localItem)
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun deleteAuditDeletedItem(userEmail: String, id: String): Result<Unit> {
+        return try {
+            dao.deleteAuditDeletedItemById(id)
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
