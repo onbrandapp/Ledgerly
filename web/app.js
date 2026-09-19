@@ -1,6 +1,12 @@
 // Ledgerly Web Companion & Interactive Demo Logic
 
 document.addEventListener('DOMContentLoaded', () => {
+  // Synchronize header version with current release
+  const CURRENT_RELEASE = 'v75.0';
+  document.querySelectorAll('.logo-version').forEach(el => {
+    el.textContent = CURRENT_RELEASE;
+  });
+
   // Mobile Navigation Drawer Toggle
   const mobileToggle = document.getElementById('mobile-toggle');
   const navLinks = document.getElementById('nav-links');
@@ -62,21 +68,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function runParser(text) {
     if (!text || !parseResult) return;
-    parseResult.innerHTML = '<span style="color: #a5b4fc;">⚡ Gemini 2.5 Flash is parsing financial intent...</span>';
+    parseResult.innerHTML = '<span style="color: #4f46e5; font-weight: 500;">⚡ Gemini 2.5 Flash is parsing financial intent...</span>';
 
     setTimeout(() => {
       const parsed = simulateAiParse(text);
       parseResult.innerHTML = `
         <div style="display:flex; flex-direction:column; gap:4px; width:100%;">
           <div style="display:flex; justify-content:space-between; align-items:center;">
-            <strong style="color: ${parsed.type === 'INCOME' ? '#34d399' : '#f87171'}; font-size:15px;">
+            <strong style="color: ${parsed.type === 'INCOME' ? '#059669' : '#dc2626'}; font-size:15px; font-weight:700;">
               ${parsed.type === 'INCOME' ? '+' : '-'}$${parsed.amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (${parsed.type})
             </strong>
-            <span style="background:rgba(99,102,241,0.25); color:#c7d2fe; padding:2px 8px; border-radius:6px; font-size:11px; font-weight:700;">
+            <span style="background:#f1f5f9; color:#475569; border:1px solid #e2e8f0; padding:2px 8px; border-radius:6px; font-size:11px; font-weight:600;">
               ${parsed.category}
             </span>
           </div>
-          <div style="color:#94a3b8; font-size:12px;">"${parsed.description}"</div>
+          <div style="color:#64748b; font-size:12px;">"${parsed.description}"</div>
         </div>
       `;
     }, 400);
@@ -232,7 +238,7 @@ function initD3SpendingChart() {
     if (metricExpense) metricExpense.textContent = '$' + totalExpense.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     if (metricNet) {
       metricNet.textContent = (netSurplus >= 0 ? '+' : '-') + '$' + Math.abs(netSurplus).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-      metricNet.style.color = netSurplus >= 0 ? '#34d399' : '#f87171';
+      metricNet.style.color = netSurplus >= 0 ? '#059669' : '#dc2626';
     }
     if (metricRate) metricRate.textContent = `${savingsRate}% 6-Month Savings Rate`;
     if (metricAvg) metricAvg.textContent = '$' + avgExpense.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -336,20 +342,20 @@ function initD3SpendingChart() {
       const savingsRate = d.income > 0 ? ((net / d.income) * 100).toFixed(0) : '0';
       tooltip.style.opacity = '1';
       tooltip.innerHTML = `
-        <div style="font-weight:700; margin-bottom:4px; font-size:13px; color:#c7d2fe;">${d.month} ${d.year} Breakdown</div>
+        <div style="font-weight:700; margin-bottom:4px; font-size:13px; color:#0f172a;">${d.month} ${d.year} Breakdown</div>
         <div style="display:flex; justify-content:space-between; gap:12px; margin-bottom:2px;">
-          <span style="color:#34d399;">▲ Income:</span>
-          <strong>$${d.income.toLocaleString('en-US', { minimumFractionDigits: 2 })}</strong>
+          <span style="color:#059669; font-weight:600;">▲ Income:</span>
+          <strong style="color:#0f172a;">$${d.income.toLocaleString('en-US', { minimumFractionDigits: 2 })}</strong>
         </div>
         <div style="display:flex; justify-content:space-between; gap:12px; margin-bottom:4px;">
-          <span style="color:#f87171;">▼ Expenses:</span>
-          <strong>$${d.expense.toLocaleString('en-US', { minimumFractionDigits: 2 })}</strong>
+          <span style="color:#dc2626; font-weight:600;">▼ Expenses:</span>
+          <strong style="color:#0f172a;">$${d.expense.toLocaleString('en-US', { minimumFractionDigits: 2 })}</strong>
         </div>
-        <div style="border-top:1px solid rgba(255,255,255,0.1); padding-top:4px; display:flex; justify-content:space-between; gap:12px;">
-          <span style="color:#a5b4fc;">Net Surplus:</span>
-          <strong style="color:${net >= 0 ? '#34d399' : '#f87171'}">${net >= 0 ? '+' : '-'}$${Math.abs(net).toLocaleString('en-US', { minimumFractionDigits: 2 })} (${savingsRate}%)</strong>
+        <div style="border-top:1px solid #e2e8f0; padding-top:4px; display:flex; justify-content:space-between; gap:12px;">
+          <span style="color:#64748b; font-weight:600;">Net Surplus:</span>
+          <strong style="color:${net >= 0 ? '#059669' : '#dc2626'}">${net >= 0 ? '+' : '-'}$${Math.abs(net).toLocaleString('en-US', { minimumFractionDigits: 2 })} (${savingsRate}%)</strong>
         </div>
-        ${extraInfo ? `<div style="font-size:10px; color:#94a3b8; margin-top:3px;">${extraInfo}</div>` : ''}
+        ${extraInfo ? `<div style="font-size:11px; color:#94a3b8; margin-top:3px;">${extraInfo}</div>` : ''}
       `;
 
       const wrapperRect = chartWrapper.getBoundingClientRect();
@@ -475,8 +481,8 @@ function initD3SpendingChart() {
       svg.append('path')
         .datum(currentData)
         .attr('fill', 'none')
-        .attr('stroke', '#818cf8')
-        .attr('stroke-width', 3.5)
+        .attr('stroke', '#4f46e5')
+        .attr('stroke-width', 3)
         .attr('d', line);
 
       // Circles for each month
@@ -487,9 +493,9 @@ function initD3SpendingChart() {
         .attr('class', 'net-dot')
         .attr('cx', d => (x0(d.month) || 0) + x0.bandwidth() / 2)
         .attr('cy', d => y(Math.max(d.income - d.expense, 0)))
-        .attr('r', 6)
-        .attr('fill', '#6366f1')
-        .attr('stroke', '#fff')
+        .attr('r', 5)
+        .attr('fill', '#4f46e5')
+        .attr('stroke', '#ffffff')
         .attr('stroke-width', 2)
         .style('cursor', 'pointer')
         .on('mousemove', (event, d) => showTooltip(event, d, 'Net Cashflow (Income - Expenses)'))

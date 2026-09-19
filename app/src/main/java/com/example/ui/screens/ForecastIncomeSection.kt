@@ -71,21 +71,24 @@ fun ForecastIncomeSection(
         }
     }
 
+    val scrollState = rememberScrollState()
+
     Column(
         modifier = modifier
-            .fillMaxWidth()
-            .padding(bottom = 80.dp)
+            .fillMaxSize()
+            .verticalScroll(scrollState)
+            .padding(horizontal = 16.dp, vertical = 12.dp)
+            .padding(bottom = 80.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         // --- 1. PIPELINE SUMMARY BENTO CARD ---
         Card(
             colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant
+                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
             ),
-            shape = RoundedCornerShape(28.dp),
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)),
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 8.dp)
+            shape = RoundedCornerShape(24.dp),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
+            modifier = Modifier.fillMaxWidth()
         ) {
             Column(
                 modifier = Modifier
@@ -98,20 +101,20 @@ fun ForecastIncomeSection(
                 ) {
                     Surface(
                         shape = CircleShape,
-                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
-                        modifier = Modifier.size(36.dp)
+                        color = MaterialTheme.colorScheme.primaryContainer,
+                        modifier = Modifier.size(38.dp)
                     ) {
                         Box(contentAlignment = Alignment.Center) {
                             Icon(
                                 imageVector = Icons.Default.TrendingUp,
                                 contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
+                                tint = MaterialTheme.colorScheme.onPrimaryContainer,
                                 modifier = Modifier.size(20.dp)
                             )
                         }
                     }
-                    Spacer(modifier = Modifier.width(10.dp))
-                    Column {
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = "FUTURE INCOME FORECAST",
                             style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.sp),
@@ -125,33 +128,30 @@ fun ForecastIncomeSection(
                             color = MaterialTheme.colorScheme.onSurface
                         )
                     }
-                }
-
-                Spacer(modifier = Modifier.height(10.dp))
-
-                Surface(
-                    shape = RoundedCornerShape(10.dp),
-                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.3f))
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                    Surface(
+                        shape = RoundedCornerShape(10.dp),
+                        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.25f))
                     ) {
-                        Box(
-                            modifier = Modifier
-                                .size(6.dp)
-                                .background(MaterialTheme.colorScheme.primary, CircleShape)
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            text = "${forecastSummary.activeCount} upcoming",
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary,
-                            maxLines = 1,
-                            softWrap = false
-                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(6.dp)
+                                    .background(MaterialTheme.colorScheme.primary, CircleShape)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = "${forecastSummary.activeCount} upcoming",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                maxLines = 1,
+                                softWrap = false
+                            )
+                        }
                     }
                 }
 
@@ -159,7 +159,7 @@ fun ForecastIncomeSection(
 
                 Text(
                     text = String.format(Locale.US, "$%.2f", forecastSummary.totalPipeline),
-                    style = MaterialTheme.typography.headlineLarge,
+                    style = MaterialTheme.typography.displaySmall,
                     fontWeight = FontWeight.Black,
                     color = MaterialTheme.colorScheme.primary
                 )
@@ -168,10 +168,10 @@ fun ForecastIncomeSection(
                     text = "Projected upcoming income not yet credited to active ledger",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                    modifier = Modifier.padding(top = 2.dp, bottom = 12.dp)
+                    modifier = Modifier.padding(top = 4.dp, bottom = 14.dp)
                 )
 
-                // Breakdown Chips Row
+                // Breakdown Chips Row (polished dark-theme surfaces with translucent tints)
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -179,135 +179,142 @@ fun ForecastIncomeSection(
                     StatusSummaryPill(
                         label = "Confirmed",
                         amount = forecastSummary.confirmedAmount,
-                        color = Color(0xFF2E7D32),
-                        backgroundColor = Color(0xFFE8F5E9),
+                        color = Color(0xFF34D399),
+                        backgroundColor = Color(0xFF10B981).copy(alpha = 0.12f),
+                        borderColor = Color(0xFF10B981).copy(alpha = 0.3f),
                         modifier = Modifier.weight(1f)
                     )
                     StatusSummaryPill(
                         label = "Expected",
                         amount = forecastSummary.expectedAmount,
-                        color = Color(0xFFD97706),
-                        backgroundColor = Color(0xFFFEF3C7),
+                        color = Color(0xFFFBBF24),
+                        backgroundColor = Color(0xFFF59E0B).copy(alpha = 0.12f),
+                        borderColor = Color(0xFFF59E0B).copy(alpha = 0.3f),
                         modifier = Modifier.weight(1f)
                     )
                     StatusSummaryPill(
                         label = "Tentative",
                         amount = forecastSummary.tentativeAmount,
-                        color = Color(0xFF7C3AED),
-                        backgroundColor = Color(0xFFEDE9FE),
+                        color = Color(0xFFA78BFA),
+                        backgroundColor = Color(0xFF8B5CF6).copy(alpha = 0.12f),
+                        borderColor = Color(0xFF8B5CF6).copy(alpha = 0.3f),
                         modifier = Modifier.weight(1f)
                     )
                 }
             }
         }
 
-        // --- 2. SUB-TABS (Pipeline vs Bulleted Notes) ---
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .horizontalScroll(rememberScrollState())
-                .padding(vertical = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically
+        // --- 2. SEGMENTED TAB SWITCHER ---
+        Surface(
+            shape = RoundedCornerShape(16.dp),
+            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
+            modifier = Modifier.fillMaxWidth()
         ) {
-            FilterChip(
-                selected = forecastSubTab == 0,
-                onClick = { forecastSubTab = 0 },
-                leadingIcon = {
-                    Icon(
-                        imageVector = Icons.Default.Timeline,
-                        contentDescription = null,
-                        modifier = Modifier.size(16.dp)
-                    )
-                },
-                label = {
-                    Text(
-                        text = "Income Pipeline (${forecastIncomes.count { !it.isRealized && !it.status.equals("RECEIVED", ignoreCase = true) }})",
-                        fontWeight = FontWeight.Bold,
-                        maxLines = 1,
-                        softWrap = false
-                    )
-                },
-                modifier = Modifier.testTag("tab_forecast_pipeline")
-            )
-            FilterChip(
-                selected = forecastSubTab == 1,
-                onClick = { forecastSubTab = 1 },
-                leadingIcon = {
-                    Icon(
-                        imageVector = Icons.Default.FormatListBulleted,
-                        contentDescription = null,
-                        modifier = Modifier.size(16.dp)
-                    )
-                },
-                label = {
-                    Text(
-                        text = "Notes & Ideas (${futureIncomeNotes.size})",
-                        fontWeight = FontWeight.Bold,
-                        maxLines = 1,
-                        softWrap = false
-                    )
-                },
-                modifier = Modifier.testTag("tab_forecast_notes")
-            )
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(4.dp),
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                // Tab 0: Income Pipeline
+                val isPipelineSelected = forecastSubTab == 0
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = if (isPipelineSelected) MaterialTheme.colorScheme.primary else Color.Transparent,
+                    modifier = Modifier
+                        .weight(1f)
+                        .clickable { forecastSubTab = 0 }
+                        .testTag("tab_forecast_pipeline")
+                ) {
+                    Row(
+                        modifier = Modifier.padding(vertical = 10.dp, horizontal = 12.dp),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Timeline,
+                            contentDescription = null,
+                            tint = if (isPipelineSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = "Pipeline (${forecastIncomes.count { !it.isRealized && !it.status.equals("RECEIVED", ignoreCase = true) }})",
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = if (isPipelineSelected) FontWeight.Bold else FontWeight.Medium,
+                            color = if (isPipelineSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            softWrap = false
+                        )
+                    }
+                }
+
+                // Tab 1: Notes & Ideas
+                val isNotesSelected = forecastSubTab == 1
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = if (isNotesSelected) MaterialTheme.colorScheme.primary else Color.Transparent,
+                    modifier = Modifier
+                        .weight(1f)
+                        .clickable { forecastSubTab = 1 }
+                        .testTag("tab_forecast_notes")
+                ) {
+                    Row(
+                        modifier = Modifier.padding(vertical = 10.dp, horizontal = 12.dp),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.FormatListBulleted,
+                            contentDescription = null,
+                            tint = if (isNotesSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = "Notes (${futureIncomeNotes.size})",
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = if (isNotesSelected) FontWeight.Bold else FontWeight.Medium,
+                            color = if (isNotesSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            softWrap = false
+                        )
+                    }
+                }
+            }
         }
 
         // --- 3. TAB 0: PIPELINE FORECAST CONTENT ---
         if (forecastSubTab == 0) {
-            // Action bar & status filter
+            // Action header row
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 6.dp),
+                modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Quick filter chips
-                LazyRow(
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    modifier = Modifier.weight(1f)
-                ) {
-                    val filters = listOf(
-                        "ALL" to "All Active",
-                        "CONFIRMED" to "Confirmed",
-                        "EXPECTED" to "Expected",
-                        "TENTATIVE" to "Tentative",
-                        "RECEIVED" to "Received"
+                Column {
+                    Text(
+                        text = "Forecast Milestones",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onBackground
                     )
-                    items(filters) { (key, label) ->
-                        val isSelected = statusFilter == key
-                        Surface(
-                            shape = RoundedCornerShape(16.dp),
-                            color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
-                            contentColor = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier
-                                .clickable { statusFilter = key }
-                                .padding(vertical = 2.dp)
-                        ) {
-                            Text(
-                                text = label,
-                                style = MaterialTheme.typography.labelSmall,
-                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                maxLines = 1,
-                                softWrap = false,
-                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
-                            )
-                        }
-                    }
+                    Text(
+                        text = "${filteredForecasts.size} in view",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                    )
                 }
 
-                Spacer(modifier = Modifier.width(8.dp))
-
-                FilledTonalButton(
+                Button(
                     onClick = {
                         editingForecast = null
                         showAddForecastDialog = true
                     },
-                    shape = RoundedCornerShape(16.dp),
-                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
-                    modifier = Modifier
-                        .wrapContentWidth()
-                        .testTag("add_forecast_button")
+                    shape = RoundedCornerShape(14.dp),
+                    contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp),
+                    modifier = Modifier.testTag("add_forecast_button")
                 ) {
                     Icon(
                         imageVector = Icons.Default.Add,
@@ -325,17 +332,53 @@ fun ForecastIncomeSection(
                 }
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
+            // Quick filter chips (comfortable horizontal scrolling row, never truncated)
+            LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                val filters = listOf(
+                    "ALL" to "All Active",
+                    "CONFIRMED" to "Confirmed",
+                    "EXPECTED" to "Expected",
+                    "TENTATIVE" to "Tentative",
+                    "RECEIVED" to "Received"
+                )
+                items(filters) { (key, label) ->
+                    val isSelected = statusFilter == key
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                        contentColor = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
+                        border = BorderStroke(
+                            1.dp,
+                            if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.5f) else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
+                        ),
+                        modifier = Modifier
+                            .clickable { statusFilter = key }
+                    ) {
+                        Text(
+                            text = label,
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                            maxLines = 1,
+                            softWrap = false,
+                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp)
+                        )
+                    }
+                }
+            }
 
             if (filteredForecasts.isEmpty()) {
                 Card(
                     colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
                     ),
                     shape = RoundedCornerShape(24.dp),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 24.dp)
+                        .padding(vertical = 12.dp)
                 ) {
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
@@ -343,13 +386,21 @@ fun ForecastIncomeSection(
                             .fillMaxWidth()
                             .padding(28.dp)
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Savings,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.4f),
-                            modifier = Modifier.size(56.dp)
-                        )
-                        Spacer(modifier = Modifier.height(12.dp))
+                        Surface(
+                            shape = CircleShape,
+                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
+                            modifier = Modifier.size(64.dp)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    imageVector = Icons.Default.Savings,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(32.dp)
+                                )
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(14.dp))
                         Text(
                             text = if (statusFilter == "RECEIVED" || statusFilter == "REALIZED") "No Received Forecasts Yet" else "No Forecasted Income In This View",
                             style = MaterialTheme.typography.titleMedium,
@@ -360,10 +411,10 @@ fun ForecastIncomeSection(
                         Text(
                             text = "Track upcoming invoices, anticipated client retainers, bonuses, or prospective income with bulleted milestones.",
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
                             textAlign = TextAlign.Center
                         )
-                        Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(modifier = Modifier.height(20.dp))
                         Button(
                             onClick = {
                                 editingForecast = null
@@ -403,34 +454,32 @@ fun ForecastIncomeSection(
         // --- 4. TAB 1: BULLETED NOTES & IDEAS CONTENT ---
         if (forecastSubTab == 1) {
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 6.dp),
+                modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = "Income Notes & Ideas",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onBackground,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f, fill = false)
-                )
+                Column {
+                    Text(
+                        text = "Income Notes & Ideas",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onBackground
+                    )
+                    Text(
+                        text = "${futureIncomeNotes.size} saved notes",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                    )
+                }
 
-                Spacer(modifier = Modifier.width(8.dp))
-
-                FilledTonalButton(
+                Button(
                     onClick = {
                         editingNote = null
                         showAddNoteDialog = true
                     },
-                    shape = RoundedCornerShape(16.dp),
-                    contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp),
-                    modifier = Modifier
-                        .wrapContentWidth()
-                        .testTag("add_income_note_button")
+                    shape = RoundedCornerShape(14.dp),
+                    contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp),
+                    modifier = Modifier.testTag("add_income_note_button")
                 ) {
                     Icon(
                         imageVector = Icons.Default.Add,
@@ -448,17 +497,16 @@ fun ForecastIncomeSection(
                 }
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
-
             if (futureIncomeNotes.isEmpty()) {
                 Card(
                     colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
                     ),
                     shape = RoundedCornerShape(24.dp),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 24.dp)
+                        .padding(vertical = 12.dp)
                 ) {
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
@@ -466,13 +514,21 @@ fun ForecastIncomeSection(
                             .fillMaxWidth()
                             .padding(28.dp)
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.FormatListBulleted,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.4f),
-                            modifier = Modifier.size(56.dp)
-                        )
-                        Spacer(modifier = Modifier.height(12.dp))
+                        Surface(
+                            shape = CircleShape,
+                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
+                            modifier = Modifier.size(64.dp)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    imageVector = Icons.Default.FormatListBulleted,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(32.dp)
+                                )
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(14.dp))
                         Text(
                             text = "No Future Income Notes Yet",
                             style = MaterialTheme.typography.titleMedium,
@@ -483,10 +539,10 @@ fun ForecastIncomeSection(
                         Text(
                             text = "Add bulleted lists of future income streams, prospective client lists, rate increase ideas, or side hustle goals.",
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
                             textAlign = TextAlign.Center
                         )
-                        Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(modifier = Modifier.height(20.dp))
                         Button(
                             onClick = {
                                 editingNote = null
@@ -597,21 +653,21 @@ fun ForecastIncomeSection(
                     Spacer(modifier = Modifier.height(12.dp))
                     Surface(
                         shape = RoundedCornerShape(12.dp),
-                        color = Color(0xFFDCFCE7),
-                        border = BorderStroke(1.dp, Color(0xFF86EFAC)),
+                        color = Color(0xFF10B981).copy(alpha = 0.14f),
+                        border = BorderStroke(1.dp, Color(0xFF10B981).copy(alpha = 0.35f)),
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Column(modifier = Modifier.padding(12.dp)) {
                             Text(
                                 text = forecast.title,
                                 fontWeight = FontWeight.Bold,
-                                color = Color(0xFF14532D)
+                                color = MaterialTheme.colorScheme.onSurface
                             )
                             Text(
                                 text = String.format(Locale.US, "+$%.2f  •  %s", forecast.amount, forecast.category),
                                 fontWeight = FontWeight.Black,
                                 fontSize = 16.sp,
-                                color = Color(0xFF16A34A)
+                                color = Color(0xFF34D399)
                             )
                         }
                     }
@@ -671,23 +727,27 @@ fun StatusSummaryPill(
     amount: Double,
     color: Color,
     backgroundColor: Color,
+    borderColor: Color = color.copy(alpha = 0.3f),
     modifier: Modifier = Modifier
 ) {
     Surface(
         shape = RoundedCornerShape(14.dp),
         color = backgroundColor,
+        border = BorderStroke(1.dp, borderColor),
         modifier = modifier
     ) {
         Column(
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp)
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
         ) {
             Text(
                 text = label.uppercase(Locale.getDefault()),
                 style = MaterialTheme.typography.labelSmall,
-                fontSize = 9.sp,
+                fontSize = 9.5.sp,
                 fontWeight = FontWeight.Black,
+                letterSpacing = 0.5.sp,
                 color = color
             )
+            Spacer(modifier = Modifier.height(2.dp))
             Text(
                 text = String.format(Locale.US, "$%.0f", amount),
                 style = MaterialTheme.typography.bodyMedium,
@@ -697,6 +757,13 @@ fun StatusSummaryPill(
         }
     }
 }
+
+data class ForecastStatusStyle(
+    val color: Color,
+    val bg: Color,
+    val border: Color,
+    val label: String
+)
 
 @Composable
 fun ForecastIncomeCard(
@@ -721,21 +788,25 @@ fun ForecastIncomeCard(
         }
     }
 
-    val (statusColor, statusBg, statusLabel) = when (item.status.uppercase()) {
-        "RECEIVED" -> Triple(Color(0xFF16A34A), Color(0xFFDCFCE7), "Received")
-        "CONFIRMED" -> Triple(Color(0xFF2E7D32), Color(0xFFE8F5E9), "Confirmed")
-        "EXPECTED" -> Triple(Color(0xFFD97706), Color(0xFFFEF3C7), "Expected")
-        else -> Triple(Color(0xFF7C3AED), Color(0xFFEDE9FE), "Tentative")
+    val statusStyle = when (item.status.uppercase()) {
+        "RECEIVED" -> ForecastStatusStyle(Color(0xFF34D399), Color(0xFF10B981).copy(alpha = 0.15f), Color(0xFF10B981).copy(alpha = 0.35f), "Received")
+        "CONFIRMED" -> ForecastStatusStyle(Color(0xFF34D399), Color(0xFF10B981).copy(alpha = 0.15f), Color(0xFF10B981).copy(alpha = 0.35f), "Confirmed")
+        "EXPECTED" -> ForecastStatusStyle(Color(0xFFFBBF24), Color(0xFFF59E0B).copy(alpha = 0.15f), Color(0xFFF59E0B).copy(alpha = 0.35f), "Expected")
+        else -> ForecastStatusStyle(Color(0xFFA78BFA), Color(0xFF8B5CF6).copy(alpha = 0.15f), Color(0xFF8B5CF6).copy(alpha = 0.35f), "Tentative")
     }
+    val statusColor = statusStyle.color
+    val statusBg = statusStyle.bg
+    val statusBorder = statusStyle.border
+    val statusLabel = statusStyle.label
 
     Card(
         colors = CardDefaults.cardColors(
-            containerColor = if (isItemReceived) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f) else MaterialTheme.colorScheme.surface
+            containerColor = if (isItemReceived) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f)
         ),
         shape = RoundedCornerShape(20.dp),
         border = BorderStroke(
-            width = if (isItemReceived) 1.dp else 1.5.dp,
-            color = if (isItemReceived) Color(0xFF16A34A).copy(alpha = 0.35f) else accentColor.copy(alpha = 0.6f)
+            width = 1.dp,
+            color = if (isItemReceived) Color(0xFF10B981).copy(alpha = 0.35f) else accentColor.copy(alpha = 0.5f)
         ),
         modifier = modifier.fillMaxWidth()
     ) {
@@ -757,7 +828,7 @@ fun ForecastIncomeCard(
                                 .width(5.dp)
                                 .height(22.dp)
                                 .clip(RoundedCornerShape(3.dp))
-                                .background(if (isItemReceived) Color(0xFF16A34A) else accentColor)
+                                .background(if (isItemReceived) Color(0xFF10B981) else accentColor)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
@@ -805,8 +876,8 @@ fun ForecastIncomeCard(
                 // Status Badge
                 Surface(
                     shape = RoundedCornerShape(10.dp),
-                    color = if (isItemReceived) Color(0xFFDCFCE7) else statusBg,
-                    border = BorderStroke(1.dp, if (isItemReceived) Color(0xFF86EFAC) else statusColor.copy(alpha = 0.3f))
+                    color = if (isItemReceived) Color(0xFF10B981).copy(alpha = 0.15f) else statusBg,
+                    border = BorderStroke(1.dp, if (isItemReceived) Color(0xFF10B981).copy(alpha = 0.35f) else statusBorder)
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -816,7 +887,7 @@ fun ForecastIncomeCard(
                             Icon(
                                 imageVector = Icons.Default.CheckCircle,
                                 contentDescription = null,
-                                tint = Color(0xFF16A34A),
+                                tint = Color(0xFF34D399),
                                 modifier = Modifier.size(12.dp)
                             )
                         } else {
@@ -832,7 +903,7 @@ fun ForecastIncomeCard(
                             text = if (isItemReceived) "Received" else statusLabel,
                             style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.ExtraBold,
-                            color = if (isItemReceived) Color(0xFF15803D) else statusColor
+                            color = if (isItemReceived) Color(0xFF34D399) else statusColor
                         )
                     }
                 }
@@ -850,15 +921,15 @@ fun ForecastIncomeCard(
                     text = String.format(Locale.US, "+$%.2f", item.amount),
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Black,
-                    color = if (isItemReceived) Color.Gray else Color(0xFF2E7D32)
+                    color = if (isItemReceived) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f) else Color(0xFF34D399)
                 )
 
                 if (!isItemReceived) {
                     Button(
                         onClick = onRealize,
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFF2E7D32),
-                            contentColor = Color.White
+                            containerColor = MaterialTheme.colorScheme.primary,
+                            contentColor = MaterialTheme.colorScheme.onPrimary
                         ),
                         shape = RoundedCornerShape(12.dp),
                         contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
@@ -1032,10 +1103,10 @@ fun FutureIncomeNoteCard(
 
     Card(
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
         ),
         shape = RoundedCornerShape(20.dp),
-        border = BorderStroke(1.5.dp, accentColor.copy(alpha = 0.6f)),
+        border = BorderStroke(1.dp, accentColor.copy(alpha = 0.45f)),
         modifier = modifier.fillMaxWidth()
     ) {
         Column(
