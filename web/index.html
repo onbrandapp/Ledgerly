@@ -62,7 +62,7 @@
         <h3>Ledgerly Production Release v75.0 (Target SDK 36)</h3>
         <p>Verified on Google Play Console and GitHub. Full offline Room persistence + Cloud Firestore Sync.</p>
       </div>
-      <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+      <div class="release-actions">
         <a href="https://play.google.com/apps/internaltest/4701469954088628501" target="_blank" class="btn-primary">
           Google Play Store
         </a>
@@ -158,8 +158,8 @@
 
             <div class="input-row">
               <input type="text" id="forecast-title" class="demo-input" placeholder="Project name (e.g. Consulting Invoice)">
-              <input type="number" id="forecast-amount" class="demo-input" placeholder="Amount ($)" style="max-width:110px;">
-              <select id="forecast-status" class="demo-input" style="max-width:130px;">
+              <input type="number" id="forecast-amount" class="demo-input input-amount" placeholder="Amount ($)">
+              <select id="forecast-status" class="demo-input select-status">
                 <option value="EXPECTED">Expected</option>
                 <option value="CONFIRMED">Confirmed</option>
                 <option value="TENTATIVE">Tentative</option>
@@ -308,13 +308,13 @@
         <div class="chart-footer-simulator">
           <span style="font-size: 13px; color: var(--text-muted); font-weight: 600;">Simulate Monthly Transaction:</span>
           <div class="sim-controls">
-            <input type="text" id="sim-desc" placeholder="e.g. Bonus / Equipment" class="demo-input" style="min-width: 180px;">
-            <input type="number" id="sim-amount" placeholder="Amount ($)" class="demo-input" style="max-width: 110px;">
-            <select id="sim-type" class="demo-input" style="max-width: 125px;">
+            <input type="text" id="sim-desc" placeholder="e.g. Bonus / Equipment" class="demo-input input-desc">
+            <input type="number" id="sim-amount" placeholder="Amount ($)" class="demo-input input-amount">
+            <select id="sim-type" class="demo-input select-type">
               <option value="EXPENSE">Expense (-)</option>
               <option value="INCOME">Income (+)</option>
             </select>
-            <select id="sim-month" class="demo-input" style="max-width: 110px;"></select>
+            <select id="sim-month" class="demo-input select-month"></select>
             <button id="btn-add-sim-tx" class="btn-primary" style="padding: 8px 16px;">+ Update</button>
             <button id="btn-reset-data" class="btn-secondary" style="padding: 8px 12px;">Reset</button>
           </div>

@@ -247,15 +247,18 @@ function initD3SpendingChart() {
   function renderChart() {
     chartWrapper.innerHTML = '';
 
-    const containerWidth = chartWrapper.parentElement.clientWidth || 800;
-    const margin = { top: 30, right: 30, bottom: 45, left: 65 };
-    const width = Math.max(containerWidth - margin.left - margin.right, 320);
-    const height = 300;
+    const containerWidth = chartWrapper.clientWidth || (chartWrapper.parentElement ? chartWrapper.parentElement.clientWidth : 0) || 600;
+    const margin = { top: 25, right: 15, bottom: 40, left: 55 };
+    const width = Math.max(containerWidth - margin.left - margin.right, 240);
+    const height = 280;
 
     const svg = d3.select('#d3-spending-chart')
       .append('svg')
       .attr('viewBox', `0 0 ${width + margin.left + margin.right} ${height + margin.top + margin.bottom}`)
       .attr('preserveAspectRatio', 'xMidYMid meet')
+      .style('width', '100%')
+      .style('height', 'auto')
+      .style('display', 'block')
       .append('g')
       .attr('transform', `translate(${margin.left},${margin.top})`);
 
