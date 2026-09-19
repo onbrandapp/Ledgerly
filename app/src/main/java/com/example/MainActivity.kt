@@ -26,11 +26,13 @@ class MainActivity : FragmentActivity() {
             val isLoggedIn by viewModel.isUserLoggedIn.collectAsState()
             val isBiometricEnabled by viewModel.isBiometricEnabled.collectAsState()
             val isBiometricUnlocked by viewModel.isBiometricUnlocked.collectAsState()
+            val isDarkMode by viewModel.isDarkMode.collectAsState()
             val primaryHex by viewModel.primaryColor.collectAsState()
             val secondaryHex by viewModel.secondaryColor.collectAsState()
             val accentHex by viewModel.accentColor.collectAsState()
 
             MyApplicationTheme(
+                darkTheme = isDarkMode,
                 primaryHex = primaryHex,
                 secondaryHex = secondaryHex,
                 accentHex = accentHex

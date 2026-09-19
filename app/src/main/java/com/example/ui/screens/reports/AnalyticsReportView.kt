@@ -215,6 +215,7 @@ fun VisualAnalyticsSection(
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 // Donut Pie Chart Canvas
+                val emptyRingColor = MaterialTheme.colorScheme.outlineVariant
                 Box(
                     modifier = Modifier
                         .size(96.dp)
@@ -228,7 +229,7 @@ fun VisualAnalyticsSection(
 
                         if (totalCurrentMonthSpent == 0.0) {
                             drawCircle(
-                                color = Color.LightGray.copy(alpha = 0.3f),
+                                color = emptyRingColor.copy(alpha = 0.5f),
                                 radius = radius,
                                 style = Stroke(width = strokeWidth)
                             )

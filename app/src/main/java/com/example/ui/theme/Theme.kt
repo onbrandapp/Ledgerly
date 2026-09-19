@@ -1,6 +1,8 @@
 package com.example.ui.theme
 
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -12,6 +14,7 @@ val LocalAppAccent = compositionLocalOf { Color(0xFF4F46E5) }
 
 @Composable
 fun MyApplicationTheme(
+  darkTheme: Boolean = false,
   primaryHex: String = "#4F46E5",
   secondaryHex: String = "#4F46E5",
   accentHex: String = "#4F46E5",
@@ -42,8 +45,8 @@ fun MyApplicationTheme(
   }
   val onAccentColor = if (isLightAccent) Color(0xFF0F172A) else Color.White
 
-  // Minimalist Light Theme matching the web overhaul
-  val colorScheme = lightColorScheme(
+  // Minimalist Light Theme matching the web overhaul (kept exactly as-is)
+  val lightColors = lightColorScheme(
     primary = customAccent,
     onPrimary = onAccentColor,
     primaryContainer = customAccent.copy(alpha = 0.12f),
@@ -78,8 +81,47 @@ fun MyApplicationTheme(
     onErrorContainer = Color(0xFF991B1B)
   )
 
+  // Polished Dark Theme mirroring light theme tokens with high-contrast, modern dark slate/neutral aesthetics
+  val darkColors = darkColorScheme(
+    primary = customAccent,
+    onPrimary = onAccentColor,
+    primaryContainer = customAccent.copy(alpha = 0.25f),
+    onPrimaryContainer = Color(0xFFF1F5F9),
+
+    secondary = customAccent,
+    onSecondary = onAccentColor,
+    secondaryContainer = customAccent.copy(alpha = 0.20f),
+    onSecondaryContainer = Color(0xFFF1F5F9),
+
+    tertiary = customAccent,
+    onTertiary = onAccentColor,
+    tertiaryContainer = customAccent.copy(alpha = 0.28f),
+    onTertiaryContainer = Color(0xFFF1F5F9),
+
+    // Modern Dark Slate Canvas (slate-950 / slate-900 / slate-800)
+    background = Color(0xFF0B0F19),       // Rich deep canvas (slate-950)
+    onBackground = Color(0xFFF8FAFC),     // Crisp bright off-white text
+
+    surface = Color(0xFF131B2E),          // Distinct elevated card surfaces (slate-900)
+    onSurface = Color(0xFFF8FAFC),        // Crisp bright off-white text on surfaces
+
+    surfaceVariant = Color(0xFF1E293B),   // Dark slate container / chip / input surface (slate-800)
+    onSurfaceVariant = Color(0xFF94A3B8), // Soft slate for subtitles & secondary labels (slate-400)
+
+    outline = Color(0xFF334155),          // Slate border / dividers (slate-700)
+    outlineVariant = Color(0xFF1E293B),   // Subtle dark separator
+
+    error = Color(0xFFF87171),
+    onError = Color(0xFF450A0A),
+    errorContainer = Color(0xFF7F1D1D),
+    onErrorContainer = Color(0xFFFECACA)
+  )
+
+  val colorScheme = if (darkTheme) darkColors else lightColors
+
   CompositionLocalProvider(LocalAppAccent provides customAccent) {
     MaterialTheme(colorScheme = colorScheme, typography = Typography, content = content)
   }
 }
+
 

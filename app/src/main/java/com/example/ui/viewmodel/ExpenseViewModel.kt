@@ -118,6 +118,21 @@ class ExpenseViewModel(application: Application) : AndroidViewModel(application)
     private val _monthlyBudget = MutableStateFlow(budgetPrefs.getFloat("limit", 2000f).toDouble())
     val monthlyBudget = _monthlyBudget.asStateFlow()
 
+    // Theme Mode State (Light / Dark)
+    private val _isDarkMode = MutableStateFlow(budgetPrefs.getBoolean("is_dark_mode", false))
+    val isDarkMode = _isDarkMode.asStateFlow()
+
+    fun toggleDarkMode() {
+        val next = !_isDarkMode.value
+        budgetPrefs.edit().putBoolean("is_dark_mode", next).apply()
+        _isDarkMode.value = next
+    }
+
+    fun setDarkMode(enabled: Boolean) {
+        budgetPrefs.edit().putBoolean("is_dark_mode", enabled).apply()
+        _isDarkMode.value = enabled
+    }
+
     // Custom Theme Accent Color State (Default signature Indigo #4F46E5 matching web overhaul)
     private val savedAccent = budgetPrefs.getString("accent_color", null)
         ?: budgetPrefs.getString("primary_color", "#4F46E5")

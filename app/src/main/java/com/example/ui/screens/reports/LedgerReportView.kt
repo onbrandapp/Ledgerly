@@ -598,7 +598,8 @@ fun LedgerReportView(
                         modifier = Modifier
                             .weight(1f)
                             .fillMaxWidth()
-                            .padding(horizontal = 8.dp)
+                            .padding(horizontal = 6.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         items(incomeList, key = { it.id }) { item ->
                             val catStyle = CategoryConstants.resolveCategoryStyle(item.category, customCategories)
@@ -607,13 +608,14 @@ fun LedgerReportView(
                                 colors = CardDefaults.cardColors(
                                     containerColor = if (item.paid) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f) else MaterialTheme.colorScheme.surface
                                 ),
-                                shape = RoundedCornerShape(10.dp),
-                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
+                                shape = RoundedCornerShape(8.dp),
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(vertical = 4.dp)
+                                    .padding(vertical = 1.dp)
                             ) {
-                                Column(modifier = Modifier.padding(8.dp)) {
+                                Column(modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp)) {
+                                    // Row 1: Date & Amount on a clean single line with ample spacing
                                     Row(
                                         modifier = Modifier.fillMaxWidth(),
                                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -622,41 +624,59 @@ fun LedgerReportView(
                                         Text(
                                             text = ledgerFormatter.format(Date(item.date)),
                                             style = MaterialTheme.typography.labelSmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            fontSize = 10.sp,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            maxLines = 1
                                         )
                                         Text(
                                             text = "+$${String.format(Locale.US, "%,.2f", item.amount)}",
-                                            style = MaterialTheme.typography.bodyMedium,
+                                            style = MaterialTheme.typography.labelMedium,
                                             fontWeight = FontWeight.Bold,
-                                            color = MaterialTheme.colorScheme.tertiary
+                                            fontSize = 12.sp,
+                                            color = MaterialTheme.colorScheme.tertiary,
+                                            maxLines = 1,
+                                            softWrap = false
                                         )
                                     }
-                                    Spacer(modifier = Modifier.height(2.dp))
+
+                                    Spacer(modifier = Modifier.height(3.dp))
+
+                                    // Row 2: Description on a single clean line with ellipsis
                                     Text(
                                         text = item.description,
                                         style = MaterialTheme.typography.bodySmall,
                                         fontWeight = FontWeight.SemiBold,
-                                        maxLines = 2,
+                                        fontSize = 12.sp,
+                                        maxLines = 1,
                                         overflow = TextOverflow.Ellipsis
                                     )
+
                                     Spacer(modifier = Modifier.height(4.dp))
+
+                                    // Row 3: Category badge, Status chip, and compact actions on a single line
                                     Row(
                                         modifier = Modifier.fillMaxWidth(),
                                         horizontalArrangement = Arrangement.SpaceBetween,
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
                                         Surface(
-                                            color = catStyle.color.copy(alpha = 0.2f),
-                                            shape = RoundedCornerShape(4.dp)
+                                            color = catStyle.color.copy(alpha = 0.18f),
+                                            shape = RoundedCornerShape(4.dp),
+                                            modifier = Modifier.weight(1f, fill = false)
                                         ) {
                                             Text(
                                                 text = item.category,
                                                 style = MaterialTheme.typography.labelSmall,
                                                 color = catStyle.color,
                                                 fontWeight = FontWeight.Bold,
-                                                modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+                                                fontSize = 9.sp,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis,
+                                                modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
                                             )
                                         }
+
+                                        Spacer(modifier = Modifier.width(4.dp))
 
                                         Row(verticalAlignment = Alignment.CenterVertically) {
                                             if (!isCash) {
@@ -666,44 +686,43 @@ fun LedgerReportView(
                                                     modifier = Modifier
                                                         .clip(RoundedCornerShape(4.dp))
                                                         .clickable { onTogglePaid(item.id) }
-                                                        .padding(horizontal = 6.dp, vertical = 2.dp)
                                                         .testTag("ledger_received_toggle_${item.id}")
                                                 ) {
                                                     Text(
                                                         text = if (item.paid) "Received" else "Pending",
                                                         style = MaterialTheme.typography.labelSmall,
                                                         fontWeight = FontWeight.ExtraBold,
+                                                        fontSize = 9.sp,
+                                                        maxLines = 1,
                                                         color = if (item.paid) Color(0xFF10B981) else Color(0xFFD97706),
-                                                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+                                                        modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
                                                     )
                                                 }
-                                            }
 
-                                            Spacer(modifier = Modifier.width(4.dp))
+                                                Spacer(modifier = Modifier.width(2.dp))
+                                            }
 
                                             IconButton(
                                                 onClick = { onEditTransaction(item) },
-                                                modifier = Modifier.size(24.dp).testTag("ledger_edit_${item.id}")
+                                                modifier = Modifier.size(22.dp).testTag("ledger_edit_${item.id}")
                                             ) {
                                                 Icon(
                                                     imageVector = Icons.Default.Edit,
                                                     contentDescription = "Edit",
                                                     tint = MaterialTheme.colorScheme.primary,
-                                                    modifier = Modifier.size(14.dp)
+                                                    modifier = Modifier.size(13.dp)
                                                 )
                                             }
 
-                                            Spacer(modifier = Modifier.width(4.dp))
-
                                             IconButton(
                                                 onClick = { onDeleteTransaction(item) },
-                                                modifier = Modifier.size(24.dp).testTag("ledger_delete_${item.id}")
+                                                modifier = Modifier.size(22.dp).testTag("ledger_delete_${item.id}")
                                             ) {
                                                 Icon(
                                                     imageVector = Icons.Default.DeleteOutline,
                                                     contentDescription = "Delete",
                                                     tint = MaterialTheme.colorScheme.error,
-                                                    modifier = Modifier.size(14.dp)
+                                                    modifier = Modifier.size(13.dp)
                                                 )
                                             }
                                         }
@@ -774,7 +793,8 @@ fun LedgerReportView(
                         modifier = Modifier
                             .weight(1f)
                             .fillMaxWidth()
-                            .padding(horizontal = 8.dp)
+                            .padding(horizontal = 6.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         items(expenseList, key = { it.id }) { item ->
                             val catStyle = CategoryConstants.resolveCategoryStyle(item.category, customCategories)
@@ -782,13 +802,14 @@ fun LedgerReportView(
                                 colors = CardDefaults.cardColors(
                                     containerColor = if (item.paid) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f) else MaterialTheme.colorScheme.surface
                                 ),
-                                shape = RoundedCornerShape(10.dp),
-                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
+                                shape = RoundedCornerShape(8.dp),
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(vertical = 4.dp)
+                                    .padding(vertical = 1.dp)
                             ) {
-                                Column(modifier = Modifier.padding(8.dp)) {
+                                Column(modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp)) {
+                                    // Row 1: Date & Amount on a clean single line with ample spacing
                                     Row(
                                         modifier = Modifier.fillMaxWidth(),
                                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -797,41 +818,59 @@ fun LedgerReportView(
                                         Text(
                                             text = ledgerFormatter.format(Date(item.date)),
                                             style = MaterialTheme.typography.labelSmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            fontSize = 10.sp,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            maxLines = 1
                                         )
                                         Text(
                                             text = "-$${String.format(Locale.US, "%,.2f", item.amount)}",
-                                            style = MaterialTheme.typography.bodyMedium,
+                                            style = MaterialTheme.typography.labelMedium,
                                             fontWeight = FontWeight.Bold,
-                                            color = MaterialTheme.colorScheme.error
+                                            fontSize = 12.sp,
+                                            color = MaterialTheme.colorScheme.error,
+                                            maxLines = 1,
+                                            softWrap = false
                                         )
                                     }
-                                    Spacer(modifier = Modifier.height(2.dp))
+
+                                    Spacer(modifier = Modifier.height(3.dp))
+
+                                    // Row 2: Description on a single clean line with ellipsis
                                     Text(
                                         text = item.description,
                                         style = MaterialTheme.typography.bodySmall,
                                         fontWeight = FontWeight.SemiBold,
-                                        maxLines = 2,
+                                        fontSize = 12.sp,
+                                        maxLines = 1,
                                         overflow = TextOverflow.Ellipsis
                                     )
+
                                     Spacer(modifier = Modifier.height(4.dp))
+
+                                    // Row 3: Category badge, Status chip, and compact actions on a single line
                                     Row(
                                         modifier = Modifier.fillMaxWidth(),
                                         horizontalArrangement = Arrangement.SpaceBetween,
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
                                         Surface(
-                                            color = catStyle.color.copy(alpha = 0.2f),
-                                            shape = RoundedCornerShape(4.dp)
+                                            color = catStyle.color.copy(alpha = 0.18f),
+                                            shape = RoundedCornerShape(4.dp),
+                                            modifier = Modifier.weight(1f, fill = false)
                                         ) {
                                             Text(
                                                 text = item.category,
                                                 style = MaterialTheme.typography.labelSmall,
                                                 color = catStyle.color,
                                                 fontWeight = FontWeight.Bold,
-                                                modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+                                                fontSize = 9.sp,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis,
+                                                modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
                                             )
                                         }
+
+                                        Spacer(modifier = Modifier.width(4.dp))
 
                                         Row(verticalAlignment = Alignment.CenterVertically) {
                                             Surface(
@@ -840,43 +879,42 @@ fun LedgerReportView(
                                                 modifier = Modifier
                                                     .clip(RoundedCornerShape(4.dp))
                                                     .clickable { onTogglePaid(item.id) }
-                                                    .padding(horizontal = 6.dp, vertical = 2.dp)
                                                     .testTag("ledger_paid_toggle_${item.id}")
                                             ) {
                                                 Text(
                                                     text = if (item.paid) "Paid" else "Unpaid",
                                                     style = MaterialTheme.typography.labelSmall,
                                                     fontWeight = FontWeight.ExtraBold,
+                                                    fontSize = 9.sp,
+                                                    maxLines = 1,
                                                     color = if (item.paid) Color(0xFF10B981) else MaterialTheme.colorScheme.error,
-                                                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+                                                    modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
                                                 )
                                             }
 
-                                            Spacer(modifier = Modifier.width(4.dp))
+                                            Spacer(modifier = Modifier.width(2.dp))
 
                                             IconButton(
                                                 onClick = { onEditTransaction(item) },
-                                                modifier = Modifier.size(24.dp).testTag("ledger_edit_${item.id}")
+                                                modifier = Modifier.size(22.dp).testTag("ledger_edit_${item.id}")
                                             ) {
                                                 Icon(
                                                     imageVector = Icons.Default.Edit,
                                                     contentDescription = "Edit",
                                                     tint = MaterialTheme.colorScheme.primary,
-                                                    modifier = Modifier.size(14.dp)
+                                                    modifier = Modifier.size(13.dp)
                                                 )
                                             }
 
-                                            Spacer(modifier = Modifier.width(4.dp))
-
                                             IconButton(
                                                 onClick = { onDeleteTransaction(item) },
-                                                modifier = Modifier.size(24.dp).testTag("ledger_delete_${item.id}")
+                                                modifier = Modifier.size(22.dp).testTag("ledger_delete_${item.id}")
                                             ) {
                                                 Icon(
                                                     imageVector = Icons.Default.DeleteOutline,
                                                     contentDescription = "Delete",
                                                     tint = MaterialTheme.colorScheme.error,
-                                                    modifier = Modifier.size(14.dp)
+                                                    modifier = Modifier.size(13.dp)
                                                 )
                                             }
                                         }

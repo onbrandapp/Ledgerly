@@ -91,6 +91,7 @@ fun DashboardScreen(
     val monthlyBudget by viewModel.monthlyBudget.collectAsState()
     val recurringTransactions by viewModel.recurringTransactions.collectAsState()
     val customCategoriesList by viewModel.customCategories.collectAsState()
+    val isDarkMode by viewModel.isDarkMode.collectAsState()
     var showGlobalCategoryDialog by remember { mutableStateOf(false) }
 
     val primaryColorHex by viewModel.primaryColor.collectAsState()
@@ -186,6 +187,25 @@ fun DashboardScreen(
                         horizontalArrangement = Arrangement.spacedBy(6.dp),
                         modifier = Modifier.padding(end = 8.dp)
                     ) {
+                        // 0. Theme Toggle (Light / Dark)
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f))
+                                .border(BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)), CircleShape)
+                                .clickable { viewModel.toggleDarkMode() }
+                                .testTag("theme_toggle_button"),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = if (isDarkMode) Icons.Default.LightMode else Icons.Default.DarkMode,
+                                contentDescription = if (isDarkMode) "Switch to Light Mode" else "Switch to Dark Mode",
+                                tint = if (isDarkMode) Color(0xFFFBBF24) else MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+
                         // 1. Settings (Budget, Biometrics, Preferences)
                         Box(
                             modifier = Modifier
@@ -1571,6 +1591,94 @@ fun DashboardScreen(
                         viewModel = viewModel,
                         onDismissParent = { showBudgetDialog = false }
                     )
+
+                    HorizontalDivider(
+                        modifier = Modifier.padding(vertical = 12.dp),
+                        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
+                    )
+
+                    // Theme Appearance Mode (Light / Dark)
+                    Text(
+                        text = "Theme Appearance",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.padding(top = 4.dp, bottom = 2.dp)
+                    )
+                    Card(
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                        ),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { viewModel.toggleDarkMode() }
+                            .testTag("dark_mode_settings_card")
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(14.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(36.dp)
+                                        .background(
+                                            if (isDarkMode) Color(0xFFFBBF24).copy(alpha = 0.2f)
+                                            else MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
+                                            CircleShape
+                                        ),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = if (isDarkMode) Icons.Default.DarkMode else Icons.Default.LightMode,
+                                        contentDescription = null,
+                                        tint = if (isDarkMode) Color(0xFFFBBF24) else MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                                Column {
+                                    Text(
+                                        text = if (isDarkMode) "Dark Theme" else "Light Theme",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Text(
+                                        text = if (isDarkMode) "Comfortable dark canvas for lower eye strain" else "Crisp high-contrast minimalist light aesthetic",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                            Switch(
+                                checked = isDarkMode,
+                                onCheckedChange = { viewModel.setDarkMode(it) },
+                                thumbContent = {
+                                    Icon(
+                                        imageVector = if (isDarkMode) Icons.Default.DarkMode else Icons.Default.LightMode,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(SwitchDefaults.IconSize)
+                                    )
+                                },
+                                colors = SwitchDefaults.colors(
+                                    checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
+                                    checkedTrackColor = MaterialTheme.colorScheme.primary,
+                                    uncheckedThumbColor = MaterialTheme.colorScheme.outline,
+                                    uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant
+                                ),
+                                modifier = Modifier.testTag("dark_mode_switch")
+                            )
+                        }
+                    }
 
                     HorizontalDivider(
                         modifier = Modifier.padding(vertical = 12.dp),
@@ -3030,6 +3138,7 @@ fun VisualAnalyticsSection(
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 // The Donut Pie Chart Canvas
+                val emptyDonutColor = MaterialTheme.colorScheme.outlineVariant
                 Box(
                     modifier = Modifier
                         .size(96.dp)
@@ -3043,7 +3152,7 @@ fun VisualAnalyticsSection(
                         
                         if (totalCurrentMonthSpent == 0.0) {
                             drawCircle(
-                                color = Color.LightGray.copy(alpha = 0.3f),
+                                color = emptyDonutColor.copy(alpha = 0.5f),
                                 radius = radius,
                                 style = Stroke(width = strokeWidth)
                             )
