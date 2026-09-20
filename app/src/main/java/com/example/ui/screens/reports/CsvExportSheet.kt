@@ -42,10 +42,10 @@ enum class CsvTransactionType(val label: String, val shortLabel: String) {
     INCOME("Income Only", "Income")
 }
 
-enum class CsvStatusFilter(val label: String) {
-    ALL("All Statuses"),
-    PAID_ONLY("Paid / Received Only"),
-    UNPAID_ONLY("Pending / Unpaid Only")
+enum class CsvStatusFilter(val label: String, val title: String, val subtitle: String) {
+    ALL("All Statuses", "All", "All Statuses"),
+    PAID_ONLY("Paid / Received Only", "Paid", "Paid / Received"),
+    UNPAID_ONLY("Pending / Unpaid Only", "Pending", "Pending / Unpaid")
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -563,7 +563,7 @@ fun CsvExportSheet(
             }
 
             // SECTION 3: Payment Status Filter
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(
                     text = "Payment Status",
                     style = MaterialTheme.typography.titleSmall,
@@ -577,21 +577,70 @@ fun CsvExportSheet(
                 ) {
                     CsvStatusFilter.entries.forEach { status ->
                         val isSelected = selectedStatus == status
-                        FilterChip(
-                            selected = isSelected,
+                        val activeColor = when (status) {
+                            CsvStatusFilter.ALL -> MaterialTheme.colorScheme.primary
+                            CsvStatusFilter.PAID_ONLY -> Color(0xFF10B981)
+                            CsvStatusFilter.UNPAID_ONLY -> Color(0xFFF59E0B)
+                        }
+
+                        Card(
                             onClick = { selectedStatus = status },
-                            label = {
-                                Text(
-                                    text = status.label,
-                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                                    fontSize = 12.sp
-                                )
-                            },
+                            shape = RoundedCornerShape(12.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = if (isSelected) activeColor.copy(alpha = 0.12f)
+                                else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
+                            ),
+                            border = BorderStroke(
+                                width = if (isSelected) 2.dp else 1.dp,
+                                color = if (isSelected) activeColor
+                                else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                            ),
                             modifier = Modifier
                                 .weight(1f)
-                                .height(32.dp)
                                 .testTag("csv_status_${status.name}")
-                        )
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 10.dp, horizontal = 4.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(2.dp)
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = when (status) {
+                                            CsvStatusFilter.ALL -> Icons.Default.FilterAlt
+                                            CsvStatusFilter.PAID_ONLY -> Icons.Default.CheckCircle
+                                            CsvStatusFilter.UNPAID_ONLY -> Icons.Default.Schedule
+                                        },
+                                        contentDescription = null,
+                                        tint = if (isSelected) activeColor else MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.size(14.dp)
+                                    )
+                                    Text(
+                                        text = status.title,
+                                        style = MaterialTheme.typography.labelLarge,
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.SemiBold,
+                                        color = if (isSelected) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
+                                        maxLines = 1
+                                    )
+                                }
+
+                                Text(
+                                    text = status.subtitle,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = if (isSelected) activeColor else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.75f),
+                                    fontSize = 10.sp,
+                                    fontWeight = if (isSelected) FontWeight.Medium else FontWeight.Normal,
+                                    textAlign = TextAlign.Center,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                        }
                     }
                 }
             }
