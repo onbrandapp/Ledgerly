@@ -1253,6 +1253,7 @@ fun LedgerReportView(
     if (showCsvExportSheet) {
         CsvExportSheet(
             transactions = transactions,
+            customCategories = customCategories,
             initialStartDate = ledgerStartDate,
             initialEndDate = ledgerEndDate,
             initialPreset = ledgerSelectedFilter,
