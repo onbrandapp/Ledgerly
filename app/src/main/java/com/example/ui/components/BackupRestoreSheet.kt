@@ -59,6 +59,8 @@ fun BackupRestoreSheet(
     var uriToRestore by remember { mutableStateOf<Uri?>(null) }
     var backupToDelete by remember { mutableStateOf<BackupMetadata?>(null) }
     var justCreatedFile by remember { mutableStateOf<File?>(null) }
+    var isRestoring by remember { mutableStateOf(false) }
+    var restoringBackupId by remember { mutableStateOf<String?>(null) }
 
     // Load initial backups
     LaunchedEffect(Unit) {
@@ -78,7 +80,11 @@ fun BackupRestoreSheet(
     }
 
     ModalBottomSheet(
-        onDismissRequest = onDismiss,
+        onDismissRequest = {
+            if (!isRestoring && !isLoading) {
+                onDismiss()
+            }
+        },
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
         containerColor = MaterialTheme.colorScheme.surface,
         shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
@@ -139,12 +145,13 @@ fun BackupRestoreSheet(
 
                 IconButton(
                     onClick = onDismiss,
+                    enabled = !isRestoring && !isLoading,
                     modifier = Modifier.testTag("close_backup_sheet_button")
                 ) {
                     Icon(
                         imageVector = Icons.Default.Close,
                         contentDescription = "Close",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        tint = if (!isRestoring && !isLoading) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f)
                     )
                 }
             }
@@ -208,13 +215,33 @@ fun BackupRestoreSheet(
                 )
             }
 
-            // Loading overlay/indicator
-            AnimatedVisibility(visible = isLoading) {
-                LinearProgressIndicator(
+            // Loading & Restoring Banner
+            AnimatedVisibility(visible = isLoading || isRestoring) {
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(bottom = 12.dp)
-                )
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(18.dp),
+                            strokeWidth = 2.dp,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        Text(
+                            text = if (isRestoring) "Restore actively running... Please wait and do not exit" else "Processing backup operation...",
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                    }
+                }
             }
 
             // Just Created Local Backup Success Banner
@@ -291,47 +318,71 @@ fun BackupRestoreSheet(
                 LocalBackupTabContent(
                     backups = localBackups,
                     isLoading = isLoading,
+                    isRestoring = isRestoring,
+                    restoringBackupId = restoringBackupId,
                     onCreateBackup = {
-                        viewModel.createLocalBackup { success, message, file ->
-                            if (success && file != null) {
-                                justCreatedFile = file
+                        if (!isRestoring && !isLoading) {
+                            viewModel.createLocalBackup { success, message, file ->
+                                if (success && file != null) {
+                                    justCreatedFile = file
+                                }
+                                Toast.makeText(context, message, Toast.LENGTH_LONG).show()
                             }
-                            Toast.makeText(context, message, Toast.LENGTH_LONG).show()
                         }
                     },
                     onImportFile = {
-                        filePickerLauncher.launch("*/*")
+                        if (!isRestoring && !isLoading) {
+                            filePickerLauncher.launch("*/*")
+                        }
                     },
                     onRestore = { backup ->
-                        val file = File(BackupManager.getBackupsDirectory(context), backup.fileName)
-                        fileToRestore = file
+                        if (!isRestoring && !isLoading) {
+                            restoringBackupId = backup.id
+                            val file = File(BackupManager.getBackupsDirectory(context), backup.fileName)
+                            fileToRestore = file
+                        }
                     },
                     onShare = { backup ->
-                        viewModel.shareLocalBackup(context, backup.fileName)
+                        if (!isRestoring && !isLoading) {
+                            viewModel.shareLocalBackup(context, backup.fileName)
+                        }
                     },
                     onDelete = { backup ->
-                        backupToDelete = backup
+                        if (!isRestoring && !isLoading) {
+                            backupToDelete = backup
+                        }
                     }
                 )
             } else {
                 CloudBackupTabContent(
                     backups = cloudBackups,
                     isLoading = isLoading,
+                    isRestoring = isRestoring,
+                    restoringBackupId = restoringBackupId,
                     isCloudAvailable = isCloudAvailable,
                     currentUserEmail = currentUserEmail,
                     onBackupToCloud = {
-                        viewModel.createCloudBackup { success, message ->
-                            Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+                        if (!isRestoring && !isLoading) {
+                            viewModel.createCloudBackup { success, message ->
+                                Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+                            }
                         }
                     },
                     onRefresh = {
-                        viewModel.loadCloudBackups()
+                        if (!isRestoring && !isLoading) {
+                            viewModel.loadCloudBackups()
+                        }
                     },
                     onRestore = { backup ->
-                        backupToRestore = backup
+                        if (!isRestoring && !isLoading) {
+                            restoringBackupId = backup.id
+                            backupToRestore = backup
+                        }
                     },
                     onDelete = { backup ->
-                        backupToDelete = backup
+                        if (!isRestoring && !isLoading) {
+                            backupToDelete = backup
+                        }
                     }
                 )
             }
@@ -341,46 +392,96 @@ fun BackupRestoreSheet(
     // Confirmation Dialog: Restore from Local File
     fileToRestore?.let { file ->
         AlertDialog(
-            onDismissRequest = { fileToRestore = null },
+            onDismissRequest = {
+                if (!isRestoring && !isLoading) {
+                    fileToRestore = null
+                    restoringBackupId = null
+                }
+            },
             icon = {
-                Icon(
-                    imageVector = Icons.Default.Restore,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(28.dp)
-                )
+                if (isRestoring) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(28.dp),
+                        strokeWidth = 2.5.dp,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                } else {
+                    Icon(
+                        imageVector = Icons.Default.Restore,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(28.dp)
+                    )
+                }
             },
             title = {
                 Text(
-                    text = "Restore Local Backup?",
+                    text = if (isRestoring) "Restoring Local Backup..." else "Restore Local Backup?",
                     fontWeight = FontWeight.Bold,
                     textAlign = TextAlign.Center
                 )
             },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(
-                        text = "Restoring from file:",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Text(
-                        text = file.name,
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                    Text(
-                        text = "This will restore all transactions, recurring items, categories, and settings from this backup. Your current ledger will be updated.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                    if (isRestoring) {
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(12.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(20.dp),
+                                    strokeWidth = 2.dp,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                                Column {
+                                    Text(
+                                        text = "Restoring in progress...",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                                    )
+                                    Text(
+                                        text = "Applying records and updating ledger. Please wait...",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
+                                    )
+                                }
+                            }
+                        }
+                    } else {
+                        Text(
+                            text = "Restoring from file:",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = file.name,
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        Text(
+                            text = "This will restore all transactions, recurring items, categories, and settings from this backup. Your current ledger will be updated.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
             },
             confirmButton = {
                 Button(
                     onClick = {
+                        if (isRestoring || isLoading) return@Button
+                        isRestoring = true
                         viewModel.restoreFromLocalFile(file, replaceExisting = true) { success, message ->
+                            isRestoring = false
+                            restoringBackupId = null
                             Toast.makeText(context, message, Toast.LENGTH_LONG).show()
                             if (success) {
                                 fileToRestore = null
@@ -388,13 +489,30 @@ fun BackupRestoreSheet(
                             }
                         }
                     },
+                    enabled = !isRestoring && !isLoading,
                     modifier = Modifier.testTag("confirm_restore_local_button")
                 ) {
-                    Text("Restore Now")
+                    if (isRestoring) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(16.dp),
+                            strokeWidth = 2.dp,
+                            color = MaterialTheme.colorScheme.onPrimary
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Restoring...")
+                    } else {
+                        Text("Restore Now")
+                    }
                 }
             },
             dismissButton = {
-                TextButton(onClick = { fileToRestore = null }) {
+                TextButton(
+                    onClick = {
+                        fileToRestore = null
+                        restoringBackupId = null
+                    },
+                    enabled = !isRestoring && !isLoading
+                ) {
                     Text("Cancel")
                 }
             }
@@ -404,33 +522,85 @@ fun BackupRestoreSheet(
     // Confirmation Dialog: Restore from Selected URI
     uriToRestore?.let { uri ->
         AlertDialog(
-            onDismissRequest = { uriToRestore = null },
+            onDismissRequest = {
+                if (!isRestoring && !isLoading) {
+                    uriToRestore = null
+                    restoringBackupId = null
+                }
+            },
             icon = {
-                Icon(
-                    imageVector = Icons.Default.FolderOpen,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(28.dp)
-                )
+                if (isRestoring) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(28.dp),
+                        strokeWidth = 2.5.dp,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                } else {
+                    Icon(
+                        imageVector = Icons.Default.FolderOpen,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(28.dp)
+                    )
+                }
             },
             title = {
                 Text(
-                    text = "Restore from Backup File?",
+                    text = if (isRestoring) "Restoring from Backup File..." else "Restore from Backup File?",
                     fontWeight = FontWeight.Bold,
                     textAlign = TextAlign.Center
                 )
             },
             text = {
-                Text(
-                    text = "The selected JSON file will be read and verified. Restoring will apply all saved transactions, recurring schedules, custom categories, and theme settings to this install.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    if (isRestoring) {
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(12.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(20.dp),
+                                    strokeWidth = 2.dp,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                                Column {
+                                    Text(
+                                        text = "Restoring in progress...",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                                    )
+                                    Text(
+                                        text = "Verifying JSON and importing records. Please wait...",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
+                                    )
+                                }
+                            }
+                        }
+                    } else {
+                        Text(
+                            text = "The selected JSON file will be read and verified. Restoring will apply all saved transactions, recurring schedules, custom categories, and theme settings to this install.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
             },
             confirmButton = {
                 Button(
                     onClick = {
+                        if (isRestoring || isLoading) return@Button
+                        isRestoring = true
                         viewModel.restoreFromUri(uri, replaceExisting = true) { success, message ->
+                            isRestoring = false
+                            restoringBackupId = null
                             Toast.makeText(context, message, Toast.LENGTH_LONG).show()
                             if (success) {
                                 uriToRestore = null
@@ -438,13 +608,30 @@ fun BackupRestoreSheet(
                             }
                         }
                     },
+                    enabled = !isRestoring && !isLoading,
                     modifier = Modifier.testTag("confirm_restore_uri_button")
                 ) {
-                    Text("Restore")
+                    if (isRestoring) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(16.dp),
+                            strokeWidth = 2.dp,
+                            color = MaterialTheme.colorScheme.onPrimary
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Restoring...")
+                    } else {
+                        Text("Restore")
+                    }
                 }
             },
             dismissButton = {
-                TextButton(onClick = { uriToRestore = null }) {
+                TextButton(
+                    onClick = {
+                        uriToRestore = null
+                        restoringBackupId = null
+                    },
+                    enabled = !isRestoring && !isLoading
+                ) {
                     Text("Cancel")
                 }
             }
@@ -454,46 +641,96 @@ fun BackupRestoreSheet(
     // Confirmation Dialog: Restore from Cloud
     backupToRestore?.let { backup ->
         AlertDialog(
-            onDismissRequest = { backupToRestore = null },
+            onDismissRequest = {
+                if (!isRestoring && !isLoading) {
+                    backupToRestore = null
+                    restoringBackupId = null
+                }
+            },
             icon = {
-                Icon(
-                    imageVector = Icons.Default.CloudDownload,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(28.dp)
-                )
+                if (isRestoring) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(28.dp),
+                        strokeWidth = 2.5.dp,
+                        color = Color(0xFF10B981)
+                    )
+                } else {
+                    Icon(
+                        imageVector = Icons.Default.CloudDownload,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(28.dp)
+                    )
+                }
             },
             title = {
                 Text(
-                    text = "Restore from Cloud?",
+                    text = if (isRestoring) "Restoring from Cloud..." else "Restore from Cloud?",
                     fontWeight = FontWeight.Bold,
                     textAlign = TextAlign.Center
                 )
             },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(
-                        text = "Cloud snapshot from ${backup.formattedDate}:",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Text(
-                        text = "• ${backup.transactionsCount} Transactions\n• ${backup.recurringCount} Recurring Items\n• ${backup.categoriesCount} Categories\n• ${backup.forecastCount} Forecasts",
-                        style = MaterialTheme.typography.bodySmall,
-                        fontWeight = FontWeight.Medium,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Text(
-                        text = "Restoring will update your local install with the cloud snapshot data.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                    if (isRestoring) {
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = Color(0xFF10B981).copy(alpha = 0.15f),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(12.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(20.dp),
+                                    strokeWidth = 2.dp,
+                                    color = Color(0xFF059669)
+                                )
+                                Column {
+                                    Text(
+                                        text = "Downloading Cloud Snapshot...",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color(0xFF047857)
+                                    )
+                                    Text(
+                                        text = "Fetching and restoring records from Firestore. Please wait...",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = Color(0xFF047857).copy(alpha = 0.85f)
+                                    )
+                                }
+                            }
+                        }
+                    } else {
+                        Text(
+                            text = "Cloud snapshot from ${backup.formattedDate}:",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = "• ${backup.transactionsCount} Transactions\n• ${backup.recurringCount} Recurring Items\n• ${backup.categoriesCount} Categories\n• ${backup.forecastCount} Forecasts",
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = "Restoring will update your local install with the cloud snapshot data.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
             },
             confirmButton = {
                 Button(
                     onClick = {
+                        if (isRestoring || isLoading) return@Button
+                        isRestoring = true
                         viewModel.restoreFromCloud(backup.id, replaceExisting = true) { success, message ->
+                            isRestoring = false
+                            restoringBackupId = null
                             Toast.makeText(context, message, Toast.LENGTH_LONG).show()
                             if (success) {
                                 backupToRestore = null
@@ -501,13 +738,33 @@ fun BackupRestoreSheet(
                             }
                         }
                     },
+                    enabled = !isRestoring && !isLoading,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFF059669)
+                    ),
                     modifier = Modifier.testTag("confirm_restore_cloud_button")
                 ) {
-                    Text("Restore from Cloud")
+                    if (isRestoring) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(16.dp),
+                            strokeWidth = 2.dp,
+                            color = Color.White
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Restoring...", color = Color.White)
+                    } else {
+                        Text("Restore from Cloud", color = Color.White)
+                    }
                 }
             },
             dismissButton = {
-                TextButton(onClick = { backupToRestore = null }) {
+                TextButton(
+                    onClick = {
+                        backupToRestore = null
+                        restoringBackupId = null
+                    },
+                    enabled = !isRestoring && !isLoading
+                ) {
                     Text("Cancel")
                 }
             }
@@ -568,6 +825,8 @@ fun BackupRestoreSheet(
 private fun LocalBackupTabContent(
     backups: List<BackupMetadata>,
     isLoading: Boolean,
+    isRestoring: Boolean = false,
+    restoringBackupId: String? = null,
     onCreateBackup: () -> Unit,
     onImportFile: () -> Unit,
     onRestore: (BackupMetadata) -> Unit,
@@ -610,7 +869,7 @@ private fun LocalBackupTabContent(
                 ) {
                     Button(
                         onClick = onCreateBackup,
-                        enabled = !isLoading,
+                        enabled = !isLoading && !isRestoring,
                         shape = RoundedCornerShape(12.dp),
                         modifier = Modifier
                             .weight(1f)
@@ -627,7 +886,7 @@ private fun LocalBackupTabContent(
 
                     OutlinedButton(
                         onClick = onImportFile,
-                        enabled = !isLoading,
+                        enabled = !isLoading && !isRestoring,
                         shape = RoundedCornerShape(12.dp),
                         modifier = Modifier
                             .weight(1f)
@@ -702,7 +961,9 @@ private fun LocalBackupTabContent(
                         metadata = backup,
                         onRestore = { onRestore(backup) },
                         onShare = { onShare(backup) },
-                        onDelete = { onDelete(backup) }
+                        onDelete = { onDelete(backup) },
+                        enabled = !isLoading && !isRestoring,
+                        isRestoringThis = (isLoading || isRestoring) && restoringBackupId == backup.id
                     )
                 }
             }
@@ -714,6 +975,8 @@ private fun LocalBackupTabContent(
 private fun CloudBackupTabContent(
     backups: List<BackupMetadata>,
     isLoading: Boolean,
+    isRestoring: Boolean = false,
+    restoringBackupId: String? = null,
     isCloudAvailable: Boolean,
     currentUserEmail: String?,
     onBackupToCloud: () -> Unit,
@@ -814,7 +1077,7 @@ private fun CloudBackupTabContent(
                     ) {
                         Button(
                             onClick = onBackupToCloud,
-                            enabled = !isLoading,
+                            enabled = !isLoading && !isRestoring,
                             shape = RoundedCornerShape(12.dp),
                             modifier = Modifier
                                 .weight(1f)
@@ -831,7 +1094,7 @@ private fun CloudBackupTabContent(
 
                         OutlinedButton(
                             onClick = onRefresh,
-                            enabled = !isLoading,
+                            enabled = !isLoading && !isRestoring,
                             shape = RoundedCornerShape(12.dp),
                             modifier = Modifier.testTag("refresh_cloud_backups_button")
                         ) {
@@ -928,7 +1191,9 @@ private fun CloudBackupTabContent(
                             metadata = backup,
                             onRestore = { onRestore(backup) },
                             onShare = null,
-                            onDelete = { onDelete(backup) }
+                            onDelete = { onDelete(backup) },
+                            enabled = !isLoading && !isRestoring,
+                            isRestoringThis = (isLoading || isRestoring) && restoringBackupId == backup.id
                         )
                     }
                 }
@@ -942,7 +1207,9 @@ private fun BackupItemCard(
     metadata: BackupMetadata,
     onRestore: () -> Unit,
     onShare: (() -> Unit)?,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
+    enabled: Boolean = true,
+    isRestoringThis: Boolean = false
 ) {
     Card(
         shape = RoundedCornerShape(16.dp),
@@ -1008,12 +1275,13 @@ private fun BackupItemCard(
                     if (onShare != null) {
                         IconButton(
                             onClick = onShare,
+                            enabled = enabled && !isRestoringThis,
                             modifier = Modifier.size(32.dp)
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Share,
                                 contentDescription = "Share",
-                                tint = MaterialTheme.colorScheme.primary,
+                                tint = if (enabled && !isRestoringThis) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f),
                                 modifier = Modifier.size(16.dp)
                             )
                         }
@@ -1021,12 +1289,13 @@ private fun BackupItemCard(
 
                     IconButton(
                         onClick = onDelete,
+                        enabled = enabled && !isRestoringThis,
                         modifier = Modifier.size(32.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Default.Delete,
                             contentDescription = "Delete",
-                            tint = MaterialTheme.colorScheme.error.copy(alpha = 0.8f),
+                            tint = if (enabled && !isRestoringThis) MaterialTheme.colorScheme.error.copy(alpha = 0.8f) else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f),
                             modifier = Modifier.size(16.dp)
                         )
                     }
@@ -1047,17 +1316,28 @@ private fun BackupItemCard(
 
                 Button(
                     onClick = onRestore,
+                    enabled = enabled && !isRestoringThis,
                     contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
                     shape = RoundedCornerShape(8.dp),
                     modifier = Modifier.height(32.dp)
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Restore,
-                        contentDescription = null,
-                        modifier = Modifier.size(14.dp)
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text("Restore", style = MaterialTheme.typography.labelMedium)
+                    if (isRestoringThis) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(12.dp),
+                            strokeWidth = 2.dp,
+                            color = MaterialTheme.colorScheme.onPrimary
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Restoring...", style = MaterialTheme.typography.labelMedium)
+                    } else {
+                        Icon(
+                            imageVector = Icons.Default.Restore,
+                            contentDescription = null,
+                            modifier = Modifier.size(14.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Restore", style = MaterialTheme.typography.labelMedium)
+                    }
                 }
             }
         }
