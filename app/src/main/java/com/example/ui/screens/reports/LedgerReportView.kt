@@ -57,6 +57,7 @@ fun LedgerReportView(
     var ledgerStartDate by remember { mutableStateOf<Long?>(null) }
     var ledgerEndDate by remember { mutableStateOf<Long?>(null) }
     var hidePaidExpenses by remember { mutableStateOf(false) }
+    var pendingDeleteTransaction by remember { mutableStateOf<Transaction?>(null) }
 
     // Automatic date range calculations
     LaunchedEffect(ledgerSelectedFilter) {
@@ -653,32 +654,52 @@ fun LedgerReportView(
 
                                     Spacer(modifier = Modifier.height(4.dp))
 
-                                    // Row 3: Category badge, Status chip, and compact actions on a single line
+                                    // Row 3: Edit button at far left, Category badge & Status chip in center, Delete button at far right
                                     Row(
                                         modifier = Modifier.fillMaxWidth(),
                                         horizontalArrangement = Arrangement.SpaceBetween,
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        Surface(
-                                            color = catStyle.color.copy(alpha = 0.18f),
-                                            shape = RoundedCornerShape(4.dp),
-                                            modifier = Modifier.weight(1f, fill = false)
+                                        // Far Left: Edit Button
+                                        IconButton(
+                                            onClick = { onEditTransaction(item) },
+                                            modifier = Modifier
+                                                .size(24.dp)
+                                                .testTag("ledger_edit_${item.id}")
                                         ) {
-                                            Text(
-                                                text = item.category,
-                                                style = MaterialTheme.typography.labelSmall,
-                                                color = catStyle.color,
-                                                fontWeight = FontWeight.Bold,
-                                                fontSize = 9.sp,
-                                                maxLines = 1,
-                                                overflow = TextOverflow.Ellipsis,
-                                                modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
+                                            Icon(
+                                                imageVector = Icons.Default.Edit,
+                                                contentDescription = "Edit",
+                                                tint = MaterialTheme.colorScheme.primary,
+                                                modifier = Modifier.size(13.dp)
                                             )
                                         }
 
-                                        Spacer(modifier = Modifier.width(4.dp))
+                                        // Middle: Category badge and Status chip
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                            modifier = Modifier
+                                                .weight(1f, fill = false)
+                                                .padding(horizontal = 2.dp)
+                                        ) {
+                                            Surface(
+                                                color = catStyle.color.copy(alpha = 0.18f),
+                                                shape = RoundedCornerShape(4.dp),
+                                                modifier = Modifier.weight(1f, fill = false)
+                                            ) {
+                                                Text(
+                                                    text = item.category,
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    color = catStyle.color,
+                                                    fontWeight = FontWeight.Bold,
+                                                    fontSize = 9.sp,
+                                                    maxLines = 1,
+                                                    overflow = TextOverflow.Ellipsis,
+                                                    modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
+                                                )
+                                            }
 
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
                                             if (!isCash) {
                                                 Surface(
                                                     color = if (item.paid) Color(0xFF10B981).copy(alpha = 0.2f) else Color(0xFFF59E0B).copy(alpha = 0.2f),
@@ -698,33 +719,22 @@ fun LedgerReportView(
                                                         modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
                                                     )
                                                 }
-
-                                                Spacer(modifier = Modifier.width(2.dp))
                                             }
+                                        }
 
-                                            IconButton(
-                                                onClick = { onEditTransaction(item) },
-                                                modifier = Modifier.size(22.dp).testTag("ledger_edit_${item.id}")
-                                            ) {
-                                                Icon(
-                                                    imageVector = Icons.Default.Edit,
-                                                    contentDescription = "Edit",
-                                                    tint = MaterialTheme.colorScheme.primary,
-                                                    modifier = Modifier.size(13.dp)
-                                                )
-                                            }
-
-                                            IconButton(
-                                                onClick = { onDeleteTransaction(item) },
-                                                modifier = Modifier.size(22.dp).testTag("ledger_delete_${item.id}")
-                                            ) {
-                                                Icon(
-                                                    imageVector = Icons.Default.DeleteOutline,
-                                                    contentDescription = "Delete",
-                                                    tint = MaterialTheme.colorScheme.error,
-                                                    modifier = Modifier.size(13.dp)
-                                                )
-                                            }
+                                        // Far Right: Delete Button
+                                        IconButton(
+                                            onClick = { pendingDeleteTransaction = item },
+                                            modifier = Modifier
+                                                .size(24.dp)
+                                                .testTag("ledger_delete_${item.id}")
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.DeleteOutline,
+                                                contentDescription = "Delete",
+                                                tint = MaterialTheme.colorScheme.error,
+                                                modifier = Modifier.size(13.dp)
+                                            )
                                         }
                                     }
                                 }
@@ -847,32 +857,52 @@ fun LedgerReportView(
 
                                     Spacer(modifier = Modifier.height(4.dp))
 
-                                    // Row 3: Category badge, Status chip, and compact actions on a single line
+                                    // Row 3: Edit button at far left, Category badge & Status chip in center, Delete button at far right
                                     Row(
                                         modifier = Modifier.fillMaxWidth(),
                                         horizontalArrangement = Arrangement.SpaceBetween,
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        Surface(
-                                            color = catStyle.color.copy(alpha = 0.18f),
-                                            shape = RoundedCornerShape(4.dp),
-                                            modifier = Modifier.weight(1f, fill = false)
+                                        // Far Left: Edit Button
+                                        IconButton(
+                                            onClick = { onEditTransaction(item) },
+                                            modifier = Modifier
+                                                .size(24.dp)
+                                                .testTag("ledger_edit_${item.id}")
                                         ) {
-                                            Text(
-                                                text = item.category,
-                                                style = MaterialTheme.typography.labelSmall,
-                                                color = catStyle.color,
-                                                fontWeight = FontWeight.Bold,
-                                                fontSize = 9.sp,
-                                                maxLines = 1,
-                                                overflow = TextOverflow.Ellipsis,
-                                                modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
+                                            Icon(
+                                                imageVector = Icons.Default.Edit,
+                                                contentDescription = "Edit",
+                                                tint = MaterialTheme.colorScheme.primary,
+                                                modifier = Modifier.size(13.dp)
                                             )
                                         }
 
-                                        Spacer(modifier = Modifier.width(4.dp))
+                                        // Middle: Category badge and Status chip
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                            modifier = Modifier
+                                                .weight(1f, fill = false)
+                                                .padding(horizontal = 2.dp)
+                                        ) {
+                                            Surface(
+                                                color = catStyle.color.copy(alpha = 0.18f),
+                                                shape = RoundedCornerShape(4.dp),
+                                                modifier = Modifier.weight(1f, fill = false)
+                                            ) {
+                                                Text(
+                                                    text = item.category,
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    color = catStyle.color,
+                                                    fontWeight = FontWeight.Bold,
+                                                    fontSize = 9.sp,
+                                                    maxLines = 1,
+                                                    overflow = TextOverflow.Ellipsis,
+                                                    modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
+                                                )
+                                            }
 
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
                                             Surface(
                                                 color = if (item.paid) Color(0xFF10B981).copy(alpha = 0.2f) else MaterialTheme.colorScheme.error.copy(alpha = 0.2f),
                                                 shape = RoundedCornerShape(4.dp),
@@ -891,32 +921,21 @@ fun LedgerReportView(
                                                     modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
                                                 )
                                             }
+                                        }
 
-                                            Spacer(modifier = Modifier.width(2.dp))
-
-                                            IconButton(
-                                                onClick = { onEditTransaction(item) },
-                                                modifier = Modifier.size(22.dp).testTag("ledger_edit_${item.id}")
-                                            ) {
-                                                Icon(
-                                                    imageVector = Icons.Default.Edit,
-                                                    contentDescription = "Edit",
-                                                    tint = MaterialTheme.colorScheme.primary,
-                                                    modifier = Modifier.size(13.dp)
-                                                )
-                                            }
-
-                                            IconButton(
-                                                onClick = { onDeleteTransaction(item) },
-                                                modifier = Modifier.size(22.dp).testTag("ledger_delete_${item.id}")
-                                            ) {
-                                                Icon(
-                                                    imageVector = Icons.Default.DeleteOutline,
-                                                    contentDescription = "Delete",
-                                                    tint = MaterialTheme.colorScheme.error,
-                                                    modifier = Modifier.size(13.dp)
-                                                )
-                                            }
+                                        // Far Right: Delete Button
+                                        IconButton(
+                                            onClick = { pendingDeleteTransaction = item },
+                                            modifier = Modifier
+                                                .size(24.dp)
+                                                .testTag("ledger_delete_${item.id}")
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.DeleteOutline,
+                                                contentDescription = "Delete",
+                                                tint = MaterialTheme.colorScheme.error,
+                                                modifier = Modifier.size(13.dp)
+                                            )
                                         }
                                     }
                                 }
@@ -1122,5 +1141,100 @@ fun LedgerReportView(
         }
 
         Spacer(modifier = Modifier.height(32.dp))
+    }
+
+    // Delete Confirmation Dialog
+    if (pendingDeleteTransaction != null) {
+        val tx = pendingDeleteTransaction!!
+        val isIncome = tx.type.equals("INCOME", ignoreCase = true)
+        AlertDialog(
+            onDismissRequest = { pendingDeleteTransaction = null },
+            icon = {
+                Icon(
+                    imageVector = Icons.Default.DeleteOutline,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.size(28.dp)
+                )
+            },
+            title = {
+                Text(
+                    text = "Delete Entry?",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text(
+                        text = "Are you sure you want to delete this ledger entry? This action cannot be undone.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Surface(
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                        shape = RoundedCornerShape(8.dp),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(modifier = Modifier.padding(12.dp)) {
+                            Text(
+                                text = tx.description.ifBlank { "Untitled" },
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = tx.category,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Text(
+                                    text = "${if (isIncome) "+" else "-"}$${String.format(Locale.US, "%,.2f", tx.amount)}",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (isIncome) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.error
+                                )
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val target = pendingDeleteTransaction
+                        pendingDeleteTransaction = null
+                        if (target != null) {
+                            onDeleteTransaction(target)
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error,
+                        contentColor = MaterialTheme.colorScheme.onError
+                    ),
+                    modifier = Modifier.testTag("confirm_delete_ledger_btn")
+                ) {
+                    Text("Delete", fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { pendingDeleteTransaction = null },
+                    modifier = Modifier.testTag("cancel_delete_ledger_btn")
+                ) {
+                    Text("Cancel")
+                }
+            },
+            containerColor = MaterialTheme.colorScheme.surface,
+            shape = RoundedCornerShape(16.dp)
+        )
     }
 }

@@ -1,6 +1,7 @@
 package com.example.ui.screens.reports
 
 import android.content.Context
+import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.pdf.PdfDocument
@@ -9,6 +10,7 @@ import com.example.data.Transaction
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import kotlin.math.abs
 
 object LedgerReportExporter {
 
@@ -161,6 +163,7 @@ object LedgerReportExporter {
 
         while (incomeIndex < incomes.size || expenseIndex < expenses.size) {
             if (yPosition > 780f) {
+                drawWatermark(canvas)
                 pdfDocument.finishPage(page)
                 val newPageInfo = PdfDocument.PageInfo.Builder(595, 842, pdfDocument.pages.size + 1).create()
                 page = pdfDocument.startPage(newPageInfo)
@@ -209,18 +212,24 @@ object LedgerReportExporter {
         }
 
         // Summary footer on last page if space allows, or start new page
-        if (yPosition > 700f) {
+        // Summary block with enhanced spacing requires ~180f vertical clearance
+        if (yPosition > 600f) {
+            drawWatermark(canvas)
             pdfDocument.finishPage(page)
             val newPageInfo = PdfDocument.PageInfo.Builder(595, 842, pdfDocument.pages.size + 1).create()
             page = pdfDocument.startPage(newPageInfo)
             canvas = page.canvas
             yPosition = 50f
         } else {
-            yPosition += 20f
+            yPosition += 28f
         }
 
-        canvas.drawLine(45f, yPosition, 550f, yPosition, linePaint)
-        yPosition += 20f
+        val summaryDividerPaint = Paint().apply {
+            strokeWidth = 0.8f
+            color = Color.rgb(203, 213, 225)
+        }
+        canvas.drawLine(45f, yPosition, 550f, yPosition, summaryDividerPaint)
+        yPosition += 26f
 
         val cashOnHand = incomes.filter { it.category.trim().equals("cash", ignoreCase = true) }.sumOf { it.amount }
         val totalIncome = incomes.filter { !it.category.trim().equals("cash", ignoreCase = true) }.sumOf { it.amount }
@@ -230,17 +239,62 @@ object LedgerReportExporter {
         val netBalance = cashOnHand + (totalIncome - totalExpense)
         val currentBalance = cashOnHand + totalLeftToReceive - totalLeftToPay
 
-        canvas.drawText("SUMMARY TOTALS", 45f, yPosition, headerPaint)
-        yPosition += 16f
-        canvas.drawText("Total Income: +$${String.format(Locale.US, "%.2f", totalIncome)} (Left to Receive: +$${String.format(Locale.US, "%.2f", totalLeftToReceive)})", 45f, yPosition, textPaint)
-        yPosition += 14f
-        canvas.drawText("Cash on Hand: +$${String.format(Locale.US, "%.2f", cashOnHand)}", 45f, yPosition, textPaint)
-        yPosition += 14f
-        canvas.drawText("Total Expenses: -$${String.format(Locale.US, "%.2f", totalExpense)} (Left to Pay: -$${String.format(Locale.US, "%.2f", totalLeftToPay)})", 45f, yPosition, textPaint)
-        yPosition += 14f
-        canvas.drawText("Net Balance: $${String.format(Locale.US, "%.2f", netBalance)}", 45f, yPosition, headerPaint)
-        yPosition += 14f
-        canvas.drawText("Projected Current Balance: $${String.format(Locale.US, "%.2f", currentBalance)}", 45f, yPosition, headerPaint)
+        val summaryTitlePaint = Paint().apply {
+            textSize = 12f
+            isFakeBoldText = true
+            color = Color.rgb(15, 23, 42)
+            isAntiAlias = true
+        }
+
+        val summaryItemPaint = Paint().apply {
+            textSize = 9.5f
+            color = Color.rgb(51, 65, 85)
+            isAntiAlias = true
+        }
+
+        val summaryBoldPaint = Paint().apply {
+            textSize = 10.5f
+            isFakeBoldText = true
+            color = Color.rgb(15, 23, 42)
+            isAntiAlias = true
+        }
+
+        // Summary Title
+        canvas.drawText("SUMMARY TOTALS", 45f, yPosition, summaryTitlePaint)
+        yPosition += 24f
+
+        // Total Income line with generous spacing
+        val incomeStr = "Total Income: +$${String.format(Locale.US, "%,.2f", totalIncome)}  (Left to Receive: +$${String.format(Locale.US, "%,.2f", totalLeftToReceive)})"
+        canvas.drawText(incomeStr, 45f, yPosition, summaryItemPaint)
+        yPosition += 22f
+
+        // Cash on Hand line
+        val cashStr = "Cash on Hand: +$${String.format(Locale.US, "%,.2f", cashOnHand)}"
+        canvas.drawText(cashStr, 45f, yPosition, summaryItemPaint)
+        yPosition += 22f
+
+        // Total Expenses line
+        val expenseStr = "Total Expenses: -$${String.format(Locale.US, "%,.2f", totalExpense)}  (Left to Pay: -$${String.format(Locale.US, "%,.2f", totalLeftToPay)})"
+        canvas.drawText(expenseStr, 45f, yPosition, summaryItemPaint)
+        yPosition += 26f
+
+        // Subtle divider separating breakdown from balance conclusions
+        canvas.drawLine(45f, yPosition, 550f, yPosition, summaryDividerPaint)
+        yPosition += 24f
+
+        // Net Balance line
+        val netSign = if (netBalance < 0) "-" else ""
+        val netBalanceStr = "Net Balance: $netSign$${String.format(Locale.US, "%,.2f", abs(netBalance))}"
+        canvas.drawText(netBalanceStr, 45f, yPosition, summaryBoldPaint)
+        yPosition += 24f
+
+        // Projected Current Balance line
+        val currentSign = if (currentBalance < 0) "-" else ""
+        val currentBalanceStr = "Projected Current Balance: $currentSign$${String.format(Locale.US, "%,.2f", abs(currentBalance))}"
+        canvas.drawText(currentBalanceStr, 45f, yPosition, summaryBoldPaint)
+
+        // Draw watermark across the middle of the page
+        drawWatermark(canvas)
 
         pdfDocument.finishPage(page)
 
@@ -248,5 +302,23 @@ object LedgerReportExporter {
             pdfDocument.writeTo(os)
         }
         pdfDocument.close()
+    }
+
+    private fun drawWatermark(canvas: Canvas, pageWidth: Float = 595f, pageHeight: Float = 842f) {
+        val watermarkPaint = Paint().apply {
+            color = Color.argb(34, 100, 116, 139) // Crisp slate grey with ~13% opacity
+            textSize = 66f
+            isFakeBoldText = true
+            isAntiAlias = true
+            textAlign = Paint.Align.CENTER
+            letterSpacing = 0.12f
+        }
+
+        canvas.save()
+        canvas.translate(pageWidth / 2f, pageHeight / 2f)
+        canvas.rotate(-35f)
+        val yOffset = (watermarkPaint.descent() + watermarkPaint.ascent()) / 2f
+        canvas.drawText("LEDGERLY", 0f, -yOffset, watermarkPaint)
+        canvas.restore()
     }
 }

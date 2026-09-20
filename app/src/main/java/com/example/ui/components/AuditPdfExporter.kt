@@ -2,6 +2,7 @@ package com.example.ui.components
 
 import android.content.Context
 import android.content.Intent
+import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.pdf.PdfDocument
@@ -243,6 +244,7 @@ object AuditPdfExporter {
                         pageHeight - 20f,
                         subtitlePaint
                     )
+                    drawWatermark(canvas, pageWidth.toFloat(), pageHeight.toFloat())
                     document.finishPage(page)
 
                     pageNumber++
@@ -332,6 +334,7 @@ object AuditPdfExporter {
             pageHeight - 20f,
             subtitlePaint
         )
+        drawWatermark(canvas, pageWidth.toFloat(), pageHeight.toFloat())
         document.finishPage(page)
 
         // Write file
@@ -367,5 +370,23 @@ object AuditPdfExporter {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
         context.startActivity(chooser)
+    }
+
+    private fun drawWatermark(canvas: Canvas, pageWidth: Float = 595f, pageHeight: Float = 842f) {
+        val watermarkPaint = Paint().apply {
+            color = Color.argb(34, 100, 116, 139) // Crisp slate grey with ~13% opacity
+            textSize = 66f
+            isFakeBoldText = true
+            isAntiAlias = true
+            textAlign = Paint.Align.CENTER
+            letterSpacing = 0.12f
+        }
+
+        canvas.save()
+        canvas.translate(pageWidth / 2f, pageHeight / 2f)
+        canvas.rotate(-35f)
+        val yOffset = (watermarkPaint.descent() + watermarkPaint.ascent()) / 2f
+        canvas.drawText("LEDGERLY", 0f, -yOffset, watermarkPaint)
+        canvas.restore()
     }
 }
