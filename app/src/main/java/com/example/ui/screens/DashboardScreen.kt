@@ -59,6 +59,7 @@ import android.app.DatePickerDialog
 import java.util.Calendar
 import com.example.data.Transaction
 import com.example.data.CustomCategory
+import com.example.ui.components.BackupRestoreSheet
 import com.example.ui.components.BiometricSettingsCard
 import com.example.ui.components.CategoryCustomizationDialog
 import com.example.ui.theme.AppAccentPresets
@@ -107,6 +108,7 @@ fun DashboardScreen(
     val coroutineScope = rememberCoroutineScope()
 
     var showBudgetDialog by remember { mutableStateOf(false) }
+    var showBackupRestoreSheet by remember { mutableStateOf(false) }
     var tempPrimaryHex by remember(primaryColorHex) { mutableStateOf(primaryColorHex) }
     var tempSecondaryHex by remember(secondaryColorHex) { mutableStateOf(secondaryColorHex) }
     var tempAccentHex by remember(accentColorHex) { mutableStateOf(accentColorHex) }
@@ -1826,6 +1828,79 @@ fun DashboardScreen(
                             )
                         }
                     }
+
+                    HorizontalDivider(
+                        modifier = Modifier.padding(vertical = 12.dp),
+                        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
+                    )
+
+                    Text(
+                        text = "Data Backup & Recovery",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.padding(top = 4.dp, bottom = 2.dp)
+                    )
+
+                    Card(
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                        ),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                showBudgetDialog = false
+                                showBackupRestoreSheet = true
+                            }
+                            .testTag("backup_restore_settings_card")
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(14.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(36.dp)
+                                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f), CircleShape),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Backup,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                                Column {
+                                    Text(
+                                        text = "Backup & Restore",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Text(
+                                        text = "Local files & Free Cloud Backups (Firestore)",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                            Icon(
+                                imageVector = Icons.Default.ChevronRight,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+                    }
                 }
 
                 Row(
@@ -1865,6 +1940,13 @@ fun DashboardScreen(
                 }
             }
         }
+    }
+
+    if (showBackupRestoreSheet) {
+        BackupRestoreSheet(
+            viewModel = viewModel,
+            onDismiss = { showBackupRestoreSheet = false }
+        )
     }
 
     // --- MANUAL ENTRY BOTTOM DRAWER ---
@@ -4025,9 +4107,9 @@ fun ColorPickerBottomSheet(
                 )
                 
                 val premiumPresets = listOf(
-                    "#4F46E5", "#059669", "#2563EB", "#7C3AED",
-                    "#D97706", "#E11D48", "#0F172A", "#06B6D4",
-                    "#10B981", "#F59E0B", "#8B5CF6", "#EC4899"
+                    "#392720", "#4F46E5", "#059669", "#2563EB",
+                    "#7C3AED", "#D97706", "#E11D48", "#0F172A",
+                    "#06B6D4", "#10B981", "#F59E0B", "#8B5CF6"
                 )
                 
                 Column(

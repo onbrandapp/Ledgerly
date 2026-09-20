@@ -47,13 +47,25 @@ object LedgerReportExporter {
 
             append("\n")
             append("--- Summary ---\n")
-            append("Total Income,,,,${String.format(Locale.US, "%.2f", totalIncome)},\n")
-            append("Total Left to Receive,,,,${String.format(Locale.US, "%.2f", totalLeftToReceive)},\n")
-            append("Cash on Hand,,,,${String.format(Locale.US, "%.2f", cashOnHand)},\n")
-            append("Total Expenses,,,,${String.format(Locale.US, "%.2f", totalExpense)},\n")
-            append("Total Left to Pay,,,,${String.format(Locale.US, "%.2f", totalLeftToPay)},\n")
-            append("Net Balance,,,,${String.format(Locale.US, "%.2f", netBalance)},\n")
-            append("Current Balance,,,,${String.format(Locale.US, "%.2f", currentBalance)},\n")
+            append("Export Records,,,,${transactions.size},\n")
+            if (startDate != null && endDate != null) {
+                append("Date Range,,,,\"${formatter.format(Date(startDate))} to ${formatter.format(Date(endDate))}\",\n")
+            }
+            if (incomes.isNotEmpty()) {
+                append("Total Income,,,,${String.format(Locale.US, "%.2f", totalIncome)},\n")
+                append("Total Left to Receive,,,,${String.format(Locale.US, "%.2f", totalLeftToReceive)},\n")
+                if (cashOnHand > 0) {
+                    append("Cash on Hand,,,,${String.format(Locale.US, "%.2f", cashOnHand)},\n")
+                }
+            }
+            if (expenses.isNotEmpty()) {
+                append("Total Expenses,,,,${String.format(Locale.US, "%.2f", totalExpense)},\n")
+                append("Total Left to Pay,,,,${String.format(Locale.US, "%.2f", totalLeftToPay)},\n")
+            }
+            if (incomes.isNotEmpty() && expenses.isNotEmpty()) {
+                append("Net Balance,,,,${String.format(Locale.US, "%.2f", netBalance)},\n")
+                append("Current Balance,,,,${String.format(Locale.US, "%.2f", currentBalance)},\n")
+            }
         }
         context.contentResolver.openOutputStream(uri)?.use { os ->
             os.write(csvContent.toByteArray())

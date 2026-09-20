@@ -2,13 +2,17 @@ package com.example.ui.viewmodel
 
 import android.app.Application
 import android.content.Context
+import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.data.*
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
+import java.io.File
 import java.util.Calendar
 
 @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
@@ -118,7 +122,7 @@ class ExpenseViewModel(application: Application) : AndroidViewModel(application)
     private val _monthlyBudget = MutableStateFlow(budgetPrefs.getFloat("limit", 2000f).toDouble())
     val monthlyBudget = _monthlyBudget.asStateFlow()
 
-    // Theme Mode State (Light / Dark)
+    // Theme Mode State (Light / Dark - defaults to Light Mode for new installs)
     private val _isDarkMode = MutableStateFlow(budgetPrefs.getBoolean("is_dark_mode", false))
     val isDarkMode = _isDarkMode.asStateFlow()
 
@@ -133,11 +137,11 @@ class ExpenseViewModel(application: Application) : AndroidViewModel(application)
         _isDarkMode.value = enabled
     }
 
-    // Custom Theme Accent Color State (Default signature Indigo #4F46E5 matching web overhaul)
+    // Custom Theme Accent Color State (Default signature #392720 for new installs)
     private val savedAccent = budgetPrefs.getString("accent_color", null)
-        ?: budgetPrefs.getString("primary_color", "#4F46E5")
-        ?: "#4F46E5"
-    private val normalizedAccent = if (savedAccent == "#D9F99D" || savedAccent == "#FFD97D") "#4F46E5" else savedAccent
+        ?: budgetPrefs.getString("primary_color", null)
+        ?: "#392720"
+    private val normalizedAccent = if (savedAccent == "#D9F99D" || savedAccent == "#FFD97D") "#392720" else savedAccent
 
     private val _accentColor = MutableStateFlow(normalizedAccent)
     val accentColor = _accentColor.asStateFlow()
@@ -808,7 +812,7 @@ class ExpenseViewModel(application: Application) : AndroidViewModel(application)
     fun updateSecondaryColor(hex: String) = updateAccentColor(hex)
 
     fun resetThemeToDefault() {
-        updateAccentColor("#4F46E5")
+        updateAccentColor("#392720")
     }
 
     // Parse with Gemini
@@ -1319,6 +1323,267 @@ class ExpenseViewModel(application: Application) : AndroidViewModel(application)
             }
             val updated = item.copy(completedBullets = newCompleted, updatedAt = System.currentTimeMillis())
             transactionRepository.addFutureIncomeNote(email, updated)
+        }
+    }
+
+    // ==========================================
+    // BACKUP & RESTORE
+    // ==========================================
+
+    val isCloudAvailable: Boolean = BackupManager.isCloudAvailable(application)
+
+    private val _localBackups = MutableStateFlow<List<BackupMetadata>>(emptyList())
+    val localBackups = _localBackups.asStateFlow()
+
+    private val _cloudBackups = MutableStateFlow<List<BackupMetadata>>(emptyList())
+    val cloudBackups = _cloudBackups.asStateFlow()
+
+    private val _isBackupLoading = MutableStateFlow(false)
+    val isBackupLoading = _isBackupLoading.asStateFlow()
+
+    private val _backupStatusMessage = MutableStateFlow<String?>(null)
+    val backupStatusMessage = _backupStatusMessage.asStateFlow()
+
+    fun clearBackupStatusMessage() {
+        _backupStatusMessage.value = null
+    }
+
+    fun loadLocalBackups() {
+        viewModelScope.launch(Dispatchers.IO) {
+            val list = BackupManager.listLocalBackups(getApplication())
+            _localBackups.value = list
+        }
+    }
+
+    fun loadCloudBackups() {
+        val email = currentUserEmail.value
+        if (email.isNullOrBlank() || !isCloudAvailable) {
+            _cloudBackups.value = emptyList()
+            return
+        }
+        viewModelScope.launch(Dispatchers.IO) {
+            val result = BackupManager.listCloudBackups(email)
+            if (result.isSuccess) {
+                _cloudBackups.value = result.getOrDefault(emptyList())
+            }
+        }
+    }
+
+    fun buildCurrentBackupData(): BackupData {
+        val email = currentUserEmail.value ?: "local@ledgerly.app"
+        val settings = BackupSettings(
+            monthlyBudget = _monthlyBudget.value,
+            isDarkMode = _isDarkMode.value,
+            accentColor = _accentColor.value,
+            primaryColor = _primaryColor.value,
+            secondaryColor = _secondaryColor.value,
+            biometricEnabled = _isBiometricEnabled.value
+        )
+        return BackupData(
+            version = 1,
+            appName = "Ledgerly",
+            exportDate = System.currentTimeMillis(),
+            userEmail = email,
+            settings = settings,
+            transactions = transactions.value,
+            recurringTransactions = recurringTransactions.value,
+            customCategories = customCategories.value,
+            forecastIncomes = forecastIncomes.value,
+            futureIncomeNotes = futureIncomeNotes.value,
+            auditDeletedItems = auditDeletedItems.value
+        )
+    }
+
+    fun createLocalBackup(onFinished: (Boolean, String, File?) -> Unit = { _, _, _ -> }) {
+        viewModelScope.launch {
+            _isBackupLoading.value = true
+            val backupData = buildCurrentBackupData()
+            val result = BackupManager.createLocalBackup(getApplication(), backupData)
+            _isBackupLoading.value = false
+            if (result.isSuccess) {
+                val file = result.getOrNull()
+                loadLocalBackups()
+                _backupStatusMessage.value = "Local backup saved: ${file?.name}"
+                onFinished(true, "Local backup saved successfully!", file)
+            } else {
+                val err = result.exceptionOrNull()?.message ?: "Failed to save local backup"
+                _backupStatusMessage.value = err
+                onFinished(false, err, null)
+            }
+        }
+    }
+
+    fun createCloudBackup(onFinished: (Boolean, String) -> Unit = { _, _ -> }) {
+        val email = currentUserEmail.value
+        if (email.isNullOrBlank()) {
+            onFinished(false, "Please sign in to use Cloud Backup.")
+            return
+        }
+        viewModelScope.launch {
+            _isBackupLoading.value = true
+            val backupData = buildCurrentBackupData()
+            val result = BackupManager.createCloudBackup(email, backupData)
+            _isBackupLoading.value = false
+            if (result.isSuccess) {
+                loadCloudBackups()
+                _backupStatusMessage.value = "Cloud backup created successfully on Firebase Firestore!"
+                onFinished(true, "Cloud backup created successfully on Firebase Firestore ($0 Free Tier)!")
+            } else {
+                val err = result.exceptionOrNull()?.message ?: "Cloud backup failed"
+                _backupStatusMessage.value = err
+                onFinished(false, err)
+            }
+        }
+    }
+
+    fun restoreBackupData(backupData: BackupData, replaceExisting: Boolean = true, onFinished: (Boolean, String) -> Unit = { _, _ -> }) {
+        viewModelScope.launch(Dispatchers.IO) {
+            _isBackupLoading.value = true
+            try {
+                val email = currentUserEmail.value ?: backupData.userEmail.ifBlank { "local@ledgerly.app" }
+                val database = AppDatabase.getDatabase(getApplication())
+                val dao = database.transactionDao()
+
+                if (replaceExisting) {
+                    dao.clearAllTransactions()
+                    dao.clearAllRecurringTransactions()
+                    dao.clearCustomCategories(email)
+                    dao.clearForecastIncomes(email)
+                    dao.clearFutureIncomeNotes(email)
+                    dao.clearAuditDeletedItems(email)
+                }
+
+                // Insert transactions
+                if (backupData.transactions.isNotEmpty()) {
+                    dao.insertTransactions(backupData.transactions.map { LocalTransaction.fromDomain(it) })
+                }
+                // Insert recurring
+                if (backupData.recurringTransactions.isNotEmpty()) {
+                    dao.insertRecurringTransactions(backupData.recurringTransactions.map { LocalRecurringTransaction.fromDomain(it) })
+                }
+                // Insert categories
+                if (backupData.customCategories.isNotEmpty()) {
+                    dao.insertCustomCategories(backupData.customCategories.map { LocalCategory.fromDomain(it.copy(userEmail = email)) })
+                }
+                // Insert forecast
+                if (backupData.forecastIncomes.isNotEmpty()) {
+                    dao.insertForecastIncomes(backupData.forecastIncomes.map { LocalForecastIncome.fromDomain(it.copy(userEmail = email)) })
+                }
+                // Insert future income notes
+                if (backupData.futureIncomeNotes.isNotEmpty()) {
+                    dao.insertFutureIncomeNotes(backupData.futureIncomeNotes.map { LocalFutureIncomeNote.fromDomain(it.copy(userEmail = email)) })
+                }
+                // Insert audit items
+                if (backupData.auditDeletedItems.isNotEmpty()) {
+                    dao.insertAuditDeletedItems(backupData.auditDeletedItems.map { LocalAuditDeletedItem.fromDomain(it.copy(userEmail = email)) })
+                }
+
+                // If in Firebase mode, sync restored items to remote Firestore as well
+                if (isFirebaseMode && email.isNotBlank()) {
+                    backupData.transactions.forEach { transactionRepository.addTransaction(email, it) }
+                    backupData.recurringTransactions.forEach { transactionRepository.addRecurringTransaction(email, it) }
+                    backupData.customCategories.forEach { transactionRepository.addCustomCategory(email, it) }
+                    backupData.forecastIncomes.forEach { transactionRepository.addForecastIncome(email, it) }
+                    backupData.futureIncomeNotes.forEach { transactionRepository.addFutureIncomeNote(email, it) }
+                }
+
+                // Restore preferences on Main thread
+                withContext(Dispatchers.Main) {
+                    updateMonthlyBudget(backupData.settings.monthlyBudget)
+                    setDarkMode(backupData.settings.isDarkMode)
+                    updateAccentColor(backupData.settings.accentColor)
+                }
+
+                _isBackupLoading.value = false
+                val msg = "Restore complete: ${backupData.transactions.size} transactions, ${backupData.recurringTransactions.size} recurring, and ${backupData.customCategories.size} categories restored."
+                _backupStatusMessage.value = msg
+                withContext(Dispatchers.Main) {
+                    onFinished(true, msg)
+                }
+            } catch (e: Exception) {
+                _isBackupLoading.value = false
+                val err = "Failed to restore backup: ${e.message}"
+                _backupStatusMessage.value = err
+                withContext(Dispatchers.Main) {
+                    onFinished(false, err)
+                }
+            }
+        }
+    }
+
+    fun restoreFromLocalFile(file: File, replaceExisting: Boolean = true, onFinished: (Boolean, String) -> Unit = { _, _ -> }) {
+        viewModelScope.launch {
+            _isBackupLoading.value = true
+            val parsedResult = BackupManager.readBackupFromFile(file)
+            if (parsedResult.isSuccess) {
+                val data = parsedResult.getOrThrow()
+                restoreBackupData(data, replaceExisting, onFinished)
+            } else {
+                _isBackupLoading.value = false
+                val err = "Invalid backup file: ${parsedResult.exceptionOrNull()?.message}"
+                _backupStatusMessage.value = err
+                onFinished(false, err)
+            }
+        }
+    }
+
+    fun restoreFromUri(uri: Uri, replaceExisting: Boolean = true, onFinished: (Boolean, String) -> Unit = { _, _ -> }) {
+        viewModelScope.launch {
+            _isBackupLoading.value = true
+            val parsedResult = BackupManager.readBackupFromUri(getApplication(), uri)
+            if (parsedResult.isSuccess) {
+                val data = parsedResult.getOrThrow()
+                restoreBackupData(data, replaceExisting, onFinished)
+            } else {
+                _isBackupLoading.value = false
+                val err = "Invalid backup file: ${parsedResult.exceptionOrNull()?.message}"
+                _backupStatusMessage.value = err
+                onFinished(false, err)
+            }
+        }
+    }
+
+    fun restoreFromCloud(backupId: String, replaceExisting: Boolean = true, onFinished: (Boolean, String) -> Unit = { _, _ -> }) {
+        val email = currentUserEmail.value
+        if (email.isNullOrBlank()) {
+            onFinished(false, "User email required for cloud restore.")
+            return
+        }
+        viewModelScope.launch {
+            _isBackupLoading.value = true
+            val fetchResult = BackupManager.fetchCloudBackupData(email, backupId)
+            if (fetchResult.isSuccess) {
+                val data = fetchResult.getOrThrow()
+                restoreBackupData(data, replaceExisting, onFinished)
+            } else {
+                _isBackupLoading.value = false
+                val err = "Could not download cloud backup: ${fetchResult.exceptionOrNull()?.message}"
+                _backupStatusMessage.value = err
+                onFinished(false, err)
+            }
+        }
+    }
+
+    fun deleteLocalBackup(fileName: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            BackupManager.deleteLocalBackup(getApplication(), fileName)
+            loadLocalBackups()
+        }
+    }
+
+    fun deleteCloudBackup(backupId: String) {
+        val email = currentUserEmail.value ?: return
+        viewModelScope.launch(Dispatchers.IO) {
+            BackupManager.deleteCloudBackup(email, backupId)
+            loadCloudBackups()
+        }
+    }
+
+    fun shareLocalBackup(context: Context, fileName: String) {
+        val dir = BackupManager.getBackupsDirectory(context)
+        val file = File(dir, fileName)
+        if (file.exists()) {
+            BackupManager.shareBackupFile(context, file)
         }
     }
 }

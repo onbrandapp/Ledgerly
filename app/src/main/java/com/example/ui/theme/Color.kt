@@ -30,6 +30,7 @@ data class AccentPreset(
 )
 
 val AppAccentPresets = listOf(
+    AccentPreset("espresso", "Espresso", "#392720", Color(0xFF392720)),
     AccentPreset("indigo", "Indigo", "#4F46E5", Color(0xFF4F46E5)),
     AccentPreset("emerald", "Emerald", "#059669", Color(0xFF059669)),
     AccentPreset("royal", "Royal Blue", "#2563EB", Color(0xFF2563EB)),
@@ -40,7 +41,7 @@ val AppAccentPresets = listOf(
 )
 
 // Bento Grid Theme Colors (Legacy references)
-val BentoPrimary = Color(0xFF4F46E5)
+val BentoPrimary = Color(0xFF392720)
 val BentoOnPrimary = Color(0xFFFFFFFF)
 val BentoPrimaryContainer = Color(0xFFEEF2FF)
 val BentoOnPrimaryContainer = Color(0xFF1E1B4B)

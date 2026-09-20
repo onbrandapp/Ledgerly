@@ -10,14 +10,14 @@ import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
 
-val LocalAppAccent = compositionLocalOf { Color(0xFF4F46E5) }
+val LocalAppAccent = compositionLocalOf { Color(0xFF392720) }
 
 @Composable
 fun MyApplicationTheme(
   darkTheme: Boolean = false,
-  primaryHex: String = "#4F46E5",
-  secondaryHex: String = "#4F46E5",
-  accentHex: String = "#4F46E5",
+  primaryHex: String = "#392720",
+  secondaryHex: String = "#392720",
+  accentHex: String = "#392720",
   content: @Composable () -> Unit,
 ) {
   // Resolve the 1 unified accent color from incoming parameters
@@ -26,15 +26,15 @@ fun MyApplicationTheme(
     accentHex.isNotBlank() && accentHex != "#D9F99D" -> accentHex
     primaryHex.isNotBlank() && primaryHex != "#FFD97D" -> primaryHex
     secondaryHex.isNotBlank() && secondaryHex != "#A78BFA" -> secondaryHex
-    else -> "#4F46E5"
+    else -> "#392720"
   }
 
-  // Parse accent color with graceful fallback to signature Indigo (#4F46E5)
+  // Parse accent color with graceful fallback to signature accent (#392720)
   val customAccent = remember(effectiveHex) {
     try {
       Color(android.graphics.Color.parseColor(effectiveHex))
     } catch (e: Exception) {
-      Color(0xFF4F46E5)
+      Color(0xFF392720)
     }
   }
 

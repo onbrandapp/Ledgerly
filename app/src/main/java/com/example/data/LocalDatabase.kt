@@ -355,6 +355,59 @@ interface TransactionDao {
 
     @Query("DELETE FROM local_audit_deleted_items WHERE userEmail = :userEmail")
     suspend fun clearAuditDeletedItems(userEmail: String)
+
+    // Direct Snapshot Queries for Backup
+    @Query("SELECT * FROM local_transactions ORDER BY date DESC")
+    suspend fun getAllTransactionsSnapshot(): List<LocalTransaction>
+
+    @Query("SELECT * FROM local_recurring_transactions ORDER BY startDate DESC")
+    suspend fun getAllRecurringTransactionsSnapshot(): List<LocalRecurringTransaction>
+
+    @Query("SELECT * FROM local_categories WHERE userEmail = :userEmail ORDER BY name ASC")
+    suspend fun getCustomCategoriesSnapshot(userEmail: String): List<LocalCategory>
+
+    @Query("SELECT * FROM local_forecast_incomes WHERE userEmail = :userEmail ORDER BY expectedDate ASC")
+    suspend fun getForecastIncomesSnapshot(userEmail: String): List<LocalForecastIncome>
+
+    @Query("SELECT * FROM local_future_income_notes WHERE userEmail = :userEmail ORDER BY updatedAt DESC")
+    suspend fun getFutureIncomeNotesSnapshot(userEmail: String): List<LocalFutureIncomeNote>
+
+    @Query("SELECT * FROM local_audit_deleted_items WHERE userEmail = :userEmail ORDER BY deletedAt DESC")
+    suspend fun getAuditDeletedItemsSnapshot(userEmail: String): List<LocalAuditDeletedItem>
+
+    // Batch Restore & Clean Methods
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertTransactions(transactions: List<LocalTransaction>)
+
+    @Query("DELETE FROM local_transactions")
+    suspend fun clearAllTransactions()
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertRecurringTransactions(recurring: List<LocalRecurringTransaction>)
+
+    @Query("DELETE FROM local_recurring_transactions")
+    suspend fun clearAllRecurringTransactions()
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertCustomCategories(categories: List<LocalCategory>)
+
+    @Query("DELETE FROM local_categories WHERE userEmail = :userEmail")
+    suspend fun clearCustomCategories(userEmail: String)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertForecastIncomes(forecasts: List<LocalForecastIncome>)
+
+    @Query("DELETE FROM local_forecast_incomes WHERE userEmail = :userEmail")
+    suspend fun clearForecastIncomes(userEmail: String)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertFutureIncomeNotes(notes: List<LocalFutureIncomeNote>)
+
+    @Query("DELETE FROM local_future_income_notes WHERE userEmail = :userEmail")
+    suspend fun clearFutureIncomeNotes(userEmail: String)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAuditDeletedItems(items: List<LocalAuditDeletedItem>)
 }
 
 @Database(

@@ -58,6 +58,10 @@ fun LedgerReportView(
     var ledgerEndDate by remember { mutableStateOf<Long?>(null) }
     var hidePaidExpenses by remember { mutableStateOf(false) }
     var pendingDeleteTransaction by remember { mutableStateOf<Transaction?>(null) }
+    var showCsvExportSheet by remember { mutableStateOf(false) }
+    var pendingCsvExportList by remember { mutableStateOf<List<Transaction>?>(null) }
+    var pendingCsvStartDate by remember { mutableStateOf<Long?>(null) }
+    var pendingCsvEndDate by remember { mutableStateOf<Long?>(null) }
 
     // Automatic date range calculations
     LaunchedEffect(ledgerSelectedFilter) {
@@ -199,17 +203,24 @@ fun LedgerReportView(
         contract = ActivityResultContracts.CreateDocument("text/csv")
     ) { uri ->
         if (uri != null) {
+            val listToExport = pendingCsvExportList ?: filteredTransactions
+            val exportStart = pendingCsvStartDate ?: ledgerStartDate
+            val exportEnd = pendingCsvEndDate ?: ledgerEndDate
             try {
                 LedgerReportExporter.exportToCsv(
                     context = context,
                     uri = uri,
-                    transactions = filteredTransactions,
-                    startDate = ledgerStartDate,
-                    endDate = ledgerEndDate
+                    transactions = listToExport,
+                    startDate = exportStart,
+                    endDate = exportEnd
                 )
-                Toast.makeText(context, "Ledger exported to CSV successfully", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, "Exported ${listToExport.size} transactions to CSV successfully", Toast.LENGTH_SHORT).show()
             } catch (e: Exception) {
                 Toast.makeText(context, "Failed to export CSV: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
+            } finally {
+                pendingCsvExportList = null
+                pendingCsvStartDate = null
+                pendingCsvEndDate = null
             }
         }
     }
@@ -490,11 +501,12 @@ fun LedgerReportView(
             // Export CSV
             Button(
                 onClick = {
-                    csvLauncher.launch("Finance_Ledger_${SimpleDateFormat("yyyyMMdd", Locale.getDefault()).format(Date())}.csv")
+                    showCsvExportSheet = true
                 },
                 modifier = Modifier
                     .weight(1f)
-                    .height(38.dp),
+                    .height(38.dp)
+                    .testTag("export_csv_button"),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = MaterialTheme.colorScheme.primaryContainer,
                     contentColor = MaterialTheme.colorScheme.onPrimaryContainer
@@ -1235,6 +1247,23 @@ fun LedgerReportView(
             },
             containerColor = MaterialTheme.colorScheme.surface,
             shape = RoundedCornerShape(16.dp)
+        )
+    }
+
+    if (showCsvExportSheet) {
+        CsvExportSheet(
+            transactions = transactions,
+            initialStartDate = ledgerStartDate,
+            initialEndDate = ledgerEndDate,
+            initialPreset = ledgerSelectedFilter,
+            onDismiss = { showCsvExportSheet = false },
+            onConfirmExport = { exportList, fileName, exportStart, exportEnd ->
+                pendingCsvExportList = exportList
+                pendingCsvStartDate = exportStart
+                pendingCsvEndDate = exportEnd
+                showCsvExportSheet = false
+                csvLauncher.launch(fileName)
+            }
         )
     }
 }
