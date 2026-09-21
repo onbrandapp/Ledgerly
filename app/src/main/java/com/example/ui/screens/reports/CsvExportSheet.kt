@@ -766,34 +766,36 @@ fun CsvExportSheet(
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Tune,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Text(
-                            text = "Drill Down: Category & Description",
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                    }
+                    Icon(
+                        imageVector = Icons.Default.Tune,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Text(
+                        text = "Drill Down: Category & Description",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
 
-                    if (selectedCategory != null || selectedDescriptionQuery.isNotBlank()) {
-                        TextButton(
+                if (selectedCategory != null || selectedDescriptionQuery.isNotBlank()) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.End
+                    ) {
+                        OutlinedButton(
                             onClick = {
                                 selectedCategory = null
                                 selectedDescriptionQuery = ""
                             },
-                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
+                            shape = RoundedCornerShape(8.dp),
+                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                            modifier = Modifier.height(30.dp)
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Clear,
@@ -803,7 +805,8 @@ fun CsvExportSheet(
                             Spacer(modifier = Modifier.width(4.dp))
                             Text(
                                 text = "Reset Drill Down",
-                                style = MaterialTheme.typography.labelSmall
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.SemiBold
                             )
                         }
                     }
@@ -989,10 +992,9 @@ fun CsvExportSheet(
                         .padding(14.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    Row(
+                    Column(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                        verticalArrangement = Arrangement.spacedBy(2.dp)
                     ) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
@@ -1015,7 +1017,8 @@ fun CsvExportSheet(
                         Text(
                             text = "Interactive Breakdown",
                             style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(start = 28.dp)
                         )
                     }
 
@@ -1252,11 +1255,10 @@ fun CsvExportSheet(
                                         },
                                         shape = RoundedCornerShape(10.dp),
                                         colors = CardDefaults.cardColors(
-                                            containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
-                                            else MaterialTheme.colorScheme.surface
+                                            containerColor = MaterialTheme.colorScheme.surface
                                         ),
                                         border = BorderStroke(
-                                            width = if (isSelected) 1.5.dp else 1.dp,
+                                            width = if (isSelected) 2.dp else 1.dp,
                                             color = if (isSelected) MaterialTheme.colorScheme.primary
                                             else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
                                         ),
@@ -1418,44 +1420,39 @@ fun CsvExportSheet(
                 ) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Icon(
-                                imageVector = if (filteredTransactions.isNotEmpty()) Icons.Default.ReceiptLong else Icons.Default.Warning,
-                                contentDescription = null,
-                                tint = if (filteredTransactions.isNotEmpty()) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
-                                modifier = Modifier.size(20.dp)
-                            )
-                            Text(
-                                text = "${filteredTransactions.size} Records Ready",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                        }
+                        Icon(
+                            imageVector = if (filteredTransactions.isNotEmpty()) Icons.Default.ReceiptLong else Icons.Default.Warning,
+                            contentDescription = null,
+                            tint = if (filteredTransactions.isNotEmpty()) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Text(
+                            text = "${filteredTransactions.size} Records Ready",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
 
-                        // Date Range Label
-                        Surface(
-                            shape = RoundedCornerShape(6.dp),
-                            color = MaterialTheme.colorScheme.surfaceVariant
-                        ) {
-                            Text(
-                                text = if (startDate != null && endDate != null) {
-                                    "${dateFormatter.format(Date(startDate!!))} - ${dateFormatter.format(Date(endDate!!))}"
-                                } else {
-                                    selectedPreset
-                                },
-                                style = MaterialTheme.typography.labelSmall,
-                                fontWeight = FontWeight.Medium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                            )
-                        }
+                    // Date Range Label on its own line
+                    Surface(
+                        shape = RoundedCornerShape(6.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant
+                    ) {
+                        Text(
+                            text = if (startDate != null && endDate != null) {
+                                "${dateFormatter.format(Date(startDate!!))} - ${dateFormatter.format(Date(endDate!!))}"
+                            } else {
+                                selectedPreset
+                            },
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                        )
                     }
 
                     // Active Drill-Down Indicators
@@ -1624,18 +1621,25 @@ fun CsvExportSheet(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    .navigationBarsPadding()
+                    .padding(top = 8.dp, bottom = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 OutlinedButton(
                     onClick = onDismiss,
                     shape = RoundedCornerShape(12.dp),
+                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
                     modifier = Modifier
-                        .weight(1f)
+                        .weight(0.75f)
                         .height(48.dp)
                         .testTag("cancel_csv_export_button")
                 ) {
-                    Text("Cancel")
+                    Text(
+                        text = "Cancel",
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.SemiBold
+                    )
                 }
 
                 Button(
@@ -1644,8 +1648,9 @@ fun CsvExportSheet(
                     },
                     enabled = filteredTransactions.isNotEmpty(),
                     shape = RoundedCornerShape(12.dp),
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
                     modifier = Modifier
-                        .weight(1.5f)
+                        .weight(1.85f)
                         .height(48.dp)
                         .testTag("download_csv_button")
                 ) {
@@ -1654,11 +1659,13 @@ fun CsvExportSheet(
                         contentDescription = null,
                         modifier = Modifier.size(18.dp)
                     )
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = "Preview & Download (${filteredTransactions.size})",
+                        text = "Preview & Download",
+                        style = MaterialTheme.typography.labelLarge,
                         fontWeight = FontWeight.Bold,
-                        maxLines = 1
+                        maxLines = 1,
+                        softWrap = false
                     )
                 }
             }
@@ -1788,15 +1795,16 @@ fun CsvPreDownloadSummaryModal(
             border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
             modifier = Modifier
                 .fillMaxWidth(0.95f)
-                .fillMaxHeight(0.88f)
-                .padding(vertical = 16.dp)
+                .fillMaxHeight(0.85f)
+                .navigationBarsPadding()
+                .padding(vertical = 12.dp)
                 .testTag("csv_pre_download_modal")
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(20.dp),
-                verticalArrangement = Arrangement.spacedBy(14.dp)
+                    .padding(start = 18.dp, end = 18.dp, top = 18.dp, bottom = 20.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 // Header
                 Row(
@@ -1851,18 +1859,19 @@ fun CsvPreDownloadSummaryModal(
 
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
 
-                // Summary Highlights Card
+                // Summary Highlights Card - Executive Financial Overview
                 Card(
                     shape = RoundedCornerShape(16.dp),
                     colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
                     ),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(12.dp),
+                            .padding(horizontal = 14.dp, vertical = 12.dp),
                         verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
                         // File and count row
@@ -1873,18 +1882,28 @@ fun CsvPreDownloadSummaryModal(
                         ) {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
                                 modifier = Modifier.weight(1f)
                             ) {
-                                Icon(
-                                    imageVector = Icons.Default.InsertDriveFile,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.size(16.dp)
-                                )
+                                Box(
+                                    modifier = Modifier
+                                        .size(28.dp)
+                                        .background(
+                                            MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
+                                            RoundedCornerShape(6.dp)
+                                        ),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.InsertDriveFile,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                }
                                 Text(
                                     text = suggestedFileName,
-                                    style = MaterialTheme.typography.labelMedium,
+                                    style = MaterialTheme.typography.bodyMedium,
                                     fontWeight = FontWeight.SemiBold,
                                     color = MaterialTheme.colorScheme.onSurface,
                                     maxLines = 1,
@@ -1893,8 +1912,8 @@ fun CsvPreDownloadSummaryModal(
                             }
 
                             Surface(
-                                shape = RoundedCornerShape(8.dp),
-                                color = MaterialTheme.colorScheme.primaryContainer
+                                shape = RoundedCornerShape(6.dp),
+                                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f)
                             ) {
                                 Text(
                                     text = "${filteredTransactions.size} Records",
@@ -1906,85 +1925,95 @@ fun CsvPreDownloadSummaryModal(
                             }
                         }
 
-                        // Metric Stat Columns (Total Income, Total Expense, Net)
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        // Unified Executive 3-Column Financial Metric Strip
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.75f),
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f)),
+                            modifier = Modifier.fillMaxWidth()
                         ) {
-                            // Income Pill
-                            Surface(
-                                shape = RoundedCornerShape(10.dp),
-                                color = MaterialTheme.colorScheme.surface,
-                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
-                                modifier = Modifier.weight(1f)
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 10.dp, horizontal = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
+                                // Column 1: Total Income
                                 Column(
-                                    modifier = Modifier.padding(8.dp),
+                                    modifier = Modifier.weight(1f),
+                                    horizontalAlignment = Alignment.CenterHorizontally,
                                     verticalArrangement = Arrangement.spacedBy(2.dp)
                                 ) {
                                     Text(
-                                        text = "Total Income",
+                                        text = "INCOME",
                                         style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        fontWeight = FontWeight.Bold,
+                                        letterSpacing = 0.6.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
                                         fontSize = 10.sp
                                     )
                                     Text(
                                         text = String.format(Locale.US, "+$%.2f", incomeSum),
-                                        style = MaterialTheme.typography.bodySmall,
-                                        fontWeight = FontWeight.Bold,
-                                        color = Color(0xFF10B981)
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = FontWeight.ExtraBold,
+                                        color = Color(0xFF10B981),
+                                        maxLines = 1
                                     )
                                 }
-                            }
 
-                            // Expense Pill
-                            Surface(
-                                shape = RoundedCornerShape(10.dp),
-                                color = MaterialTheme.colorScheme.surface,
-                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
-                                modifier = Modifier.weight(1f)
-                            ) {
+                                VerticalDivider(
+                                    modifier = Modifier.height(28.dp),
+                                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)
+                                )
+
+                                // Column 2: Total Expenses
                                 Column(
-                                    modifier = Modifier.padding(8.dp),
+                                    modifier = Modifier.weight(1f),
+                                    horizontalAlignment = Alignment.CenterHorizontally,
                                     verticalArrangement = Arrangement.spacedBy(2.dp)
                                 ) {
                                     Text(
-                                        text = "Total Expenses",
+                                        text = "EXPENSES",
                                         style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        fontWeight = FontWeight.Bold,
+                                        letterSpacing = 0.6.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
                                         fontSize = 10.sp
                                     )
                                     Text(
                                         text = String.format(Locale.US, "-$%.2f", expenseSum),
-                                        style = MaterialTheme.typography.bodySmall,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.error
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = FontWeight.ExtraBold,
+                                        color = if (expenseSum > 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
+                                        maxLines = 1
                                     )
                                 }
-                            }
 
-                            // Net Pill
-                            Surface(
-                                shape = RoundedCornerShape(10.dp),
-                                color = MaterialTheme.colorScheme.surface,
-                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
-                                modifier = Modifier.weight(1f)
-                            ) {
+                                VerticalDivider(
+                                    modifier = Modifier.height(28.dp),
+                                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)
+                                )
+
+                                // Column 3: Net Balance
                                 Column(
-                                    modifier = Modifier.padding(8.dp),
+                                    modifier = Modifier.weight(1f),
+                                    horizontalAlignment = Alignment.CenterHorizontally,
                                     verticalArrangement = Arrangement.spacedBy(2.dp)
                                 ) {
                                     Text(
-                                        text = "Net Balance",
+                                        text = "NET",
                                         style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        fontWeight = FontWeight.Bold,
+                                        letterSpacing = 0.6.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
                                         fontSize = 10.sp
                                     )
                                     Text(
                                         text = String.format(Locale.US, "$%.2f", netBalance),
-                                        style = MaterialTheme.typography.bodySmall,
-                                        fontWeight = FontWeight.Bold,
-                                        color = if (netBalance >= 0) Color(0xFF10B981) else MaterialTheme.colorScheme.error
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = FontWeight.ExtraBold,
+                                        color = if (netBalance >= 0) Color(0xFF10B981) else MaterialTheme.colorScheme.error,
+                                        maxLines = 1
                                     )
                                 }
                             }
@@ -2000,7 +2029,7 @@ fun CsvPreDownloadSummaryModal(
                             // Date Range Chip
                             Surface(
                                 shape = RoundedCornerShape(6.dp),
-                                color = MaterialTheme.colorScheme.surface
+                                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.8f)
                             ) {
                                 Text(
                                     text = if (startDate != null && endDate != null) {
@@ -2017,7 +2046,7 @@ fun CsvPreDownloadSummaryModal(
                             // Type Chip
                             Surface(
                                 shape = RoundedCornerShape(6.dp),
-                                color = MaterialTheme.colorScheme.surface
+                                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.8f)
                             ) {
                                 Text(
                                     text = selectedType.label,
@@ -2031,7 +2060,7 @@ fun CsvPreDownloadSummaryModal(
                             if (selectedStatus != CsvStatusFilter.ALL) {
                                 Surface(
                                     shape = RoundedCornerShape(6.dp),
-                                    color = MaterialTheme.colorScheme.surface
+                                    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.8f)
                                 ) {
                                     Text(
                                         text = selectedStatus.title,
@@ -2086,22 +2115,23 @@ fun CsvPreDownloadSummaryModal(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 12.dp, vertical = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                            .padding(horizontal = 14.dp, vertical = 9.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         Text(
                             text = "Category",
                             style = MaterialTheme.typography.labelMedium,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.weight(1.1f)
+                            modifier = Modifier.weight(1.05f)
                         )
                         Text(
                             text = "Description",
                             style = MaterialTheme.typography.labelMedium,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.weight(1.5f)
+                            modifier = Modifier.weight(1.35f)
                         )
                         Text(
                             text = "Amount",
@@ -2109,7 +2139,7 @@ fun CsvPreDownloadSummaryModal(
                             fontWeight = FontWeight.Bold,
                             textAlign = TextAlign.End,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.weight(1.0f)
+                            modifier = Modifier.weight(0.9f)
                         )
                     }
                 }
@@ -2151,19 +2181,20 @@ fun CsvPreDownloadSummaryModal(
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(horizontal = 12.dp, vertical = 10.dp),
-                                    verticalAlignment = Alignment.CenterVertically
+                                        .padding(horizontal = 14.dp, vertical = 10.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
                                 ) {
-                                    // Column 1: Category with Icon & Color
+                                    // Column 1: Category with Icon & Label
                                     Row(
-                                        modifier = Modifier.weight(1.1f),
+                                        modifier = Modifier.weight(1.05f),
                                         verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                        horizontalArrangement = Arrangement.spacedBy(7.dp)
                                     ) {
                                         Box(
                                             modifier = Modifier
                                                 .size(24.dp)
-                                                .background(catStyle.color.copy(alpha = 0.2f), CircleShape),
+                                                .background(catStyle.color.copy(alpha = 0.18f), CircleShape),
                                             contentAlignment = Alignment.Center
                                         ) {
                                             Icon(
@@ -2186,7 +2217,7 @@ fun CsvPreDownloadSummaryModal(
 
                                     // Column 2: Description & Date
                                     Column(
-                                        modifier = Modifier.weight(1.5f),
+                                        modifier = Modifier.weight(1.35f),
                                         verticalArrangement = Arrangement.spacedBy(2.dp)
                                     ) {
                                         Text(
@@ -2213,6 +2244,7 @@ fun CsvPreDownloadSummaryModal(
                                                     text = "• Paid",
                                                     style = MaterialTheme.typography.labelSmall,
                                                     fontSize = 9.sp,
+                                                    fontWeight = FontWeight.Medium,
                                                     color = Color(0xFF10B981)
                                                 )
                                             }
@@ -2231,7 +2263,7 @@ fun CsvPreDownloadSummaryModal(
                                         fontWeight = FontWeight.Bold,
                                         textAlign = TextAlign.End,
                                         color = if (isIncome) Color(0xFF10B981) else MaterialTheme.colorScheme.onSurface,
-                                        modifier = Modifier.weight(1.0f)
+                                        modifier = Modifier.weight(0.9f)
                                     )
                                 }
                             }
@@ -2243,18 +2275,27 @@ fun CsvPreDownloadSummaryModal(
 
                 // Bottom Action Buttons: Cancel and Confirm Export
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 4.dp, bottom = 4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
                     OutlinedButton(
                         onClick = onDismiss,
                         shape = RoundedCornerShape(12.dp),
+                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
                         modifier = Modifier
-                            .weight(1f)
+                            .weight(0.85f)
                             .height(48.dp)
                             .testTag("pre_download_cancel_button")
                     ) {
-                        Text("Back to Edit")
+                        Text(
+                            text = "Back",
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.SemiBold,
+                            maxLines = 1
+                        )
                     }
 
                     Button(
@@ -2264,8 +2305,9 @@ fun CsvPreDownloadSummaryModal(
                         colors = ButtonDefaults.buttonColors(
                             containerColor = MaterialTheme.colorScheme.primary
                         ),
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
                         modifier = Modifier
-                            .weight(1.5f)
+                            .weight(1.55f)
                             .height(48.dp)
                             .testTag("pre_download_confirm_export_button")
                     ) {
@@ -2274,11 +2316,13 @@ fun CsvPreDownloadSummaryModal(
                             contentDescription = null,
                             modifier = Modifier.size(18.dp)
                         )
-                        Spacer(modifier = Modifier.width(8.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = "Generate CSV (${filteredTransactions.size})",
+                            text = "Generate CSV",
+                            style = MaterialTheme.typography.labelLarge,
                             fontWeight = FontWeight.Bold,
-                            maxLines = 1
+                            maxLines = 1,
+                            softWrap = false
                         )
                     }
                 }
