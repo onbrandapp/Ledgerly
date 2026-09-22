@@ -1,61 +1,77 @@
 # Product & Engineering Roadmap - Ledgerly
 
-This roadmap outlines the evolution of **Ledgerly**, detailing completed milestones, current deliverables, and strategic future initiatives.
+This roadmap outlines the evolution of **Ledgerly**, detailing completed milestones through production release **v85.0**, current deliverables, and strategic future initiatives.
 
 ---
 
 ## 🎯 Release Milestones
 
 ```
-  v1.0 - v10.0         v11.0 - v25.0        v26.0 - v34.0 (Current)        v35.0+ (Upcoming)
+  v1.0 - v34.0         v35.0 - v70.0        v71.0 - v85.0 (Current)        v86.0+ (Upcoming)
  ──────────────       ───────────────      ─────────────────────────      ───────────────────
-  Core MVP &           Automations,         Future Forecasts, Notes,       OCR Receipt Scan,
-  Gemini 2.5 Flash     Complete Ledger,     Milestone Checklists,          Multi-Currency,
-  Parsing              Cloud & Room Sync    Version 34.0 Release           Biometrics & Widgets
+  Core MVP, Gemini     Biometrics Lock,     Duplicate Detection,           Gemini Vision OCR,
+  Parsing, Forecast    Audit Trails, PDF    Search Overlay, Snapshot       Multi-Currency FX,
+  & Milestone Engine   & CSV Reports        Backups, v85.0 Release         Glance Widgets
 ```
 
 ---
 
 ## 📋 Detailed Phases
 
-### Phase 1: Core Foundation & AI Intelligence *(Completed)*
+### Phase 1: Core Foundation & AI Intelligence *(Completed - v1.0 - v10.0)*
 - [x] **Natural Language AI Parsing**: Integrated Gemini 2.5 Flash model for natural language transaction extraction.
 - [x] **Offline-First Room SQLite Storage**: Complete local storage and DAO operations for zero-latency execution.
 - [x] **Cloud Sync via Firebase Firestore**: Real-time multi-device synchronization with Firestore snapshot listeners.
 - [x] **Google Identity Authentication**: Seamless authentication using Jetpack Credential Manager with Guest mode fallback.
 - [x] **Material 3 Dynamic Theming**: Expressive design system with customizable primary and secondary color accents.
 
-### Phase 2: Power Tools, Automations & Analytics *(Completed)*
-- [x] **Complete Financial Ledger**: Dedicated bottom sheet with multi-criteria search, date filters, and custom ranges.
+### Phase 2: Power Tools, Automations & Analytics *(Completed - v11.0 - v25.0)*
+- [x] **Complete Financial Ledger**: Dedicated ledger sheet with multi-criteria search, date filters, and custom ranges.
 - [x] **Recurring Automations Engine**: Automatic logging for Daily, Weekly, Monthly, and Yearly bills/subscriptions.
 - [x] **Reconciliation & Status Flags**: Paid / Unpaid toggle for tracking outstanding debts and pending receipts.
 - [x] **Custom Categories & Budgets**: User-created spending categories with monthly budget tracking and limit warnings.
 - [x] **Interactive Visualizations**: Category breakdown graphs and daily cash flow trend charts.
 
-### Phase 3: Future Forecasting & Milestone Planner *(Completed - v34.0)*
+### Phase 3: Future Forecasting & Milestone Planner *(Completed - v26.0 - v34.0)*
 - [x] **Future Income Pipeline**: Projections for invoices, freelance retainers, and bonuses with confidence ratings (*Confirmed / Expected / Tentative*).
 - [x] **One-Tap Realization**: Direct conversion of forecasted items into active ledger income entries upon receipt.
 - [x] **Interactive Milestones**: Bulleted checklists attached to forecast cards with strikethrough completion states.
 - [x] **Brainstorming Notes & Scratchpad**: Color-tagged income notes with customizable checklist items.
-- [x] **Target SDK 36 Alignment & Version 34.0 Production Readiness**.
+
+### Phase 4: Biometric Security & Vault Shield *(Completed - v35.0 - v50.0)*
+- [x] **Biometric Authentication**: Fingerprint and face unlock integration via AndroidX `BiometricPrompt`.
+- [x] **Configurable Auto-Lock**: Automatic security barrier presented on app backgrounding / resume.
+- [x] **Manual Vault Lock**: One-tap quick lock option with clear status indicators in user settings.
+- [x] **Privacy Protection**: Data obfuscation when device lock is active.
+
+### Phase 5: Auditing, PDF & CSV Financial Reporting *(Completed - v51.0 - v70.0)*
+- [x] **Comprehensive Audit Trail**: Dedicated tracking of all deleted transactions in Room database.
+- [x] **Native PDF Exporter**: Professional on-device PDF generation using Android `PdfDocument` with print and share intents.
+- [x] **Advanced CSV Export Sheet**: Multi-criteria date range filtering, column configuration, and live summary totals.
+- [x] **Visual Drill-Down Analysis**: Interactive breakdown by category, description, and daily spending velocity.
+
+### Phase 6: Duplicate Detection, Search Overlay & Backups *(Completed - v71.0 - v85.0 - Current)*
+- [x] **Duplicate Detection Engine**: Centralized algorithm detecting identical entries by amount, category, and calendar day.
+- [x] **Real-time Add Form Warning**: Interactive warning banner and confirmation dialog with "Add Anyway" override.
+- [x] **Ledger Duplicate Badging**: Amber warning badges on conflicting ledger cards with one-tap conflict inspection and deletion.
+- [x] **Ledger Review Filter**: Quick toggle to isolate and review all flagged duplicate entries.
+- [x] **Search Overlay Integration**: Full-screen search overlay with date presets, keyword search, category filters, and live net balance totals.
+- [x] **Snapshot Backup & Restore**: Local JSON snapshot archives, file sharing, and Google account cloud backup sync.
+- [x] **Target SDK 36 Alignment & Version 85.0 Production Readiness**.
 
 ---
 
-## 🚀 Near-Term Priorities (v35.0 - v40.0)
+## 🚀 Near-Term Priorities (v86.0 - v95.0)
 
 ### 1. Vision & Multimodal OCR Receipt Scanning
 - Utilize **Gemini 2.5 Flash Vision** to scan paper receipts and invoice photos.
-- Auto-extract merchant, total amount, taxes, date, and line-item categories directly from the camera or gallery.
+- Auto-extract merchant, total amount, taxes, date, and line-item categories directly from camera or photo picker.
 
 ### 2. Multi-Currency Support & Live FX Conversion
 - Support multiple world currencies (USD, EUR, GBP, JPY, CAD, AUD, INR, etc.) with real-time exchange rates.
 - Automatic currency conversion for international transactions and foreign income forecasts.
 
-### 3. Biometric App Lock & Privacy Shield
-- Biometric authentication (Fingerprint / Face Unlock / PIN) using Android `BiometricPrompt`.
-- Privacy masking option to blur financial figures in public settings or app switcher.
-
-### 4. Home Screen & Lock Screen Widgets
+### 3. Home Screen & Lock Screen Glance Widgets
 - Jetpack Glance Compose widgets:
   - **Quick Add Widget**: One-tap AI voice/text logging shortcut.
   - **Budget Meter Widget**: Real-time monthly spending progress bar.
@@ -63,31 +79,17 @@ This roadmap outlines the evolution of **Ledgerly**, detailing completed milesto
 
 ---
 
-## 🔮 Mid-Term Innovations (v41.0 - v50.0)
+## 🔮 Mid-Term Innovations (v96.0 - v110.0)
 
 ### 1. Proactive AI Financial Advisor & Anomaly Detection
 - Gemini-powered automated weekly insights:
   - *"You spent 24% more on Dining Out this week compared to your 3-month average."*
-  - *"Your Netflix subscription increased by $2.00 this month."*
+  - *"Your utility bill increased by $12.00 compared to last month."*
   - *"Based on your expected freelance pipeline, you are on track to exceed your savings goal by 15%."*
 
 ### 2. Split Bills & Household Shared Ledgers
 - Shared ledgers for couples, roommates, and small project teams.
 - Automated balance calculations and debt settlement summaries.
-
-### 3. Comprehensive Tax Estimator & Invoicing
-- Tag deductible expenses and generate quarterly estimated tax reports.
-- Export PDF invoices from realized forecast items for freelance clients.
-
----
-
-## 🌐 Long-Term Vision (v51.0+)
-
-### 1. Kotlin Multiplatform (KMP) Desktop & Web Companion
-- Cross-platform synchronization across Android, Web, macOS, and Windows with unified Kotlin business logic.
-
-### 2. Open Banking API Integration
-- Optional direct bank synchronization via Plaid or Open Banking APIs for automatic balance verification.
 
 ---
 

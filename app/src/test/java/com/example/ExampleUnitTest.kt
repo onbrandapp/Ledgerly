@@ -137,5 +137,50 @@ class ExampleUnitTest {
     val afterFiltered = list.filter { it.date >= 1500L }
     assertEquals(2, afterFiltered.size)
   }
+
+  @Test
+  fun testDuplicateTransactionDetection() {
+    val tx1 = com.example.data.Transaction(
+      id = "tx1",
+      amount = 45.50,
+      category = "Groceries",
+      description = "Trader Joe's",
+      date = 1711000000000L,
+      type = "EXPENSE"
+    )
+    val tx2 = com.example.data.Transaction(
+      id = "tx2",
+      amount = 45.50,
+      category = "groceries",
+      description = "Trader Joe's duplicate",
+      date = 1711000000000L,
+      type = "EXPENSE"
+    )
+    val tx3 = com.example.data.Transaction(
+      id = "tx3",
+      amount = 50.00,
+      category = "Groceries",
+      description = "Different amount",
+      date = 1711000000000L,
+      type = "EXPENSE"
+    )
+
+    val list = listOf(tx1, tx2, tx3)
+
+    // Check potential duplicate detection
+    val duplicates = com.example.data.DuplicateTransactionDetector.findPotentialDuplicates(
+      amount = 45.50,
+      category = "Groceries",
+      date = 1711000000000L,
+      transactions = list
+    )
+    assertEquals(2, duplicates.size)
+
+    val duplicateIds = com.example.data.DuplicateTransactionDetector.findAllDuplicateIds(list)
+    assertEquals(2, duplicateIds.size)
+    assertTrue(duplicateIds.contains("tx1"))
+    assertTrue(duplicateIds.contains("tx2"))
+    assertFalse(duplicateIds.contains("tx3"))
+  }
 }
 

@@ -49,6 +49,29 @@
 - **Local Database**: Zero-latency, completely offline functionality powered by Jetpack Room (SQLite).
 - **Cloud Database**: Real-time cross-device sync with Firebase Firestore and Google Identity authentication.
 
+### 8. Biometric Security & App Lock
+- Integrated Android `BiometricPrompt` framework with fingerprint and face unlock authentication.
+- Configurable auto-lock on app minimize / backgrounding, manual unlock options, and private vault safeguards.
+
+### 9. Financial Auditing & Native PDF Reporting
+- Complete audit trails recording all transaction deletions and modifications.
+- Native on-device PDF generation via Android's `PdfDocument` engine for professional financial audit reports and print/share workflows.
+- Customizable CSV export engine supporting custom date windows, category filters, and financial summary totals.
+
+### 10. Snapshot Backup & Restore System
+- Encrypted local JSON snapshots stored securely in the app's external document directory.
+- Backup sharing via standard Android share sheets and full database restoration with conflict handling.
+- Cloud snapshot backups linked directly to Google user profiles.
+
+### 11. Duplicate Transaction Warning Engine
+- Real-time detection of potential duplicate entries sharing the same amount, category, and calendar day.
+- In-form warning banners, confirmation dialogs with "Add Anyway" overrides, and amber "Duplicate" ledger badges with one-tap conflict resolution.
+
+### 12. Advanced Multi-Criteria Search & Filter Overlay
+- Header search bar with keyword matching against transaction notes and descriptions.
+- Dynamic date presets (*Today*, *This Week*, *This Month*, *Last 30 Days*, *Year-to-Date*, *All Time*) plus custom date-picker ranges.
+- Category filtering chips with live financial recalculation of filtered Income, Expenses, and Net Balance.
+
 ---
 
 ## Tech Stack & Architecture
@@ -59,11 +82,14 @@
 | **UI Framework** | Jetpack Compose with Material Design 3 (M3) |
 | **Architecture** | MVVM (Model-View-ViewModel) + Reactive Unidirectional Data Flow |
 | **Concurrency** | Kotlin Coroutines & Kotlin StateFlow / SharedFlow |
-| **Local Database** | Jetpack Room (SQLite with KSP codegen) |
+| **Local Database** | Jetpack Room 2.6+ (SQLite with KSP codegen) |
 | **Cloud Backend** | Firebase Firestore (Real-time reactive snapshot listeners) |
 | **Authentication** | Google Sign-In via Jetpack Credential Manager + Guest Mode |
+| **Biometrics** | AndroidX Biometric API (Fingerprint / Face / PIN) |
+| **Document Export** | Android Native `PdfDocument` & CSV Serialization |
 | **AI Integration** | Gemini 2.5 Flash REST API via OkHttp |
 | **Target Platforms** | Android 7.0 (API 24) to Android 15+ (API 36) |
+| **Release Version** | Production Release v85.0 (versionCode 85) |
 
 ---
 
@@ -71,24 +97,46 @@
 
 ```
 app/src/main/java/com/example/
-├── MainActivity.kt                # Application entry point, Edge-to-Edge setup & Navigation
+├── MainActivity.kt                      # Application entry point, Edge-to-Edge setup & Navigation
+├── security/
+│   └── BiometricAuthManager.kt          # BiometricPrompt lifecycle manager & security preferences
 ├── data/
-│   ├── AuthRepository.kt          # Google Credential Manager & user session handling
-│   ├── GeminiParser.kt            # Gemini 2.5 Flash natural language parser
-│   ├── LocalDatabase.kt           # Room Database, DAOs, and Local Entities
-│   ├── Models.kt                  # Domain data classes (Transaction, ForecastIncome, Note, etc.)
-│   └── TransactionRepository.kt   # Dual Repository (Firebase & Room implementations)
+│   ├── AuthRepository.kt                # Google Credential Manager & user session handling
+│   ├── BackupManager.kt                 # Local & cloud JSON snapshot backup/restore manager
+│   ├── DuplicateTransactionDetector.kt  # Duplicate transaction matching engine (amount, category, day)
+│   ├── GeminiParser.kt                  # Gemini 2.5 Flash natural language parser
+│   ├── LocalDatabase.kt                 # Room Database, DAOs, and Local Entities
+│   ├── Models.kt                        # Domain data classes (Transaction, ForecastIncome, Note, etc.)
+│   └── TransactionRepository.kt         # Dual Repository (Firebase & Room implementations)
 └── ui/
+    ├── components/
+    │   ├── AuditPdfExporter.kt          # Native PDF generation for audit reports
+    │   ├── AuditReportSheet.kt          # Bottom sheet viewer for audit logs & deletion history
+    │   ├── BackupRestoreSheet.kt        # Local & Cloud backup/restore modal
+    │   ├── BiometricSettingsCard.kt     # Biometric security configuration card
+    │   ├── CategoryCustomizationDialog.kt # Dynamic category editor with custom color palette
+    │   └── TransactionSearchOverlay.kt  # Multi-criteria search overlay (dates, keywords, categories)
     ├── screens/
-    │   ├── DashboardScreen.kt     # Main financial dashboard, ledger drawer, charts & bento grids
-    │   ├── ForecastIncomeSection.kt# Future income pipeline, milestone checklists & notes
-    │   └── LoginScreen.kt         # Google Sign-In & Guest authentication interface
+    │   ├── BiometricLockScreen.kt       # Secure lock screen with biometric prompt trigger
+    │   ├── DashboardScreen.kt           # Main cockpit: Bento grid, ledger, duplicate badges, manual entry
+    │   ├── ForecastIncomeSection.kt     # Future income pipeline, milestone checklists & notes
+    │   ├── LoginScreen.kt               # Google Sign-In & Guest authentication interface
+    │   └── reports/
+    │       ├── AnalyticsReportView.kt   # Interactive drill-down charts & description breakdown
+    │       ├── AuditReportView.kt       # Dedicated audit report view with filter controls
+    │       ├── CsvExportSheet.kt        # CSV export modal with date filters and summary previews
+    │       ├── LedgerReportExporter.kt  # Specialized ledger export helpers
+    │       ├── LedgerReportView.kt      # Detailed ledger report breakdown
+    │       ├── ReportsScreen.kt         # Top-level reports hub container
+    │       └── ReportType.kt            # Report categorization enum
     ├── theme/
-    │   ├── Color.kt               # Dynamic M3 light & dark color schemes
-    │   ├── Theme.kt               # Centralized Material3 Theme provider
-    │   └── Type.kt                # Typography configurations
+    │   ├── CategoryConstants.kt         # Default category definitions and visual styling
+    │   ├── CategoryStyle.kt             # Category icon and color mapping
+    │   ├── Color.kt                     # Dynamic M3 light & dark color schemes
+    │   ├── Theme.kt                     # Centralized Material3 Theme provider
+    │   └── Type.kt                      # Typography configurations
     └── viewmodel/
-        └── ExpenseViewModel.kt    # Core business logic, StateFlows, calculations & aggregations
+        └── ExpenseViewModel.kt          # Core business logic, StateFlows, aggregations & duplicate checks
 ```
 
 ---

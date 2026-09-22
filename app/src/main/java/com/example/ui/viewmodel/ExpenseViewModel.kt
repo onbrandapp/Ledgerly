@@ -415,6 +415,25 @@ class ExpenseViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
+    /**
+     * Checks if there are any potential duplicate transactions in the ledger
+     * matching the given amount, category, and date.
+     */
+    fun findPotentialDuplicates(
+        amount: Double,
+        category: String,
+        date: Long,
+        excludeId: String = ""
+    ): List<Transaction> {
+        return DuplicateTransactionDetector.findPotentialDuplicates(
+            amount = amount,
+            category = category,
+            date = date,
+            transactions = transactions.value,
+            excludeId = excludeId
+        )
+    }
+
     // Transaction Operations
     fun addTransaction(
         amount: Double,
@@ -424,7 +443,8 @@ class ExpenseViewModel(application: Application) : AndroidViewModel(application)
         date: Long = System.currentTimeMillis(),
         id: String = "",
         recurringId: String = "",
-        paid: Boolean = false
+        paid: Boolean = false,
+        forceAdd: Boolean = false
     ) {
         val email = currentUserEmail.value ?: return
         val newTx = Transaction(
@@ -437,7 +457,7 @@ class ExpenseViewModel(application: Application) : AndroidViewModel(application)
             recurringId = recurringId,
             paid = paid
         )
-        if (isDuplicateTransaction(newTx)) {
+        if (!forceAdd && isDuplicateTransaction(newTx)) {
             _transactionsError.value = "This ledger item already exists. Please edit the existing ledger item from the series as necessary."
             return
         }

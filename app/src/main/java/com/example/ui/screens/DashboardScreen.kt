@@ -59,9 +59,11 @@ import android.app.DatePickerDialog
 import java.util.Calendar
 import com.example.data.Transaction
 import com.example.data.CustomCategory
+import com.example.data.DuplicateTransactionDetector
 import com.example.ui.components.BackupRestoreSheet
 import com.example.ui.components.BiometricSettingsCard
 import com.example.ui.components.CategoryCustomizationDialog
+import com.example.ui.components.TransactionSearchOverlay
 import com.example.ui.theme.AppAccentPresets
 import com.example.ui.theme.CategoryConstants
 import com.example.ui.theme.CategoryStyle
@@ -108,6 +110,7 @@ fun DashboardScreen(
     val coroutineScope = rememberCoroutineScope()
 
     var showBudgetDialog by remember { mutableStateOf(false) }
+    var showSearchOverlay by remember { mutableStateOf(false) }
     var showBackupRestoreSheet by remember { mutableStateOf(false) }
     var tempPrimaryHex by remember(primaryColorHex) { mutableStateOf(primaryColorHex) }
     var tempSecondaryHex by remember(secondaryColorHex) { mutableStateOf(secondaryColorHex) }
@@ -119,6 +122,12 @@ fun DashboardScreen(
     var selectedTab by remember { mutableStateOf(0) } // 0 = Transactions, 1 = Recurring
     var allTimeSortOption by remember { mutableStateOf("date_desc") }
     var showSortMenu by remember { mutableStateOf(false) }
+
+    val duplicateTxIds = remember(transactions) {
+        DuplicateTransactionDetector.findAllDuplicateIds(transactions)
+    }
+    var filterOnlyDuplicatesTab0 by remember { mutableStateOf(false) }
+    var filterOnlyDuplicatesTab1 by remember { mutableStateOf(false) }
 
     var transactionToEditSeriesOption by remember { mutableStateOf<Transaction?>(null) }
     var transactionToDeleteSeriesOption by remember { mutableStateOf<Transaction?>(null) }
@@ -186,9 +195,28 @@ fun DashboardScreen(
                 actions = {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp),
-                        modifier = Modifier.padding(end = 8.dp)
+                        horizontalArrangement = Arrangement.spacedBy(5.dp),
+                        modifier = Modifier.padding(end = 6.dp)
                     ) {
+                        // Search Transactions Overlay Button (Magnifying Glass)
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f))
+                                .border(BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.35f)), CircleShape)
+                                .clickable { showSearchOverlay = true }
+                                .testTag("top_search_button"),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Search,
+                                contentDescription = "Search Transactions",
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(19.dp)
+                            )
+                        }
+
                         // 0. Theme Toggle (Light / Dark)
                         Box(
                             modifier = Modifier
@@ -1213,6 +1241,11 @@ fun DashboardScreen(
                             }
                         }
                     } else {
+                        val monthDuplicates = remember(monthlySummary.currentMonthList, duplicateTxIds) {
+                            monthlySummary.currentMonthList.filter { it.id in duplicateTxIds }
+                        }
+                        val tab0DisplayList = if (filterOnlyDuplicatesTab0) monthDuplicates else monthlySummary.currentMonthList
+
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -1221,9 +1254,22 @@ fun DashboardScreen(
                             verticalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
                             ExpenseReconciliationHeader(transactions = monthlySummary.currentMonthList)
-                            monthlySummary.currentMonthList.forEach { tx ->
+
+                            if (monthDuplicates.isNotEmpty()) {
+                                PotentialDuplicateLedgerBanner(
+                                    duplicateCount = monthDuplicates.size,
+                                    isFiltering = filterOnlyDuplicatesTab0,
+                                    onToggleFilter = { filterOnlyDuplicatesTab0 = !filterOnlyDuplicatesTab0 }
+                                )
+                            }
+
+                            tab0DisplayList.forEach { tx ->
                                 TransactionRowItem(
                                     transaction = tx,
+                                    isDuplicate = tx.id in duplicateTxIds,
+                                    duplicateMatchingTx = remember(tx.id, transactions) {
+                                        DuplicateTransactionDetector.findMatchingDuplicatesFor(tx, transactions).firstOrNull()
+                                    },
                                     onEdit = {
                                         if (tx.recurringId.isNotEmpty()) {
                                             transactionToEditSeriesOption = tx
@@ -1294,6 +1340,11 @@ fun DashboardScreen(
                             }
                         }
                     } else {
+                        val allTimeDuplicates = remember(allTimeList, duplicateTxIds) {
+                            allTimeList.filter { it.id in duplicateTxIds }
+                        }
+                        val tab1DisplayList = if (filterOnlyDuplicatesTab1) allTimeDuplicates else allTimeList
+
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -1302,9 +1353,22 @@ fun DashboardScreen(
                             verticalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
                             ExpenseReconciliationHeader(transactions = allTimeList)
-                            allTimeList.forEach { tx ->
+
+                            if (allTimeDuplicates.isNotEmpty()) {
+                                PotentialDuplicateLedgerBanner(
+                                    duplicateCount = allTimeDuplicates.size,
+                                    isFiltering = filterOnlyDuplicatesTab1,
+                                    onToggleFilter = { filterOnlyDuplicatesTab1 = !filterOnlyDuplicatesTab1 }
+                                )
+                            }
+
+                            tab1DisplayList.forEach { tx ->
                                 TransactionRowItem(
                                     transaction = tx,
+                                    isDuplicate = tx.id in duplicateTxIds,
+                                    duplicateMatchingTx = remember(tx.id, transactions) {
+                                        DuplicateTransactionDetector.findMatchingDuplicatesFor(tx, transactions).firstOrNull()
+                                    },
                                     onEdit = {
                                         if (tx.recurringId.isNotEmpty()) {
                                             transactionToEditSeriesOption = tx
@@ -1942,6 +2006,19 @@ fun DashboardScreen(
         }
     }
 
+    if (showSearchOverlay) {
+        TransactionSearchOverlay(
+            transactions = transactions,
+            customCategories = customCategoriesList,
+            onDismiss = { showSearchOverlay = false },
+            onTransactionClick = { tx ->
+                editingTransaction = tx
+                showManualAddForm = true
+                showSearchOverlay = false
+            }
+        )
+    }
+
     if (showBackupRestoreSheet) {
         BackupRestoreSheet(
             viewModel = viewModel,
@@ -1976,19 +2053,19 @@ fun DashboardScreen(
                     viewModel = viewModel,
                     initialTransaction = editingTransaction,
                     initialRecurringTransaction = editingRecurringTransaction,
-                    onSubmit = { id, amount, category, type, description, isRecurring, frequency, selectedDate, numInstances ->
+                    onSubmit = { id, amount, category, type, description, isRecurring, frequency, selectedDate, numInstances, forceAdd ->
                         if (editingTransaction != null) {
                             if (isRecurring) {
                                 // Toggled from non-recurring to recurring
                                 viewModel.addRecurringTransaction(amount, category, type, description, frequency, selectedDate, numInstances = numInstances)
                                 viewModel.deleteTransaction(editingTransaction!!.id)
                             } else {
-                                viewModel.addTransaction(amount, category, type, description, selectedDate, id, recurringId = editingTransaction!!.recurringId, paid = editingTransaction!!.paid)
+                                viewModel.addTransaction(amount, category, type, description, selectedDate, id, recurringId = editingTransaction!!.recurringId, paid = editingTransaction!!.paid, forceAdd = forceAdd)
                             }
                         } else if (editingRecurringTransaction != null) {
                             if (!isRecurring) {
                                 // Toggled from recurring to non-recurring
-                                viewModel.addTransaction(amount, category, type, description, selectedDate)
+                                viewModel.addTransaction(amount, category, type, description, selectedDate, forceAdd = forceAdd)
                                 viewModel.deleteRecurringTransaction(editingRecurringTransaction!!.id)
                             } else {
                                 viewModel.addRecurringTransaction(
@@ -2008,7 +2085,7 @@ fun DashboardScreen(
                             if (isRecurring) {
                                 viewModel.addRecurringTransaction(amount, category, type, description, frequency, selectedDate, numInstances = numInstances)
                             } else {
-                                viewModel.addTransaction(amount, category, type, description, selectedDate)
+                                viewModel.addTransaction(amount, category, type, description, selectedDate, forceAdd = forceAdd)
                             }
                         }
                         showManualAddForm = false
@@ -2040,7 +2117,7 @@ fun DashboardScreen(
 @Composable
 fun ManualAddForm(
     viewModel: ExpenseViewModel,
-    onSubmit: (id: String, Double, String, String, String, Boolean, String, Long, Int) -> Unit,
+    onSubmit: (id: String, Double, String, String, String, Boolean, String, Long, Int, Boolean) -> Unit,
     initialTransaction: Transaction? = null,
     initialRecurringTransaction: com.example.data.RecurringTransaction? = null,
     modifier: Modifier = Modifier
@@ -2073,6 +2150,7 @@ fun ManualAddForm(
     }
     var numInstancesText by remember { mutableStateOf("12") }
 
+    val transactions by viewModel.transactions.collectAsState()
     val context = LocalContext.current
     val calendar = remember(initialTransaction, initialRecurringTransaction) {
         Calendar.getInstance().apply {
@@ -2081,6 +2159,23 @@ fun ManualAddForm(
     }
     var selectedDate by remember(initialTransaction, initialRecurringTransaction) { mutableStateOf(calendar.timeInMillis) }
     val dateFormatter = remember { SimpleDateFormat("MMM dd, yyyy", Locale.getDefault()) }
+
+    val parsedAmount = amountText.toDoubleOrNull() ?: 0.0
+    val potentialDuplicates = remember(parsedAmount, category, selectedDate, transactions, initialTransaction, isRecurring) {
+        if (parsedAmount > 0.0 && !isRecurring) {
+            DuplicateTransactionDetector.findPotentialDuplicates(
+                amount = parsedAmount,
+                category = category,
+                date = selectedDate,
+                transactions = transactions,
+                excludeId = initialTransaction?.id ?: ""
+            )
+        } else {
+            emptyList()
+        }
+    }
+    val hasPotentialDuplicate = potentialDuplicates.isNotEmpty()
+    var showDuplicateConfirmDialog by remember { mutableStateOf(false) }
 
     val datePickerDialog = remember {
         DatePickerDialog(
@@ -2407,21 +2502,116 @@ fun ManualAddForm(
 
             Spacer(modifier = Modifier.height(16.dp))
 
+            // Warning banner if a duplicate transaction is detected
+            if (hasPotentialDuplicate) {
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = Color(0xFFFFF8E1),
+                    border = BorderStroke(1.dp, Color(0xFFF59E0B)),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 12.dp)
+                        .testTag("duplicate_warning_banner")
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(12.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.WarningAmber,
+                                contentDescription = "Potential duplicate warning",
+                                tint = Color(0xFFD97706),
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Text(
+                                text = "Potential Duplicate Detected",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFFB45309)
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "An identical entry with this amount ($${String.format(Locale.US, "%.2f", parsedAmount)}), category ('$category'), and date (${dateFormatter.format(Date(selectedDate))}) is already in your ledger:",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+                        potentialDuplicates.take(2).forEach { dup ->
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = MaterialTheme.colorScheme.surface,
+                                border = BorderStroke(0.5.dp, Color(0xFFF59E0B).copy(alpha = 0.5f)),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 2.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 10.dp, vertical = 6.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = dup.description.ifBlank { "No description" },
+                                            style = MaterialTheme.typography.labelMedium,
+                                            fontWeight = FontWeight.SemiBold,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                        Text(
+                                            text = "${dup.category} • ${dateFormatter.format(Date(dup.date))}",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            fontSize = 10.sp,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                    Text(
+                                        text = String.format(Locale.US, "$%.2f", dup.amount),
+                                        style = MaterialTheme.typography.labelMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color(0xFFD97706)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            fun executeSubmit(forceAdd: Boolean = false) {
+                val amount = amountText.toDoubleOrNull() ?: 0.0
+                if (amount > 0 && description.isNotBlank()) {
+                    val id = initialTransaction?.id ?: initialRecurringTransaction?.id ?: ""
+                    val numInstances = numInstancesText.toIntOrNull() ?: 12
+                    onSubmit(id, amount, category, type, description, isRecurring, frequency, selectedDate, numInstances, forceAdd)
+                    amountText = ""
+                    description = ""
+                    type = "EXPENSE"
+                    category = "Food"
+                    isRecurring = false
+                    frequency = "MONTHLY"
+                    numInstancesText = "12"
+                    selectedDate = System.currentTimeMillis()
+                }
+            }
+
             Button(
                 onClick = {
                     val amount = amountText.toDoubleOrNull() ?: 0.0
                     if (amount > 0 && description.isNotBlank()) {
-                        val id = initialTransaction?.id ?: initialRecurringTransaction?.id ?: ""
-                        val numInstances = numInstancesText.toIntOrNull() ?: 12
-                        onSubmit(id, amount, category, type, description, isRecurring, frequency, selectedDate, numInstances)
-                        amountText = ""
-                        description = ""
-                        type = "EXPENSE"
-                        category = "Food"
-                        isRecurring = false
-                        frequency = "MONTHLY"
-                        numInstancesText = "12"
-                        selectedDate = System.currentTimeMillis()
+                        if (hasPotentialDuplicate) {
+                            showDuplicateConfirmDialog = true
+                        } else {
+                            executeSubmit(forceAdd = false)
+                        }
                     }
                 },
                 enabled = amountText.isNotBlank() && description.isNotBlank(),
@@ -2431,6 +2621,72 @@ fun ManualAddForm(
                     .testTag("manual_submit_button")
             ) {
                 Text(if (initialTransaction != null || initialRecurringTransaction != null) "Save Changes" else "Post Entry")
+            }
+
+            if (showDuplicateConfirmDialog) {
+                AlertDialog(
+                    onDismissRequest = { showDuplicateConfirmDialog = false },
+                    icon = {
+                        Icon(
+                            imageVector = Icons.Default.WarningAmber,
+                            contentDescription = null,
+                            tint = Color(0xFFD97706),
+                            modifier = Modifier.size(32.dp)
+                        )
+                    },
+                    title = {
+                        Text(
+                            text = "Potential Duplicate Entry",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                    },
+                    text = {
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text(
+                                text = "A transaction with identical amount ($${String.format(Locale.US, "%.2f", parsedAmount)}), category ('$category'), and date (${dateFormatter.format(Date(selectedDate))}) is already in your ledger.",
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                            if (potentialDuplicates.isNotEmpty()) {
+                                Text(
+                                    text = "Existing entry: \"${potentialDuplicates.first().description}\"",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            Text(
+                                text = "Are you sure you want to add this duplicate transaction?",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    },
+                    confirmButton = {
+                        Button(
+                            onClick = {
+                                showDuplicateConfirmDialog = false
+                                executeSubmit(forceAdd = true)
+                            },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color(0xFFD97706),
+                                contentColor = Color.White
+                            ),
+                            modifier = Modifier.testTag("duplicate_dialog_confirm_button")
+                        ) {
+                            Text(if (initialTransaction != null || initialRecurringTransaction != null) "Save Anyway" else "Add Anyway")
+                        }
+                    },
+                    dismissButton = {
+                        OutlinedButton(
+                            onClick = { showDuplicateConfirmDialog = false },
+                            modifier = Modifier.testTag("duplicate_dialog_dismiss_button")
+                        ) {
+                            Text("Review Entry")
+                        }
+                    },
+                    modifier = Modifier.testTag("duplicate_confirmation_dialog")
+                )
             }
         }
     }
@@ -2678,12 +2934,86 @@ fun ExpenseReconciliationHeader(
 }
 
 @Composable
+fun PotentialDuplicateLedgerBanner(
+    duplicateCount: Int,
+    isFiltering: Boolean,
+    onToggleFilter: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        shape = RoundedCornerShape(14.dp),
+        color = Color(0xFFFFF8E1),
+        border = BorderStroke(1.dp, Color(0xFFF59E0B).copy(alpha = 0.7f)),
+        modifier = modifier
+            .fillMaxWidth()
+            .testTag("duplicate_ledger_banner")
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 14.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.weight(1f)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.WarningAmber,
+                    contentDescription = "Duplicate warning",
+                    tint = Color(0xFFD97706),
+                    modifier = Modifier.size(20.dp)
+                )
+                Column {
+                    Text(
+                        text = "Potential Duplicates Flagged",
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFFB45309)
+                    )
+                    Text(
+                        text = "$duplicateCount entries share identical amount, category & date",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color(0xFFB45309).copy(alpha = 0.9f),
+                        fontSize = 11.sp
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.width(8.dp))
+            OutlinedButton(
+                onClick = onToggleFilter,
+                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                border = BorderStroke(1.dp, Color(0xFFD97706)),
+                shape = RoundedCornerShape(8.dp),
+                colors = ButtonDefaults.outlinedButtonColors(
+                    containerColor = if (isFiltering) Color(0xFFD97706) else Color.Transparent,
+                    contentColor = if (isFiltering) Color.White else Color(0xFFD97706)
+                ),
+                modifier = Modifier
+                    .height(32.dp)
+                    .testTag("filter_duplicates_button")
+            ) {
+                Text(
+                    text = if (isFiltering) "Show All" else "Review",
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
+    }
+}
+
+@Composable
 fun TransactionRowItem(
     transaction: Transaction,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
     onTogglePaid: (() -> Unit)? = null,
     customCategories: List<CustomCategory> = emptyList(),
+    isDuplicate: Boolean = false,
+    duplicateMatchingTx: Transaction? = null,
     modifier: Modifier = Modifier
 ) {
     val categoryStyle = getCategoryStyle(transaction.category, customCategories)
@@ -2767,41 +3097,160 @@ fun TransactionRowItem(
                     )
                 }
 
-                // Clickable status badge for expense entries
-                if (isExpense && onTogglePaid != null) {
-                    Spacer(modifier = Modifier.height(6.dp))
-                    Surface(
-                        onClick = onTogglePaid,
-                        shape = RoundedCornerShape(8.dp),
-                        color = if (transaction.paid) 
-                            Color(0xFF2E7D32).copy(alpha = 0.12f) 
-                        else 
-                            Color(0xFFE65100).copy(alpha = 0.12f),
-                        border = BorderStroke(
-                            1.dp,
-                            if (transaction.paid) 
-                                Color(0xFF2E7D32).copy(alpha = 0.35f) 
+                // Badges row (Paid / Unpaid status & Potential Duplicate)
+                Row(
+                    modifier = Modifier.padding(top = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    // Clickable status badge for expense entries
+                    if (isExpense && onTogglePaid != null) {
+                        Surface(
+                            onClick = onTogglePaid,
+                            shape = RoundedCornerShape(8.dp),
+                            color = if (transaction.paid) 
+                                Color(0xFF2E7D32).copy(alpha = 0.12f) 
                             else 
-                                Color(0xFFE65100).copy(alpha = 0.35f)
-                        ),
-                        modifier = Modifier.testTag("status_badge_${transaction.id}")
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                Color(0xFFE65100).copy(alpha = 0.12f),
+                            border = BorderStroke(
+                                1.dp,
+                                if (transaction.paid) 
+                                    Color(0xFF2E7D32).copy(alpha = 0.35f) 
+                                else 
+                                    Color(0xFFE65100).copy(alpha = 0.35f)
+                            ),
+                            modifier = Modifier.testTag("status_badge_${transaction.id}")
                         ) {
-                            Icon(
-                                imageVector = if (transaction.paid) Icons.Default.CheckCircle else Icons.Default.Schedule,
-                                contentDescription = if (transaction.paid) "Status: Paid. Tap to mark unpaid" else "Status: Unpaid. Tap to mark paid",
-                                tint = if (transaction.paid) Color(0xFF2E7D32) else Color(0xFFE65100),
-                                modifier = Modifier.size(12.dp)
-                            )
-                            Text(
-                                text = if (transaction.paid) "Paid" else "Unpaid",
-                                style = MaterialTheme.typography.labelSmall,
-                                fontWeight = FontWeight.ExtraBold,
-                                color = if (transaction.paid) Color(0xFF2E7D32) else Color(0xFFE65100)
+                            Row(
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Icon(
+                                    imageVector = if (transaction.paid) Icons.Default.CheckCircle else Icons.Default.Schedule,
+                                    contentDescription = if (transaction.paid) "Status: Paid. Tap to mark unpaid" else "Status: Unpaid. Tap to mark paid",
+                                    tint = if (transaction.paid) Color(0xFF2E7D32) else Color(0xFFE65100),
+                                    modifier = Modifier.size(12.dp)
+                                )
+                                Text(
+                                    text = if (transaction.paid) "Paid" else "Unpaid",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = if (transaction.paid) Color(0xFF2E7D32) else Color(0xFFE65100)
+                                )
+                            }
+                        }
+                    }
+
+                    // Warning badge for potential duplicate entry
+                    if (isDuplicate) {
+                        var showDuplicateInfoDialog by remember { mutableStateOf(false) }
+
+                        Surface(
+                            onClick = { showDuplicateInfoDialog = true },
+                            shape = RoundedCornerShape(8.dp),
+                            color = Color(0xFFFFF8E1),
+                            border = BorderStroke(1.dp, Color(0xFFF59E0B).copy(alpha = 0.8f)),
+                            modifier = Modifier.testTag("duplicate_badge_${transaction.id}")
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.WarningAmber,
+                                    contentDescription = "Potential duplicate transaction",
+                                    tint = Color(0xFFD97706),
+                                    modifier = Modifier.size(12.dp)
+                                )
+                                Text(
+                                    text = "Duplicate",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = Color(0xFFB45309),
+                                    fontSize = 10.sp
+                                )
+                            }
+                        }
+
+                        if (showDuplicateInfoDialog) {
+                            AlertDialog(
+                                onDismissRequest = { showDuplicateInfoDialog = false },
+                                icon = {
+                                    Icon(
+                                        imageVector = Icons.Default.WarningAmber,
+                                        contentDescription = null,
+                                        tint = Color(0xFFD97706),
+                                        modifier = Modifier.size(32.dp)
+                                    )
+                                },
+                                title = {
+                                    Text(
+                                        text = "Potential Duplicate Entry",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                },
+                                text = {
+                                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        Text(
+                                            text = "This transaction shares identical amount ($${String.format(Locale.US, "%.2f", transaction.amount)}), category ('${transaction.category}'), and date (${formatter.format(Date(transaction.date))}) with another entry in the ledger.",
+                                            style = MaterialTheme.typography.bodyMedium
+                                        )
+                                        if (duplicateMatchingTx != null) {
+                                            Surface(
+                                                shape = RoundedCornerShape(8.dp),
+                                                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                                                modifier = Modifier.fillMaxWidth().padding(top = 4.dp)
+                                            ) {
+                                                Column(modifier = Modifier.padding(10.dp)) {
+                                                    Text(
+                                                        text = "Matching Ledger Entry:",
+                                                        style = MaterialTheme.typography.labelSmall,
+                                                        fontWeight = FontWeight.Bold,
+                                                        color = MaterialTheme.colorScheme.primary
+                                                    )
+                                                    Text(
+                                                        text = duplicateMatchingTx.description.ifBlank { "No description" },
+                                                        style = MaterialTheme.typography.bodySmall,
+                                                        fontWeight = FontWeight.SemiBold
+                                                    )
+                                                    Text(
+                                                        text = "$${String.format(Locale.US, "%.2f", duplicateMatchingTx.amount)} • ${duplicateMatchingTx.category} • ${formatter.format(Date(duplicateMatchingTx.date))}",
+                                                        style = MaterialTheme.typography.labelSmall,
+                                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                    )
+                                                }
+                                            }
+                                        }
+                                        Text(
+                                            text = "If this entry was logged by mistake, you can edit or delete it.",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                },
+                                confirmButton = {
+                                    TextButton(
+                                        onClick = { showDuplicateInfoDialog = false },
+                                        modifier = Modifier.testTag("duplicate_info_close_button")
+                                    ) {
+                                        Text("Got it")
+                                    }
+                                },
+                                dismissButton = {
+                                    TextButton(
+                                        onClick = {
+                                            showDuplicateInfoDialog = false
+                                            onDelete()
+                                        },
+                                        modifier = Modifier.testTag("duplicate_info_delete_button")
+                                    ) {
+                                        Text("Delete Entry", color = MaterialTheme.colorScheme.error)
+                                    }
+                                },
+                                modifier = Modifier.testTag("duplicate_info_dialog")
                             )
                         }
                     }
