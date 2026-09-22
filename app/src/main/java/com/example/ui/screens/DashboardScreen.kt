@@ -236,14 +236,14 @@ fun DashboardScreen(
                             )
                         }
 
-                        // 1. Settings (Budget, Biometrics, Preferences)
+                        // 1. Settings (Budget, Biometrics, Preferences, Custom Categories)
                         Box(
                             modifier = Modifier
                                 .size(36.dp)
                                 .clip(CircleShape)
                                 .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f))
                                 .border(BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)), CircleShape)
-                                .clickable { showBudgetDialog = true }
+                            .clickable { showBudgetDialog = true }
                                 .testTag("edit_budget_button"),
                             contentAlignment = Alignment.Center
                         ) {
@@ -255,26 +255,7 @@ fun DashboardScreen(
                             )
                         }
 
-                        // 2. Custom Categories
-                        Box(
-                            modifier = Modifier
-                                .size(36.dp)
-                                .clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f))
-                                .border(BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)), CircleShape)
-                                .clickable { showGlobalCategoryDialog = true }
-                                .testTag("manage_categories_top_button"),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Palette,
-                                contentDescription = "Manage Custom Categories",
-                                tint = MaterialTheme.colorScheme.onSurface,
-                                modifier = Modifier.size(18.dp)
-                            )
-                        }
-
-                        // 3. Audit Deletion Report
+                        // 2. Audit Deletion Report
                         Box(
                             modifier = Modifier
                                 .size(36.dp)

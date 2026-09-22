@@ -1,17 +1,17 @@
 # Product & Engineering Roadmap - Ledgerly
 
-This roadmap outlines the evolution of **Ledgerly**, detailing completed milestones through production release **v85.0**, current deliverables, and strategic future initiatives.
+This roadmap outlines the evolution of **Ledgerly**, detailing completed milestones through production release **v86.0**, current deliverables, and strategic future initiatives.
 
 ---
 
 ## 🎯 Release Milestones
 
 ```
-  v1.0 - v34.0         v35.0 - v70.0        v71.0 - v85.0 (Current)        v86.0+ (Upcoming)
+  v1.0 - v34.0         v35.0 - v70.0        v71.0 - v86.0 (Current)        v87.0+ (Upcoming)
  ──────────────       ───────────────      ─────────────────────────      ───────────────────
   Core MVP, Gemini     Biometrics Lock,     Duplicate Detection,           Gemini Vision OCR,
   Parsing, Forecast    Audit Trails, PDF    Search Overlay, Snapshot       Multi-Currency FX,
-  & Milestone Engine   & CSV Reports        Backups, v85.0 Release         Glance Widgets
+  & Milestone Engine   & CSV Reports        Backups, v86.0 Release         Glance Widgets
 ```
 
 ---
@@ -50,14 +50,15 @@ This roadmap outlines the evolution of **Ledgerly**, detailing completed milesto
 - [x] **Advanced CSV Export Sheet**: Multi-criteria date range filtering, column configuration, and live summary totals.
 - [x] **Visual Drill-Down Analysis**: Interactive breakdown by category, description, and daily spending velocity.
 
-### Phase 6: Duplicate Detection, Search Overlay & Backups *(Completed - v71.0 - v85.0 - Current)*
+### Phase 6: Duplicate Detection, Search Overlay & Backups *(Completed - v71.0 - v86.0 - Current)*
 - [x] **Duplicate Detection Engine**: Centralized algorithm detecting identical entries by amount, category, and calendar day.
 - [x] **Real-time Add Form Warning**: Interactive warning banner and confirmation dialog with "Add Anyway" override.
 - [x] **Ledger Duplicate Badging**: Amber warning badges on conflicting ledger cards with one-tap conflict inspection and deletion.
 - [x] **Ledger Review Filter**: Quick toggle to isolate and review all flagged duplicate entries.
 - [x] **Search Overlay Integration**: Full-screen search overlay with date presets, keyword search, category filters, and live net balance totals.
 - [x] **Snapshot Backup & Restore**: Local JSON snapshot archives, file sharing, and Google account cloud backup sync.
-- [x] **Target SDK 36 Alignment & Version 85.0 Production Readiness**.
+- [x] **Streamlined Navigation Header**: De-cluttered top app bar by consolidating Custom Categories into the primary Settings sheet.
+- [x] **Target SDK 36 Alignment & Version 86.0 Production Readiness**.
 
 ---
 

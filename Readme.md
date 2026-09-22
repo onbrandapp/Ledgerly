@@ -89,7 +89,7 @@
 | **Document Export** | Android Native `PdfDocument` & CSV Serialization |
 | **AI Integration** | Gemini 2.5 Flash REST API via OkHttp |
 | **Target Platforms** | Android 7.0 (API 24) to Android 15+ (API 36) |
-| **Release Version** | Production Release v85.0 (versionCode 85) |
+| **Release Version** | Production Release v86.0 (versionCode 86) |
 
 ---
 
