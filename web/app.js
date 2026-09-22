@@ -2,7 +2,7 @@
 
 document.addEventListener('DOMContentLoaded', () => {
   // Synchronize header version with current release
-  const CURRENT_RELEASE = 'v86.0';
+  const CURRENT_RELEASE = 'v87.0';
   document.querySelectorAll('.logo-version').forEach(el => {
     el.textContent = CURRENT_RELEASE;
   });

@@ -140,47 +140,74 @@ class ExampleUnitTest {
 
   @Test
   fun testDuplicateTransactionDetection() {
-    val tx1 = com.example.data.Transaction(
+    // 1. Transactions with different descriptions (e.g. Christian vs Rick) are NOT duplicates
+    val christianTx = com.example.data.Transaction(
       id = "tx1",
-      amount = 45.50,
-      category = "Groceries",
-      description = "Trader Joe's",
+      amount = 100.00,
+      category = "Product",
+      description = "Christian",
       date = 1711000000000L,
-      type = "EXPENSE"
+      type = "INCOME"
     )
-    val tx2 = com.example.data.Transaction(
+    val rickTx = com.example.data.Transaction(
       id = "tx2",
-      amount = 45.50,
-      category = "groceries",
-      description = "Trader Joe's duplicate",
+      amount = 100.00,
+      category = "Product",
+      description = "Rick",
       date = 1711000000000L,
-      type = "EXPENSE"
+      type = "INCOME"
     )
-    val tx3 = com.example.data.Transaction(
+    // 2. Exact duplicate of Christian with case/trim variation
+    val christianDuplicateTx = com.example.data.Transaction(
       id = "tx3",
-      amount = 50.00,
-      category = "Groceries",
-      description = "Different amount",
+      amount = 100.00,
+      category = "product",
+      description = "christian ",
       date = 1711000000000L,
-      type = "EXPENSE"
+      type = "INCOME"
+    )
+    val differentAmountTx = com.example.data.Transaction(
+      id = "tx4",
+      amount = 50.00,
+      category = "Product",
+      description = "Christian",
+      date = 1711000000000L,
+      type = "INCOME"
     )
 
-    val list = listOf(tx1, tx2, tx3)
+    val list = listOf(christianTx, rickTx, christianDuplicateTx, differentAmountTx)
 
-    // Check potential duplicate detection
-    val duplicates = com.example.data.DuplicateTransactionDetector.findPotentialDuplicates(
-      amount = 45.50,
-      category = "Groceries",
+    // Christian and Rick have different descriptions, so Rick is NOT a duplicate of Christian
+    val duplicatesForChristian = com.example.data.DuplicateTransactionDetector.findPotentialDuplicates(
+      description = "Christian",
+      amount = 100.00,
+      category = "Product",
       date = 1711000000000L,
       transactions = list
     )
-    assertEquals(2, duplicates.size)
+    assertEquals(2, duplicatesForChristian.size) // tx1 and tx3
+    assertTrue(duplicatesForChristian.any { it.id == "tx1" })
+    assertTrue(duplicatesForChristian.any { it.id == "tx3" })
+    assertFalse(duplicatesForChristian.any { it.id == "tx2" }) // Rick is NOT included
 
+    // Searching for Rick finds only Rick (no duplicates since only 1 Rick)
+    val duplicatesForRick = com.example.data.DuplicateTransactionDetector.findPotentialDuplicates(
+      description = "Rick",
+      amount = 100.00,
+      category = "Product",
+      date = 1711000000000L,
+      transactions = list
+    )
+    assertEquals(1, duplicatesForRick.size)
+    assertEquals("tx2", duplicatesForRick.first().id)
+
+    // Overall duplicate detection flags only tx1 and tx3
     val duplicateIds = com.example.data.DuplicateTransactionDetector.findAllDuplicateIds(list)
     assertEquals(2, duplicateIds.size)
     assertTrue(duplicateIds.contains("tx1"))
-    assertTrue(duplicateIds.contains("tx2"))
-    assertFalse(duplicateIds.contains("tx3"))
+    assertTrue(duplicateIds.contains("tx3"))
+    assertFalse(duplicateIds.contains("tx2")) // Rick is not a duplicate!
+    assertFalse(duplicateIds.contains("tx4"))
   }
 }
 

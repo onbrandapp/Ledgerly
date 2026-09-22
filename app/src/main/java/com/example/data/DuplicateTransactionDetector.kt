@@ -8,8 +8,9 @@ import kotlin.math.abs
 
 /**
  * Utility for detecting potential duplicate transactions within the ledger.
- * A transaction is flagged as a potential duplicate if its amount, category,
- * and calendar date are identical to an existing entry.
+ * A transaction is flagged as a potential duplicate only if its description,
+ * amount, category, and calendar date are identical to an existing entry.
+ * If Description is different, the transactions are NOT duplicates.
  */
 object DuplicateTransactionDetector {
 
@@ -24,9 +25,11 @@ object DuplicateTransactionDetector {
     }
 
     /**
-     * Checks if a given amount, category, and date match an existing transaction.
+     * Checks if a given description, amount, category, and date match an existing transaction.
+     * If description is different (different customer, vendor, or note), they are not duplicates.
      */
     fun isPotentialDuplicate(
+        description: String,
         amount: Double,
         category: String,
         date: Long,
@@ -39,16 +42,18 @@ object DuplicateTransactionDetector {
         if (amount <= 0.0 || category.isBlank()) {
             return false
         }
+        val sameDescription = existingTx.description.trim().equals(description.trim(), ignoreCase = true)
         val sameAmount = abs(existingTx.amount - amount) < 0.001
         val sameCategory = existingTx.category.trim().equals(category.trim(), ignoreCase = true)
         val sameDate = isSameCalendarDay(existingTx.date, date)
-        return sameAmount && sameCategory && sameDate
+        return sameDescription && sameAmount && sameCategory && sameDate
     }
 
     /**
-     * Finds all transactions in [transactions] that match the provided amount, category, and date.
+     * Finds all transactions in [transactions] that match the provided description, amount, category, and date.
      */
     fun findPotentialDuplicates(
+        description: String,
         amount: Double,
         category: String,
         date: Long,
@@ -59,13 +64,20 @@ object DuplicateTransactionDetector {
             return emptyList()
         }
         return transactions.filter { existing ->
-            isPotentialDuplicate(amount, category, date, existing, excludeId)
+            isPotentialDuplicate(
+                description = description,
+                amount = amount,
+                category = category,
+                date = date,
+                existingTx = existing,
+                excludeId = excludeId
+            )
         }
     }
 
     /**
      * Returns a set of all transaction IDs that have at least one other transaction
-     * with the identical amount, category, and calendar date in the given list.
+     * with the identical description, amount, category, and calendar date in the given list.
      */
     fun findAllDuplicateIds(transactions: List<Transaction>): Set<String> {
         val duplicateIds = mutableSetOf<String>()
@@ -77,7 +89,8 @@ object DuplicateTransactionDetector {
             val dateKey = dayFormat.format(Date(tx.date))
             val amountKey = String.format(Locale.US, "%.2f", tx.amount)
             val catKey = tx.category.trim().lowercase(Locale.ROOT)
-            val groupKey = "$amountKey|$catKey|$dateKey"
+            val descKey = tx.description.trim().lowercase(Locale.ROOT)
+            val groupKey = "$amountKey|$catKey|$descKey|$dateKey"
 
             val list = map.getOrPut(groupKey) { mutableListOf() }
             list.add(tx)
@@ -92,13 +105,14 @@ object DuplicateTransactionDetector {
     }
 
     /**
-     * Returns other transactions sharing identical amount, category, and date with [tx].
+     * Returns other transactions sharing identical description, amount, category, and date with [tx].
      */
     fun findMatchingDuplicatesFor(
         tx: Transaction,
         allTransactions: List<Transaction>
     ): List<Transaction> {
         return findPotentialDuplicates(
+            description = tx.description,
             amount = tx.amount,
             category = tx.category,
             date = tx.date,

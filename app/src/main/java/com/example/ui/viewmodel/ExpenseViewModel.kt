@@ -417,15 +417,17 @@ class ExpenseViewModel(application: Application) : AndroidViewModel(application)
 
     /**
      * Checks if there are any potential duplicate transactions in the ledger
-     * matching the given amount, category, and date.
+     * matching the given description, amount, category, and date.
      */
     fun findPotentialDuplicates(
+        description: String,
         amount: Double,
         category: String,
         date: Long,
         excludeId: String = ""
     ): List<Transaction> {
         return DuplicateTransactionDetector.findPotentialDuplicates(
+            description = description,
             amount = amount,
             category = category,
             date = date,

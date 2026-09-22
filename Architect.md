@@ -1,6 +1,6 @@
 # System Architecture & Technical Design - Ledgerly
 
-This document details the architectural principles, component structures, data models, state flows, and integration paradigms utilized within **Ledgerly** (v86.0).
+This document details the architectural principles, component structures, data models, state flows, and integration paradigms utilized within **Ledgerly** (v87.0).
 
 ---
 

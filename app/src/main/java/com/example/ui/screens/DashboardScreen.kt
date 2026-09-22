@@ -2142,9 +2142,10 @@ fun ManualAddForm(
     val dateFormatter = remember { SimpleDateFormat("MMM dd, yyyy", Locale.getDefault()) }
 
     val parsedAmount = amountText.toDoubleOrNull() ?: 0.0
-    val potentialDuplicates = remember(parsedAmount, category, selectedDate, transactions, initialTransaction, isRecurring) {
+    val potentialDuplicates = remember(description, parsedAmount, category, selectedDate, transactions, initialTransaction, isRecurring) {
         if (parsedAmount > 0.0 && !isRecurring) {
             DuplicateTransactionDetector.findPotentialDuplicates(
+                description = description,
                 amount = parsedAmount,
                 category = category,
                 date = selectedDate,
@@ -2625,7 +2626,7 @@ fun ManualAddForm(
                     text = {
                         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             Text(
-                                text = "A transaction with identical amount ($${String.format(Locale.US, "%.2f", parsedAmount)}), category ('$category'), and date (${dateFormatter.format(Date(selectedDate))}) is already in your ledger.",
+                                text = "A transaction with identical description ('${description.trim()}'), amount ($${String.format(Locale.US, "%.2f", parsedAmount)}), category ('$category'), and date (${dateFormatter.format(Date(selectedDate))}) is already in your ledger.",
                                 style = MaterialTheme.typography.bodyMedium
                             )
                             if (potentialDuplicates.isNotEmpty()) {
@@ -2955,7 +2956,7 @@ fun PotentialDuplicateLedgerBanner(
                         color = Color(0xFFB45309)
                     )
                     Text(
-                        text = "$duplicateCount entries share identical amount, category & date",
+                        text = "$duplicateCount entries share identical description, amount, category & date",
                         style = MaterialTheme.typography.bodySmall,
                         color = Color(0xFFB45309).copy(alpha = 0.9f),
                         fontSize = 11.sp
@@ -3176,7 +3177,7 @@ fun TransactionRowItem(
                                 text = {
                                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                         Text(
-                                            text = "This transaction shares identical amount ($${String.format(Locale.US, "%.2f", transaction.amount)}), category ('${transaction.category}'), and date (${formatter.format(Date(transaction.date))}) with another entry in the ledger.",
+                                            text = "This transaction shares identical description ('${transaction.description}'), amount ($${String.format(Locale.US, "%.2f", transaction.amount)}), category ('${transaction.category}'), and date (${formatter.format(Date(transaction.date))}) with another entry in the ledger.",
                                             style = MaterialTheme.typography.bodyMedium
                                         )
                                         if (duplicateMatchingTx != null) {
