@@ -122,6 +122,16 @@ class ExpenseViewModel(application: Application) : AndroidViewModel(application)
     private val _monthlyBudget = MutableStateFlow(budgetPrefs.getFloat("limit", 2000f).toDouble())
     val monthlyBudget = _monthlyBudget.asStateFlow()
 
+    // Primary Display Currency State (defaults to USD)
+    private val _primaryCurrency = MutableStateFlow(budgetPrefs.getString("primary_currency", "USD") ?: "USD")
+    val primaryCurrency = _primaryCurrency.asStateFlow()
+
+    fun setPrimaryCurrency(code: String) {
+        val normalized = code.uppercase().trim().ifBlank { "USD" }
+        budgetPrefs.edit().putString("primary_currency", normalized).apply()
+        _primaryCurrency.value = normalized
+    }
+
     // Theme Mode State (Light / Dark - defaults to Light Mode for new installs)
     private val _isDarkMode = MutableStateFlow(budgetPrefs.getBoolean("is_dark_mode", false))
     val isDarkMode = _isDarkMode.asStateFlow()
@@ -446,7 +456,10 @@ class ExpenseViewModel(application: Application) : AndroidViewModel(application)
         id: String = "",
         recurringId: String = "",
         paid: Boolean = false,
-        forceAdd: Boolean = false
+        forceAdd: Boolean = false,
+        currency: String = _primaryCurrency.value,
+        originalAmount: Double = amount,
+        exchangeRate: Double = 1.0
     ) {
         val email = currentUserEmail.value ?: return
         val newTx = Transaction(
@@ -457,7 +470,10 @@ class ExpenseViewModel(application: Application) : AndroidViewModel(application)
             description = description.trim(),
             date = date,
             recurringId = recurringId,
-            paid = paid
+            paid = paid,
+            currency = currency.ifBlank { _primaryCurrency.value },
+            originalAmount = if (originalAmount > 0.0) originalAmount else amount,
+            exchangeRate = if (exchangeRate > 0.0) exchangeRate else 1.0
         )
         if (!forceAdd && isDuplicateTransaction(newTx)) {
             _transactionsError.value = "This ledger item already exists. Please edit the existing ledger item from the series as necessary."
@@ -533,7 +549,10 @@ class ExpenseViewModel(application: Application) : AndroidViewModel(application)
         startDate: Long,
         id: String = "",
         lastLoggedDate: Long = 0L,
-        numInstances: Int = 12
+        numInstances: Int = 12,
+        currency: String = _primaryCurrency.value,
+        originalAmount: Double = amount,
+        exchangeRate: Double = 1.0
     ) {
         val email = currentUserEmail.value ?: return
         viewModelScope.launch {
@@ -546,7 +565,10 @@ class ExpenseViewModel(application: Application) : AndroidViewModel(application)
                 description = description.trim(),
                 frequency = frequency,
                 startDate = startDate,
-                lastLoggedDate = lastLoggedDate
+                lastLoggedDate = lastLoggedDate,
+                currency = currency.ifBlank { _primaryCurrency.value },
+                originalAmount = if (originalAmount > 0.0) originalAmount else amount,
+                exchangeRate = if (exchangeRate > 0.0) exchangeRate else 1.0
             )
             transactionRepository.addRecurringTransaction(email, recurring)
 
@@ -584,7 +606,10 @@ class ExpenseViewModel(application: Application) : AndroidViewModel(application)
                     type = type,
                     description = txDesc,
                     date = instanceDate,
-                    recurringId = ruleId
+                    recurringId = ruleId,
+                    currency = recurring.currency,
+                    originalAmount = recurring.originalAmount,
+                    exchangeRate = recurring.exchangeRate
                 )
 
                 if (!isDuplicateTransaction(nextTx)) {
@@ -765,7 +790,10 @@ class ExpenseViewModel(application: Application) : AndroidViewModel(application)
                             category = template.category,
                             type = template.type,
                             description = template.description + " (Recurring)",
-                            date = startDate
+                            date = startDate,
+                            currency = template.currency,
+                            originalAmount = template.originalAmount,
+                            exchangeRate = template.exchangeRate
                         )
                         transactionRepository.addTransaction(userEmail, firstTx)
                         updatedLastLogged = startDate
@@ -789,7 +817,10 @@ class ExpenseViewModel(application: Application) : AndroidViewModel(application)
                                 category = template.category,
                                 type = template.type,
                                 description = template.description + " (Recurring)",
-                                date = nextTime
+                                date = nextTime,
+                                currency = template.currency,
+                                originalAmount = template.originalAmount,
+                                exchangeRate = template.exchangeRate
                             )
                             transactionRepository.addTransaction(userEmail, nextTx)
                             updatedLastLogged = nextTime
@@ -1399,7 +1430,8 @@ class ExpenseViewModel(application: Application) : AndroidViewModel(application)
             accentColor = _accentColor.value,
             primaryColor = _primaryColor.value,
             secondaryColor = _secondaryColor.value,
-            biometricEnabled = _isBiometricEnabled.value
+            biometricEnabled = _isBiometricEnabled.value,
+            primaryCurrency = _primaryCurrency.value
         )
         return BackupData(
             version = 1,
@@ -1514,6 +1546,7 @@ class ExpenseViewModel(application: Application) : AndroidViewModel(application)
                     updateMonthlyBudget(backupData.settings.monthlyBudget)
                     setDarkMode(backupData.settings.isDarkMode)
                     updateAccentColor(backupData.settings.accentColor)
+                    setPrimaryCurrency(backupData.settings.primaryCurrency)
                 }
 
                 _isBackupLoading.value = false

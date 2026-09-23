@@ -193,7 +193,7 @@ fun LedgerReportView(
     val totalLeftToPay = remember(rawExpenseList) {
         rawExpenseList.filter { !it.paid }.sumOf { it.amount }
     }
-    val netBalance = cashOnHand + (totalIncome - totalExpense)
+    val netBalance = totalIncome - totalExpense
     val currentBalance = cashOnHand + totalLeftToReceive - totalLeftToPay
 
     val ledgerFormatter = remember { SimpleDateFormat("MMM dd, yyyy", Locale.getDefault()) }

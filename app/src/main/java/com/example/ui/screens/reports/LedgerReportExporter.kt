@@ -42,7 +42,7 @@ object LedgerReportExporter {
             val totalLeftToReceive = incomes.filter { !it.paid && !it.category.trim().equals("cash", ignoreCase = true) }.sumOf { it.amount }
             val totalExpense = expenses.sumOf { it.amount }
             val totalLeftToPay = expenses.filter { !it.paid }.sumOf { it.amount }
-            val netBalance = cashOnHand + (totalIncome - totalExpense)
+            val netBalance = totalIncome - totalExpense
             val currentBalance = cashOnHand + totalLeftToReceive - totalLeftToPay
 
             append("\n")
@@ -248,7 +248,7 @@ object LedgerReportExporter {
         val totalLeftToReceive = incomes.filter { !it.paid && !it.category.trim().equals("cash", ignoreCase = true) }.sumOf { it.amount }
         val totalExpense = expenses.sumOf { it.amount }
         val totalLeftToPay = expenses.filter { !it.paid }.sumOf { it.amount }
-        val netBalance = cashOnHand + (totalIncome - totalExpense)
+        val netBalance = totalIncome - totalExpense
         val currentBalance = cashOnHand + totalLeftToReceive - totalLeftToPay
 
         val summaryTitlePaint = Paint().apply {

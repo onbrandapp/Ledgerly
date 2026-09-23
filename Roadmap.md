@@ -1,17 +1,17 @@
 # Product & Engineering Roadmap - Ledgerly
 
-This roadmap outlines the evolution of **Ledgerly**, detailing completed milestones through production release **v87.0**, current deliverables, and strategic future initiatives.
+This roadmap outlines the evolution of **Ledgerly**, detailing completed milestones through production release **v88.0**, current deliverables, and strategic future initiatives.
 
 ---
 
 ## 🎯 Release Milestones
 
 ```
-  v1.0 - v34.0         v35.0 - v70.0        v71.0 - v87.0 (Current)        v88.0+ (Upcoming)
+  v1.0 - v34.0         v35.0 - v70.0        v71.0 - v88.0 (Current)        v89.0+ (Upcoming)
  ──────────────       ───────────────      ─────────────────────────      ───────────────────
   Core MVP, Gemini     Biometrics Lock,     Duplicate Detection,           Gemini Vision OCR,
-  Parsing, Forecast    Audit Trails, PDF    Search Overlay, Snapshot       Multi-Currency FX,
-  & Milestone Engine   & CSV Reports        Backups, v87.0 Release         Glance Widgets
+  Parsing, Forecast    Audit Trails, PDF    Search Overlay, Net Balance    Multi-Currency FX,
+  & Milestone Engine   & CSV Reports        Balance Formula, v88.0 Release Glance Widgets
 ```
 
 ---
@@ -50,7 +50,7 @@ This roadmap outlines the evolution of **Ledgerly**, detailing completed milesto
 - [x] **Advanced CSV Export Sheet**: Multi-criteria date range filtering, column configuration, and live summary totals.
 - [x] **Visual Drill-Down Analysis**: Interactive breakdown by category, description, and daily spending velocity.
 
-### Phase 6: Duplicate Detection, Search Overlay & Backups *(Completed - v71.0 - v87.0 - Current)*
+### Phase 6: Duplicate Detection, Search Overlay & Backups *(Completed - v71.0 - v88.0 - Current)*
 - [x] **Duplicate Detection Engine**: Centralized algorithm detecting identical entries by description (vendor/customer), amount, category, and calendar day. If description differs, transactions are uniquely distinguished.
 - [x] **Real-time Add Form Warning**: Interactive warning banner and confirmation dialog with "Add Anyway" override.
 - [x] **Ledger Duplicate Badging**: Amber warning badges on conflicting ledger cards with one-tap conflict inspection and deletion.
@@ -58,7 +58,8 @@ This roadmap outlines the evolution of **Ledgerly**, detailing completed milesto
 - [x] **Search Overlay Integration**: Full-screen search overlay with date presets, keyword search, category filters, and live net balance totals.
 - [x] **Snapshot Backup & Restore**: Local JSON snapshot archives, file sharing, and Google account cloud backup sync.
 - [x] **Streamlined Navigation Header**: De-cluttered top app bar by consolidating Custom Categories into the primary Settings sheet.
-- [x] **Target SDK 36 Alignment & Version 87.0 Production Readiness**.
+- [x] **Net Balance Formula Refinement**: Corrected Net Balance formula across Ledger screen, CSV export, and PDF statements to calculate `Total Income - Total Expenses` strictly without adding Cash on Hand.
+- [x] **Target SDK 36 Alignment & Version 88.0 Production Readiness**.
 
 ---
 

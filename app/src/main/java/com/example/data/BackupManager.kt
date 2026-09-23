@@ -26,7 +26,8 @@ data class BackupSettings(
     val accentColor: String = "#392720",
     val primaryColor: String = "#392720",
     val secondaryColor: String = "#392720",
-    val biometricEnabled: Boolean = false
+    val biometricEnabled: Boolean = false,
+    val primaryCurrency: String = "USD"
 )
 
 data class BackupData(
@@ -93,6 +94,7 @@ object BackupManager {
                 put("primaryColor", data.settings.primaryColor)
                 put("secondaryColor", data.settings.secondaryColor)
                 put("biometricEnabled", data.settings.biometricEnabled)
+                put("primaryCurrency", data.settings.primaryCurrency)
             }
             put("settings", settingsObj)
 
@@ -108,6 +110,9 @@ object BackupManager {
                     put("date", tx.date)
                     put("recurringId", tx.recurringId)
                     put("paid", tx.paid)
+                    put("currency", tx.currency)
+                    put("originalAmount", tx.originalAmount)
+                    put("exchangeRate", tx.exchangeRate)
                 })
             }
             put("transactions", txArr)
@@ -124,6 +129,9 @@ object BackupManager {
                     put("frequency", rec.frequency)
                     put("startDate", rec.startDate)
                     put("lastLoggedDate", rec.lastLoggedDate)
+                    put("currency", rec.currency)
+                    put("originalAmount", rec.originalAmount)
+                    put("exchangeRate", rec.exchangeRate)
                 })
             }
             put("recurringTransactions", recArr)
@@ -221,7 +229,8 @@ object BackupManager {
                     accentColor = settingsObj.optString("accentColor", "#392720"),
                     primaryColor = settingsObj.optString("primaryColor", "#392720"),
                     secondaryColor = settingsObj.optString("secondaryColor", "#392720"),
-                    biometricEnabled = settingsObj.optBoolean("biometricEnabled", false)
+                    biometricEnabled = settingsObj.optBoolean("biometricEnabled", false),
+                    primaryCurrency = settingsObj.optString("primaryCurrency", "USD")
                 )
             } else {
                 BackupSettings()
@@ -233,16 +242,20 @@ object BackupManager {
             if (txArr != null) {
                 for (i in 0 until txArr.length()) {
                     val obj = txArr.getJSONObject(i)
+                    val txAmount = obj.optDouble("amount", 0.0)
                     transactions.add(
                         Transaction(
                             id = obj.optString("id", UUID.randomUUID().toString()),
-                            amount = obj.optDouble("amount", 0.0),
+                            amount = txAmount,
                             category = obj.optString("category", "General"),
                             type = obj.optString("type", "EXPENSE"),
                             description = obj.optString("description", ""),
                             date = obj.optLong("date", System.currentTimeMillis()),
                             recurringId = obj.optString("recurringId", ""),
-                            paid = obj.optBoolean("paid", false)
+                            paid = obj.optBoolean("paid", false),
+                            currency = obj.optString("currency", "USD"),
+                            originalAmount = obj.optDouble("originalAmount", txAmount),
+                            exchangeRate = obj.optDouble("exchangeRate", 1.0)
                         )
                     )
                 }
@@ -254,16 +267,20 @@ object BackupManager {
             if (recArr != null) {
                 for (i in 0 until recArr.length()) {
                     val obj = recArr.getJSONObject(i)
+                    val recAmount = obj.optDouble("amount", 0.0)
                     recurring.add(
                         RecurringTransaction(
                             id = obj.optString("id", UUID.randomUUID().toString()),
-                            amount = obj.optDouble("amount", 0.0),
+                            amount = recAmount,
                             category = obj.optString("category", "General"),
                             type = obj.optString("type", "EXPENSE"),
                             description = obj.optString("description", ""),
                             frequency = obj.optString("frequency", "MONTHLY"),
                             startDate = obj.optLong("startDate", System.currentTimeMillis()),
-                            lastLoggedDate = obj.optLong("lastLoggedDate", 0L)
+                            lastLoggedDate = obj.optLong("lastLoggedDate", 0L),
+                            currency = obj.optString("currency", "USD"),
+                            originalAmount = obj.optDouble("originalAmount", recAmount),
+                            exchangeRate = obj.optDouble("exchangeRate", 1.0)
                         )
                     )
                 }

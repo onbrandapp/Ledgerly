@@ -60,10 +60,16 @@ import java.util.Calendar
 import com.example.data.Transaction
 import com.example.data.CustomCategory
 import com.example.data.DuplicateTransactionDetector
+import com.example.data.CurrencyHelper
 import com.example.ui.components.BackupRestoreSheet
 import com.example.ui.components.BiometricSettingsCard
 import com.example.ui.components.CategoryCustomizationDialog
 import com.example.ui.components.TransactionSearchOverlay
+import com.example.ui.components.CurrencySelectorChip
+import com.example.ui.components.CurrencySelectionBottomSheet
+import com.example.ui.components.CurrencyConversionHelperCard
+import com.example.ui.components.CurrencyConversionDialog
+import com.example.ui.components.PrimaryCurrencySettingsCard
 import com.example.ui.theme.AppAccentPresets
 import com.example.ui.theme.CategoryConstants
 import com.example.ui.theme.CategoryStyle
@@ -106,10 +112,13 @@ fun DashboardScreen(
     val parseError by viewModel.parseError.collectAsState()
     val parseSuccessMessage by viewModel.parseSuccessMessage.collectAsState()
     val transactionsError by viewModel.transactionsError.collectAsState()
+    val primaryCurrency by viewModel.primaryCurrency.collectAsState()
 
     val coroutineScope = rememberCoroutineScope()
 
     var showBudgetDialog by remember { mutableStateOf(false) }
+    var showPrimaryCurrencyPicker by remember { mutableStateOf(false) }
+    var showSettingsConversionDialog by remember { mutableStateOf(false) }
     var showSearchOverlay by remember { mutableStateOf(false) }
     var showBackupRestoreSheet by remember { mutableStateOf(false) }
     var tempPrimaryHex by remember(primaryColorHex) { mutableStateOf(primaryColorHex) }
@@ -1270,7 +1279,8 @@ fun DashboardScreen(
                                     onTogglePaid = {
                                         viewModel.toggleTransactionPaid(tx.id)
                                     },
-                                    customCategories = customCategoriesList
+                                    customCategories = customCategoriesList,
+                                    primaryCurrency = primaryCurrency
                                 )
                             }
                         }
@@ -1369,7 +1379,8 @@ fun DashboardScreen(
                                     onTogglePaid = {
                                         viewModel.toggleTransactionPaid(tx.id)
                                     },
-                                    customCategories = customCategoriesList
+                                    customCategories = customCategoriesList,
+                                    primaryCurrency = primaryCurrency
                                 )
                             }
                         }
@@ -1425,7 +1436,8 @@ fun DashboardScreen(
                                         showManualAddForm = true
                                     },
                                     onDelete = { viewModel.deleteRecurringTransaction(rec.id) },
-                                    customCategories = customCategoriesList
+                                    customCategories = customCategoriesList,
+                                    primaryCurrency = primaryCurrency
                                 )
                             }
                         }
@@ -1602,6 +1614,82 @@ fun DashboardScreen(
                         .verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
+                    // Currency & Display Settings
+                    Text(
+                        "Currency & Display",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.padding(bottom = 2.dp)
+                    )
+
+                    PrimaryCurrencySettingsCard(
+                        currentCurrency = primaryCurrency,
+                        onOpenPicker = { showPrimaryCurrencyPicker = true }
+                    )
+
+                    // Standalone Currency Converter Launcher in Settings
+                    Card(
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                        ),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { showSettingsConversionDialog = true }
+                            .testTag("open_currency_converter_settings_card")
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(14.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(36.dp)
+                                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f), CircleShape),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.CurrencyExchange,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                                Column {
+                                    Text(
+                                        text = "Currency Conversion Helper",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Text(
+                                        text = "Live exchange converter between supported currencies",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                            Icon(
+                                imageVector = Icons.Default.ChevronRight,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+                    }
+
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
+
                     Text(
                         "Monthly Budget Limit",
                         style = MaterialTheme.typography.titleSmall,
@@ -1612,7 +1700,7 @@ fun DashboardScreen(
                     OutlinedTextField(
                         value = budgetText,
                         onValueChange = { budgetText = it },
-                        label = { Text("Monthly Limit ($)") },
+                        label = { Text("Monthly Limit (${CurrencyHelper.getSymbol(primaryCurrency)})") },
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         colors = OutlinedTextFieldDefaults.colors(
@@ -2034,19 +2122,53 @@ fun DashboardScreen(
                     viewModel = viewModel,
                     initialTransaction = editingTransaction,
                     initialRecurringTransaction = editingRecurringTransaction,
-                    onSubmit = { id, amount, category, type, description, isRecurring, frequency, selectedDate, numInstances, forceAdd ->
+                    onSubmit = { id, amount, category, type, description, isRecurring, frequency, selectedDate, numInstances, forceAdd, currency, originalAmount, exchangeRate ->
                         if (editingTransaction != null) {
                             if (isRecurring) {
                                 // Toggled from non-recurring to recurring
-                                viewModel.addRecurringTransaction(amount, category, type, description, frequency, selectedDate, numInstances = numInstances)
+                                viewModel.addRecurringTransaction(
+                                    amount = amount,
+                                    category = category,
+                                    type = type,
+                                    description = description,
+                                    frequency = frequency,
+                                    startDate = selectedDate,
+                                    numInstances = numInstances,
+                                    currency = currency,
+                                    originalAmount = originalAmount,
+                                    exchangeRate = exchangeRate
+                                )
                                 viewModel.deleteTransaction(editingTransaction!!.id)
                             } else {
-                                viewModel.addTransaction(amount, category, type, description, selectedDate, id, recurringId = editingTransaction!!.recurringId, paid = editingTransaction!!.paid, forceAdd = forceAdd)
+                                viewModel.addTransaction(
+                                    amount = amount,
+                                    category = category,
+                                    type = type,
+                                    description = description,
+                                    date = selectedDate,
+                                    id = id,
+                                    recurringId = editingTransaction!!.recurringId,
+                                    paid = editingTransaction!!.paid,
+                                    forceAdd = forceAdd,
+                                    currency = currency,
+                                    originalAmount = originalAmount,
+                                    exchangeRate = exchangeRate
+                                )
                             }
                         } else if (editingRecurringTransaction != null) {
                             if (!isRecurring) {
                                 // Toggled from recurring to non-recurring
-                                viewModel.addTransaction(amount, category, type, description, selectedDate, forceAdd = forceAdd)
+                                viewModel.addTransaction(
+                                    amount = amount,
+                                    category = category,
+                                    type = type,
+                                    description = description,
+                                    date = selectedDate,
+                                    forceAdd = forceAdd,
+                                    currency = currency,
+                                    originalAmount = originalAmount,
+                                    exchangeRate = exchangeRate
+                                )
                                 viewModel.deleteRecurringTransaction(editingRecurringTransaction!!.id)
                             } else {
                                 viewModel.addRecurringTransaction(
@@ -2058,15 +2180,39 @@ fun DashboardScreen(
                                     startDate = selectedDate,
                                     id = id,
                                     lastLoggedDate = editingRecurringTransaction!!.lastLoggedDate,
-                                    numInstances = numInstances
+                                    numInstances = numInstances,
+                                    currency = currency,
+                                    originalAmount = originalAmount,
+                                    exchangeRate = exchangeRate
                                 )
                             }
                         } else {
                             // New entry
                             if (isRecurring) {
-                                viewModel.addRecurringTransaction(amount, category, type, description, frequency, selectedDate, numInstances = numInstances)
+                                viewModel.addRecurringTransaction(
+                                    amount = amount,
+                                    category = category,
+                                    type = type,
+                                    description = description,
+                                    frequency = frequency,
+                                    startDate = selectedDate,
+                                    numInstances = numInstances,
+                                    currency = currency,
+                                    originalAmount = originalAmount,
+                                    exchangeRate = exchangeRate
+                                )
                             } else {
-                                viewModel.addTransaction(amount, category, type, description, selectedDate, forceAdd = forceAdd)
+                                viewModel.addTransaction(
+                                    amount = amount,
+                                    category = category,
+                                    type = type,
+                                    description = description,
+                                    date = selectedDate,
+                                    forceAdd = forceAdd,
+                                    currency = currency,
+                                    originalAmount = originalAmount,
+                                    exchangeRate = exchangeRate
+                                )
                             }
                         }
                         showManualAddForm = false
@@ -2076,6 +2222,27 @@ fun DashboardScreen(
                 )
             }
         }
+    }
+
+    if (showPrimaryCurrencyPicker) {
+        CurrencySelectionBottomSheet(
+            selectedCurrency = primaryCurrency,
+            primaryCurrency = primaryCurrency,
+            onCurrencySelected = { newCurrency ->
+                viewModel.setPrimaryCurrency(newCurrency)
+            },
+            onDismiss = { showPrimaryCurrencyPicker = false },
+            title = "Select Primary Currency"
+        )
+    }
+
+    if (showSettingsConversionDialog) {
+        CurrencyConversionDialog(
+            primaryCurrency = primaryCurrency,
+            initialFromCurrency = primaryCurrency,
+            initialAmount = 100.0,
+            onDismiss = { showSettingsConversionDialog = false }
+        )
     }
 
     // --- CUSTOM COLOR PICKER BOTTOM DRAWER ---
@@ -2098,17 +2265,55 @@ fun DashboardScreen(
 @Composable
 fun ManualAddForm(
     viewModel: ExpenseViewModel,
-    onSubmit: (id: String, Double, String, String, String, Boolean, String, Long, Int, Boolean) -> Unit,
+    onSubmit: (
+        id: String,
+        amount: Double,
+        category: String,
+        type: String,
+        description: String,
+        isRecurring: Boolean,
+        frequency: String,
+        selectedDate: Long,
+        numInstances: Int,
+        forceAdd: Boolean,
+        currency: String,
+        originalAmount: Double,
+        exchangeRate: Double
+    ) -> Unit,
     initialTransaction: Transaction? = null,
     initialRecurringTransaction: com.example.data.RecurringTransaction? = null,
     modifier: Modifier = Modifier
 ) {
+    val primaryCurrency by viewModel.primaryCurrency.collectAsState()
+    var selectedCurrency by remember(initialTransaction, initialRecurringTransaction, primaryCurrency) {
+        mutableStateOf(
+            initialTransaction?.currency?.ifBlank { primaryCurrency }
+                ?: initialRecurringTransaction?.currency?.ifBlank { primaryCurrency }
+                ?: primaryCurrency
+        )
+    }
+    var customExchangeRate by remember(initialTransaction, initialRecurringTransaction) {
+        mutableStateOf<Double?>(
+            if ((initialTransaction?.exchangeRate ?: 1.0) != 1.0 && initialTransaction?.currency?.isNotBlank() == true && initialTransaction.currency != primaryCurrency) {
+                initialTransaction.exchangeRate
+            } else if ((initialRecurringTransaction?.exchangeRate ?: 1.0) != 1.0 && initialRecurringTransaction?.currency?.isNotBlank() == true && initialRecurringTransaction.currency != primaryCurrency) {
+                initialRecurringTransaction.exchangeRate
+            } else {
+                null
+            }
+        )
+    }
+    var showCurrencyPicker by remember { mutableStateOf(false) }
+    var showConversionDialog by remember { mutableStateOf(false) }
+
     var amountText by remember(initialTransaction, initialRecurringTransaction) {
         mutableStateOf(
             if (initialTransaction != null) {
-                if (initialTransaction.amount == 0.0) "" else initialTransaction.amount.toString()
+                val amt = if (initialTransaction.originalAmount > 0.0) initialTransaction.originalAmount else initialTransaction.amount
+                if (amt == 0.0) "" else if (amt % 1.0 == 0.0) String.format(Locale.US, "%.0f", amt) else String.format(Locale.US, "%.2f", amt)
             } else if (initialRecurringTransaction != null) {
-                if (initialRecurringTransaction.amount == 0.0) "" else initialRecurringTransaction.amount.toString()
+                val amt = if (initialRecurringTransaction.originalAmount > 0.0) initialRecurringTransaction.originalAmount else initialRecurringTransaction.amount
+                if (amt == 0.0) "" else if (amt % 1.0 == 0.0) String.format(Locale.US, "%.0f", amt) else String.format(Locale.US, "%.2f", amt)
             } else {
                 ""
             }
@@ -2142,11 +2347,17 @@ fun ManualAddForm(
     val dateFormatter = remember { SimpleDateFormat("MMM dd, yyyy", Locale.getDefault()) }
 
     val parsedAmount = amountText.toDoubleOrNull() ?: 0.0
-    val potentialDuplicates = remember(description, parsedAmount, category, selectedDate, transactions, initialTransaction, isRecurring) {
-        if (parsedAmount > 0.0 && !isRecurring) {
+    val effectiveRate = customExchangeRate ?: CurrencyHelper.getRate(selectedCurrency, primaryCurrency)
+    val convertedPrimaryAmount = if (selectedCurrency.equals(primaryCurrency, ignoreCase = true)) {
+        parsedAmount
+    } else {
+        parsedAmount * effectiveRate
+    }
+    val potentialDuplicates = remember(description, convertedPrimaryAmount, category, selectedDate, transactions, initialTransaction, isRecurring) {
+        if (convertedPrimaryAmount > 0.0 && !isRecurring) {
             DuplicateTransactionDetector.findPotentialDuplicates(
                 description = description,
-                amount = parsedAmount,
+                amount = convertedPrimaryAmount,
                 category = category,
                 date = selectedDate,
                 transactions = transactions,
@@ -2243,19 +2454,67 @@ fun ManualAddForm(
                     .testTag("manual_desc_input")
             )
 
-            // Amount Input
-            OutlinedTextField(
-                value = amountText,
-                onValueChange = { amountText = it },
-                label = { Text("Amount ($)") },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                shape = RoundedCornerShape(8.dp),
+            // Multi-Currency & Amount Input Row
+            Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(bottom = 12.dp)
-                    .testTag("manual_amount_input")
-            )
+                    .padding(bottom = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                CurrencySelectorChip(
+                    selectedCurrency = selectedCurrency,
+                    onClick = { showCurrencyPicker = true }
+                )
+
+                OutlinedTextField(
+                    value = amountText,
+                    onValueChange = { amountText = it },
+                    label = { Text("Amount") },
+                    prefix = {
+                        Text(
+                            text = CurrencyHelper.getSymbol(selectedCurrency) + " ",
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    },
+                    trailingIcon = {
+                        IconButton(
+                            onClick = { showConversionDialog = true },
+                            modifier = Modifier.testTag("open_conversion_dialog_button")
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.CurrencyExchange,
+                                contentDescription = "Currency Conversion Helper",
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier
+                        .weight(1f)
+                        .testTag("manual_amount_input")
+                )
+            }
+
+            // In-line Currency Conversion Helper Card (shown if foreign currency chosen)
+            if (!selectedCurrency.equals(primaryCurrency, ignoreCase = true)) {
+                CurrencyConversionHelperCard(
+                    foreignCurrency = selectedCurrency,
+                    primaryCurrency = primaryCurrency,
+                    foreignAmount = parsedAmount,
+                    customRate = customExchangeRate,
+                    onRateChange = { newRate -> customExchangeRate = newRate },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 12.dp)
+                )
+            } else {
+                Spacer(modifier = Modifier.height(4.dp))
+            }
 
             // Category Selection Header with Edit Button for Custom Category Management
             Row(
@@ -2569,11 +2828,31 @@ fun ManualAddForm(
             }
 
             fun executeSubmit(forceAdd: Boolean = false) {
-                val amount = amountText.toDoubleOrNull() ?: 0.0
-                if (amount > 0 && description.isNotBlank()) {
+                val entered = amountText.toDoubleOrNull() ?: 0.0
+                if (entered > 0 && description.isNotBlank()) {
                     val id = initialTransaction?.id ?: initialRecurringTransaction?.id ?: ""
                     val numInstances = numInstancesText.toIntOrNull() ?: 12
-                    onSubmit(id, amount, category, type, description, isRecurring, frequency, selectedDate, numInstances, forceAdd)
+                    val currentRate = customExchangeRate ?: CurrencyHelper.getRate(selectedCurrency, primaryCurrency)
+                    val primaryAmount = if (selectedCurrency.equals(primaryCurrency, ignoreCase = true)) {
+                        entered
+                    } else {
+                        entered * currentRate
+                    }
+                    onSubmit(
+                        id,
+                        primaryAmount,
+                        category,
+                        type,
+                        description,
+                        isRecurring,
+                        frequency,
+                        selectedDate,
+                        numInstances,
+                        forceAdd,
+                        selectedCurrency,
+                        entered,
+                        currentRate
+                    )
                     amountText = ""
                     description = ""
                     type = "EXPENSE"
@@ -2582,6 +2861,8 @@ fun ManualAddForm(
                     frequency = "MONTHLY"
                     numInstancesText = "12"
                     selectedDate = System.currentTimeMillis()
+                    selectedCurrency = primaryCurrency
+                    customExchangeRate = null
                 }
             }
 
@@ -2626,7 +2907,7 @@ fun ManualAddForm(
                     text = {
                         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             Text(
-                                text = "A transaction with identical description ('${description.trim()}'), amount ($${String.format(Locale.US, "%.2f", parsedAmount)}), category ('$category'), and date (${dateFormatter.format(Date(selectedDate))}) is already in your ledger.",
+                                text = "A transaction with identical description ('${description.trim()}'), amount (${CurrencyHelper.formatAmount(convertedPrimaryAmount, primaryCurrency)}), category ('$category'), and date (${dateFormatter.format(Date(selectedDate))}) is already in your ledger.",
                                 style = MaterialTheme.typography.bodyMedium
                             )
                             if (potentialDuplicates.isNotEmpty()) {
@@ -2671,6 +2952,28 @@ fun ManualAddForm(
                 )
             }
         }
+    }
+
+    if (showCurrencyPicker) {
+        CurrencySelectionBottomSheet(
+            selectedCurrency = selectedCurrency,
+            primaryCurrency = primaryCurrency,
+            onCurrencySelected = { newCurrency ->
+                selectedCurrency = newCurrency
+                customExchangeRate = null
+            },
+            onDismiss = { showCurrencyPicker = false },
+            title = "Select Transaction Currency"
+        )
+    }
+
+    if (showConversionDialog) {
+        CurrencyConversionDialog(
+            primaryCurrency = primaryCurrency,
+            initialFromCurrency = selectedCurrency,
+            initialAmount = if (parsedAmount > 0.0) parsedAmount else 100.0,
+            onDismiss = { showConversionDialog = false }
+        )
     }
 }
 
@@ -2996,6 +3299,7 @@ fun TransactionRowItem(
     customCategories: List<CustomCategory> = emptyList(),
     isDuplicate: Boolean = false,
     duplicateMatchingTx: Transaction? = null,
+    primaryCurrency: String = "USD",
     modifier: Modifier = Modifier
 ) {
     val categoryStyle = getCategoryStyle(transaction.category, customCategories)
@@ -3244,19 +3548,30 @@ fun TransactionRowItem(
             // Value Amount Text
             val valSign = if (isExpense) "-" else "+"
             val valColor = if (isExpense) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.tertiary
+            val primarySymbol = CurrencyHelper.getSymbol(primaryCurrency)
 
             Column(
                 horizontalAlignment = Alignment.End,
                 verticalArrangement = Arrangement.Center
             ) {
                 Text(
-                    text = "$valSign$${String.format("%.2f", transaction.amount)}",
+                    text = "$valSign$primarySymbol${String.format(Locale.US, "%.2f", transaction.amount)}",
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.ExtraBold,
                     color = valColor,
                     maxLines = 1,
                     softWrap = false
                 )
+                if (transaction.currency.isNotBlank() && !transaction.currency.equals(primaryCurrency, ignoreCase = true) && transaction.originalAmount > 0.0) {
+                    Text(
+                        text = CurrencyHelper.formatAmount(transaction.originalAmount, transaction.currency, includeCode = true),
+                        style = MaterialTheme.typography.labelSmall,
+                        fontSize = 10.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.85f),
+                        maxLines = 1,
+                        softWrap = false
+                    )
+                }
                 
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(4.dp),
@@ -3376,6 +3691,7 @@ fun RecurringRowItem(
     onEdit: () -> Unit,
     onDelete: () -> Unit,
     customCategories: List<CustomCategory> = emptyList(),
+    primaryCurrency: String = "USD",
     modifier: Modifier = Modifier
 ) {
     val categoryStyle = getCategoryStyle(recurring.category, customCategories)
@@ -3470,17 +3786,28 @@ fun RecurringRowItem(
             // Value Amount Text
             val valSign = if (isExpense) "-" else "+"
             val valColor = if (isExpense) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.tertiary
+            val primarySymbol = CurrencyHelper.getSymbol(primaryCurrency)
 
             Column(
                 horizontalAlignment = Alignment.End,
                 verticalArrangement = Arrangement.Center
             ) {
                 Text(
-                    text = "$valSign$${String.format("%.2f", recurring.amount)}",
+                    text = "$valSign$primarySymbol${String.format(Locale.US, "%.2f", recurring.amount)}",
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.ExtraBold,
                     color = valColor
                 )
+                if (recurring.currency.isNotBlank() && !recurring.currency.equals(primaryCurrency, ignoreCase = true) && recurring.originalAmount > 0.0) {
+                    Text(
+                        text = CurrencyHelper.formatAmount(recurring.originalAmount, recurring.currency, includeCode = true),
+                        style = MaterialTheme.typography.labelSmall,
+                        fontSize = 10.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.85f),
+                        maxLines = 1,
+                        softWrap = false
+                    )
+                }
 
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(4.dp),

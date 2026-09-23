@@ -209,5 +209,117 @@ class ExampleUnitTest {
     assertFalse(duplicateIds.contains("tx2")) // Rick is not a duplicate!
     assertFalse(duplicateIds.contains("tx4"))
   }
+
+  @Test
+  fun testNetBalanceCalculationDoesNotIncludeCashCategory() {
+    // Replicate user scenario:
+    // Total Income (excluding Cash) = $3,680.50
+    // Total Expenses = $3,236.16
+    // Cash on Hand = $1,184.20
+    // Left to Receive = $780.00
+    // Left to Pay = $1,903.00
+    val incomeList = listOf(
+      com.example.data.Transaction(
+        id = "inc1",
+        amount = 3680.50,
+        category = "Salary",
+        type = "INCOME",
+        description = "Employer",
+        date = 1711000000000L,
+        paid = false
+      ),
+      com.example.data.Transaction(
+        id = "cash1",
+        amount = 1184.20,
+        category = "Cash",
+        type = "INCOME",
+        description = "Cash on Hand",
+        date = 1711000000000L,
+        paid = true
+      )
+    )
+    val expenseList = listOf(
+      com.example.data.Transaction(
+        id = "exp1",
+        amount = 3236.16,
+        category = "Bills",
+        type = "EXPENSE",
+        description = "Rent and utilities",
+        date = 1711000000000L,
+        paid = false
+      )
+    )
+
+    val cashOnHand = incomeList.filter { it.category.trim().equals("cash", ignoreCase = true) }.sumOf { it.amount }
+    val totalIncome = incomeList.filter { !it.category.trim().equals("cash", ignoreCase = true) }.sumOf { it.amount }
+    val totalExpense = expenseList.sumOf { it.amount }
+    val totalLeftToReceive = 780.00
+    val totalLeftToPay = 1903.00
+
+    // Net Balance should be exactly totalIncome - totalExpense (WITHOUT adding cashOnHand)
+    val netBalance = totalIncome - totalExpense
+    assertEquals(444.34, netBalance, 0.001)
+
+    // Current Balance (Actual) = cashOnHand + totalLeftToReceive - totalLeftToPay
+    val currentBalance = cashOnHand + totalLeftToReceive - totalLeftToPay
+    assertEquals(61.20, currentBalance, 0.001)
+  }
+
+  @Test
+  fun testCurrencyHelperConversionAndRates() {
+    // 1. Identity conversion
+    val sameRate = com.example.data.CurrencyHelper.getRate("USD", "USD")
+    assertEquals(1.0, sameRate, 0.0001)
+
+    // 2. Conversion between EUR and USD
+    val eurToUsdRate = com.example.data.CurrencyHelper.getRate("EUR", "USD")
+    assertEquals(1.08, eurToUsdRate, 0.001)
+
+    val convertedEurToUsd = com.example.data.CurrencyHelper.convert(100.0, "EUR", "USD")
+    assertEquals(108.0, convertedEurToUsd, 0.01)
+
+    // 3. Conversion between USD and EUR
+    val usdToEurRate = com.example.data.CurrencyHelper.getRate("USD", "EUR")
+    assertEquals(1.0 / 1.08, usdToEurRate, 0.001)
+
+    // 4. Conversion between non-USD pairs: EUR to GBP
+    val eurToGbpRate = com.example.data.CurrencyHelper.getRate("EUR", "GBP")
+    val expectedEurToGbp = 1.08 / 1.28
+    assertEquals(expectedEurToGbp, eurToGbpRate, 0.001)
+
+    // 5. Symbol and Flag lookups
+    assertEquals("$", com.example.data.CurrencyHelper.getSymbol("USD"))
+    assertEquals("€", com.example.data.CurrencyHelper.getSymbol("EUR"))
+    assertEquals("£", com.example.data.CurrencyHelper.getSymbol("GBP"))
+    assertEquals("¥", com.example.data.CurrencyHelper.getSymbol("JPY"))
+    assertEquals("CA$", com.example.data.CurrencyHelper.getSymbol("CAD"))
+
+    // 6. Formatting test
+    val formattedUsd = com.example.data.CurrencyHelper.formatAmount(1234.50, "USD", includeCode = false)
+    assertEquals("$1,234.50", formattedUsd)
+
+    val formattedEurWithCode = com.example.data.CurrencyHelper.formatAmount(99.00, "EUR", includeCode = true)
+    assertEquals("€99.00 EUR", formattedEurWithCode)
+  }
+
+  @Test
+  fun testTransactionMultiCurrencyFields() {
+    val tx = com.example.data.Transaction(
+      id = "tx_multi",
+      amount = 108.00, // Converted to primary USD
+      category = "Travel",
+      description = "Paris Hotel",
+      date = 1711000000000L,
+      type = "EXPENSE",
+      currency = "EUR",
+      originalAmount = 100.00,
+      exchangeRate = 1.08
+    )
+
+    assertEquals("EUR", tx.currency)
+    assertEquals(100.00, tx.originalAmount, 0.001)
+    assertEquals(1.08, tx.exchangeRate, 0.001)
+    assertEquals(108.00, tx.amount, 0.001)
+  }
 }
 

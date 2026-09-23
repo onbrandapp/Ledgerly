@@ -22,7 +22,10 @@ data class LocalTransaction(
     val description: String,
     val date: Long,
     val recurringId: String = "",
-    val paid: Boolean = false
+    val paid: Boolean = false,
+    val currency: String = "USD",
+    val originalAmount: Double = 0.0,
+    val exchangeRate: Double = 1.0
 ) {
     fun toDomain(): Transaction = Transaction(
         id = id,
@@ -32,7 +35,10 @@ data class LocalTransaction(
         description = description,
         date = date,
         recurringId = recurringId,
-        paid = paid
+        paid = paid,
+        currency = currency.ifBlank { "USD" },
+        originalAmount = if (originalAmount > 0.0) originalAmount else amount,
+        exchangeRate = if (exchangeRate > 0.0) exchangeRate else 1.0
     )
 
     companion object {
@@ -44,7 +50,10 @@ data class LocalTransaction(
             description = t.description,
             date = t.date,
             recurringId = t.recurringId,
-            paid = t.paid
+            paid = t.paid,
+            currency = t.currency.ifBlank { "USD" },
+            originalAmount = if (t.originalAmount > 0.0) t.originalAmount else t.amount,
+            exchangeRate = if (t.exchangeRate > 0.0) t.exchangeRate else 1.0
         )
     }
 }
@@ -58,7 +67,10 @@ data class LocalRecurringTransaction(
     val description: String,
     val frequency: String,
     val startDate: Long,
-    val lastLoggedDate: Long
+    val lastLoggedDate: Long,
+    val currency: String = "USD",
+    val originalAmount: Double = 0.0,
+    val exchangeRate: Double = 1.0
 ) {
     fun toDomain(): RecurringTransaction = RecurringTransaction(
         id = id,
@@ -68,7 +80,10 @@ data class LocalRecurringTransaction(
         description = description,
         frequency = frequency,
         startDate = startDate,
-        lastLoggedDate = lastLoggedDate
+        lastLoggedDate = lastLoggedDate,
+        currency = currency.ifBlank { "USD" },
+        originalAmount = if (originalAmount > 0.0) originalAmount else amount,
+        exchangeRate = if (exchangeRate > 0.0) exchangeRate else 1.0
     )
 
     companion object {
@@ -80,7 +95,10 @@ data class LocalRecurringTransaction(
             description = r.description,
             frequency = r.frequency,
             startDate = r.startDate,
-            lastLoggedDate = r.lastLoggedDate
+            lastLoggedDate = r.lastLoggedDate,
+            currency = r.currency.ifBlank { "USD" },
+            originalAmount = if (r.originalAmount > 0.0) r.originalAmount else r.amount,
+            exchangeRate = if (r.exchangeRate > 0.0) r.exchangeRate else 1.0
         )
     }
 }
@@ -419,7 +437,7 @@ interface TransactionDao {
         LocalFutureIncomeNote::class,
         LocalAuditDeletedItem::class
     ],
-    version = 11,
+    version = 12,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {

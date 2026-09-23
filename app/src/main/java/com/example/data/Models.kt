@@ -8,10 +8,13 @@ data class Transaction(
     val description: String = "",
     val date: Long = System.currentTimeMillis(),
     val recurringId: String = "",
-    val paid: Boolean = false
+    val paid: Boolean = false,
+    val currency: String = "USD",
+    val originalAmount: Double = 0.0,
+    val exchangeRate: Double = 1.0
 ) {
     // Zero-argument constructor required for Firestore deserialization
-    constructor() : this("", 0.0, "", "EXPENSE", "", System.currentTimeMillis(), "", false)
+    constructor() : this("", 0.0, "", "EXPENSE", "", System.currentTimeMillis(), "", false, "USD", 0.0, 1.0)
 }
 
 data class RecurringTransaction(
@@ -22,10 +25,13 @@ data class RecurringTransaction(
     val description: String = "",
     val frequency: String = "MONTHLY", // "DAILY", "WEEKLY", "MONTHLY", "YEARLY"
     val startDate: Long = System.currentTimeMillis(),
-    val lastLoggedDate: Long = 0L
+    val lastLoggedDate: Long = 0L,
+    val currency: String = "USD",
+    val originalAmount: Double = 0.0,
+    val exchangeRate: Double = 1.0
 ) {
     // Zero-argument constructor required for Firestore deserialization
-    constructor() : this("", 0.0, "", "EXPENSE", "", "MONTHLY", System.currentTimeMillis(), 0L)
+    constructor() : this("", 0.0, "", "EXPENSE", "", "MONTHLY", System.currentTimeMillis(), 0L, "USD", 0.0, 1.0)
 }
 
 data class CustomCategory(
