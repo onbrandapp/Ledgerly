@@ -426,6 +426,16 @@ interface TransactionDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAuditDeletedItems(items: List<LocalAuditDeletedItem>)
+
+    // Bulk Category Change Methods
+    @Query("UPDATE local_transactions SET category = :newCategory WHERE TRIM(category) = TRIM(:oldCategory) COLLATE NOCASE")
+    suspend fun bulkUpdateTransactionCategory(oldCategory: String, newCategory: String): Int
+
+    @Query("UPDATE local_recurring_transactions SET category = :newCategory WHERE TRIM(category) = TRIM(:oldCategory) COLLATE NOCASE")
+    suspend fun bulkUpdateRecurringCategory(oldCategory: String, newCategory: String): Int
+
+    @Query("UPDATE local_forecast_incomes SET category = :newCategory WHERE userEmail = :userEmail AND TRIM(category) = TRIM(:oldCategory) COLLATE NOCASE")
+    suspend fun bulkUpdateForecastCategory(userEmail: String, oldCategory: String, newCategory: String): Int
 }
 
 @Database(

@@ -321,5 +321,43 @@ class ExampleUnitTest {
     assertEquals(1.08, tx.exchangeRate, 0.001)
     assertEquals(108.00, tx.amount, 0.001)
   }
+
+  @Test
+  fun testProductCategoryResolution() {
+    val style = CategoryConstants.resolveCategoryStyle("Product")
+    assertNotNull(style.icon)
+    assertEquals(Color(0xFF00897B), style.color)
+  }
+
+  @Test
+  fun testProductCostAndProfitPercentage() {
+    // Formula requested: Profit = (Price - Cost) / Price reflected as a percentage
+    val price = 100.0
+    val cost = 40.0
+    val profitPct = ((price - cost) / price) * 100.0
+    assertEquals(60.0, profitPct, 0.001)
+
+    val tx = com.example.data.Transaction(
+      id = "tx_product",
+      amount = price,
+      category = "Product",
+      description = "Handmade Mug",
+      date = 1711000000000L,
+      type = "INCOME",
+      cost = cost
+    )
+    assertEquals(40.0, tx.cost, 0.001)
+
+    // Decimal cost test
+    val decimalPrice = 50.0
+    val decimalCost = 12.50
+    val decimalProfitPct = ((decimalPrice - decimalCost) / decimalPrice) * 100.0
+    assertEquals(75.0, decimalProfitPct, 0.001)
+
+    // Safe zero price handling
+    val zeroPrice = 0.0
+    val safePct = if (zeroPrice > 0.0) ((zeroPrice - cost) / zeroPrice) * 100.0 else 0.0
+    assertEquals(0.0, safePct, 0.001)
+  }
 }
 

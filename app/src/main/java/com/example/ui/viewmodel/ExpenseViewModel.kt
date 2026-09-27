@@ -132,6 +132,38 @@ class ExpenseViewModel(application: Application) : AndroidViewModel(application)
         _primaryCurrency.value = normalized
     }
 
+    // Cost and Profit Field Visible Categories State (defaults to setOf("Product"))
+    private val savedCostProfitCategories = budgetPrefs.getStringSet("cost_profit_categories", null)
+        ?: setOf("Product")
+    private val _costProfitCategories = MutableStateFlow<Set<String>>(savedCostProfitCategories)
+    val costProfitCategories = _costProfitCategories.asStateFlow()
+
+    fun toggleCostProfitCategory(categoryName: String) {
+        val clean = categoryName.trim()
+        if (clean.isBlank()) return
+        val current = _costProfitCategories.value.toMutableSet()
+        val existing = current.find { it.equals(clean, ignoreCase = true) }
+        if (existing != null) {
+            current.remove(existing)
+        } else {
+            current.add(clean)
+        }
+        _costProfitCategories.value = current
+        budgetPrefs.edit().putStringSet("cost_profit_categories", current).apply()
+    }
+
+    fun setCostProfitCategories(categories: Set<String>) {
+        val cleaned = categories.map { it.trim() }.filter { it.isNotBlank() }.toSet()
+        _costProfitCategories.value = cleaned
+        budgetPrefs.edit().putStringSet("cost_profit_categories", cleaned).apply()
+    }
+
+    fun resetCostProfitCategoriesToDefault() {
+        val defaultSet = setOf("Product")
+        _costProfitCategories.value = defaultSet
+        budgetPrefs.edit().putStringSet("cost_profit_categories", defaultSet).apply()
+    }
+
     // Theme Mode State (Light / Dark - defaults to Light Mode for new installs)
     private val _isDarkMode = MutableStateFlow(budgetPrefs.getBoolean("is_dark_mode", false))
     val isDarkMode = _isDarkMode.asStateFlow()
@@ -292,6 +324,45 @@ class ExpenseViewModel(application: Application) : AndroidViewModel(application)
             }
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    // Real-time Category Usage Breakdown for all entries
+    val categoryUsageList: StateFlow<List<CategoryUsage>> = combine(
+        transactions,
+        recurringTransactions,
+        forecastIncomes
+    ) { txList, recList, forecastList ->
+        val counts = mutableMapOf<String, Triple<Int, Int, Int>>() // cat -> (txCount, recCount, forecastCount)
+        for (tx in txList) {
+            val cat = tx.category.trim()
+            if (cat.isNotEmpty()) {
+                val cur = counts.getOrDefault(cat, Triple(0, 0, 0))
+                counts[cat] = Triple(cur.first + 1, cur.second, cur.third)
+            }
+        }
+        for (rec in recList) {
+            val cat = rec.category.trim()
+            if (cat.isNotEmpty()) {
+                val cur = counts.getOrDefault(cat, Triple(0, 0, 0))
+                counts[cat] = Triple(cur.first, cur.second + 1, cur.third)
+            }
+        }
+        for (f in forecastList) {
+            val cat = f.category.trim()
+            if (cat.isNotEmpty()) {
+                val cur = counts.getOrDefault(cat, Triple(0, 0, 0))
+                counts[cat] = Triple(cur.first, cur.second, cur.third + 1)
+            }
+        }
+        counts.map { (cat, triple) ->
+            CategoryUsage(
+                name = cat,
+                transactionCount = triple.first,
+                recurringCount = triple.second,
+                forecastCount = triple.third,
+                totalCount = triple.first + triple.second + triple.third
+            )
+        }.sortedByDescending { it.totalCount }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     init {
         viewModelScope.launch {
@@ -759,6 +830,38 @@ class ExpenseViewModel(application: Application) : AndroidViewModel(application)
         val email = currentUserEmail.value ?: return
         viewModelScope.launch {
             transactionRepository.deleteCustomCategory(email, id)
+        }
+    }
+
+    /**
+     * Bulk reassigns all entries from an existing category to a new category.
+     * Updates transactions, recurring rules, and forecast items as requested.
+     */
+    fun bulkUpdateCategory(
+        oldCategory: String,
+        newCategory: String,
+        includeRecurring: Boolean = true,
+        includeForecast: Boolean = true,
+        onResult: (Result<Int>) -> Unit = {}
+    ) {
+        val email = currentUserEmail.value ?: return
+        val trimmedOld = oldCategory.trim()
+        val trimmedNew = newCategory.trim()
+        if (trimmedOld.isBlank() || trimmedNew.isBlank()) {
+            onResult(Result.failure(IllegalArgumentException("Categories cannot be blank.")))
+            return
+        }
+        viewModelScope.launch(Dispatchers.IO) {
+            val result = transactionRepository.bulkUpdateCategory(
+                userEmail = email,
+                oldCategory = trimmedOld,
+                newCategory = trimmedNew,
+                includeRecurring = includeRecurring,
+                includeForecast = includeForecast
+            )
+            withContext(Dispatchers.Main) {
+                onResult(result)
+            }
         }
     }
 

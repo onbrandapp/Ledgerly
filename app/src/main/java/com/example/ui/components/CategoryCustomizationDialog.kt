@@ -33,6 +33,7 @@ fun CategoryCustomizationDialog(
     isOpen: Boolean,
     onDismiss: () -> Unit,
     viewModel: ExpenseViewModel,
+    onOpenBulkReassign: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     if (!isOpen) return
@@ -683,6 +684,65 @@ fun CategoryCustomizationDialog(
                         }
                     }
                 }
+
+                // Bulk Reassign Entries Shortcut Card
+                if (onOpenBulkReassign != null) {
+                    item {
+                        Card(
+                            shape = RoundedCornerShape(12.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.35f)
+                            ),
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.secondary.copy(alpha = 0.25f)),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    onDismiss()
+                                    onOpenBulkReassign()
+                                }
+                                .testTag("bulk_reassign_banner_card")
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(12.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(32.dp)
+                                        .background(MaterialTheme.colorScheme.secondary.copy(alpha = 0.2f), CircleShape),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.SwapHoriz,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.secondary,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = "Bulk Reassign Entries",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onSecondaryContainer
+                                    )
+                                    Text(
+                                        text = "Reassign all entries from one category to another",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.8f)
+                                    )
+                                }
+                                Icon(
+                                    imageVector = Icons.Default.ChevronRight,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f),
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                        }
+                    }
+                }
             }
         },
         confirmButton = {
@@ -691,6 +751,25 @@ fun CategoryCustomizationDialog(
                 modifier = Modifier.testTag("close_category_dialog_button")
             ) {
                 Text("Done")
+            }
+        },
+        dismissButton = {
+            if (onOpenBulkReassign != null) {
+                TextButton(
+                    onClick = {
+                        onDismiss()
+                        onOpenBulkReassign()
+                    },
+                    modifier = Modifier.testTag("bulk_reassign_shortcut_button")
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.SwapHoriz,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("Bulk Reassign")
+                }
             }
         }
     )

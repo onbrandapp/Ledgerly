@@ -36,6 +36,14 @@ interface TransactionRepository {
     suspend fun recordAuditDeletedItem(userEmail: String, item: AuditDeletedItem): Result<Unit>
     suspend fun deleteAuditDeletedItem(userEmail: String, id: String): Result<Unit>
     suspend fun clearAuditDeletedItems(userEmail: String): Result<Unit>
+
+    suspend fun bulkUpdateCategory(
+        userEmail: String,
+        oldCategory: String,
+        newCategory: String,
+        includeRecurring: Boolean = true,
+        includeForecast: Boolean = true
+    ): Result<Int>
 }
 
 class FirebaseTransactionRepository : TransactionRepository {
@@ -375,6 +383,101 @@ class FirebaseTransactionRepository : TransactionRepository {
                 if (continuation.isActive) continuation.resume(Result.failure(exception))
             }
     }
+
+    override suspend fun bulkUpdateCategory(
+        userEmail: String,
+        oldCategory: String,
+        newCategory: String,
+        includeRecurring: Boolean,
+        includeForecast: Boolean
+    ): Result<Int> = suspendCancellableCoroutine { continuation ->
+        val userDoc = firestore.collection("users").document(userEmail)
+        val trimmedOld = oldCategory.trim()
+        val targetNew = newCategory.trim()
+
+        userDoc.collection("transactions").get()
+            .addOnSuccessListener { txSnap ->
+                val batch = firestore.batch()
+                var count = 0
+
+                for (doc in txSnap.documents) {
+                    val cat = doc.getString("category")?.trim() ?: ""
+                    if (cat.equals(trimmedOld, ignoreCase = true)) {
+                        batch.update(doc.reference, "category", targetNew)
+                        count++
+                    }
+                }
+
+                if (includeRecurring) {
+                    userDoc.collection("recurring_transactions").get()
+                        .addOnSuccessListener { recSnap ->
+                            for (doc in recSnap.documents) {
+                                val cat = doc.getString("category")?.trim() ?: ""
+                                if (cat.equals(trimmedOld, ignoreCase = true)) {
+                                    batch.update(doc.reference, "category", targetNew)
+                                    count++
+                                }
+                            }
+                            if (includeForecast) {
+                                userDoc.collection("forecast_incomes").get()
+                                    .addOnSuccessListener { fSnap ->
+                                        for (doc in fSnap.documents) {
+                                            val cat = doc.getString("category")?.trim() ?: ""
+                                            if (cat.equals(trimmedOld, ignoreCase = true)) {
+                                                batch.update(doc.reference, "category", targetNew)
+                                                count++
+                                            }
+                                        }
+                                        if (count > 0) {
+                                            batch.commit()
+                                                .addOnSuccessListener {
+                                                    if (continuation.isActive) continuation.resume(Result.success(count))
+                                                }
+                                                .addOnFailureListener { e ->
+                                                    if (continuation.isActive) continuation.resume(Result.failure(e))
+                                                }
+                                        } else {
+                                            if (continuation.isActive) continuation.resume(Result.success(0))
+                                        }
+                                    }
+                                    .addOnFailureListener { e ->
+                                        if (continuation.isActive) continuation.resume(Result.failure(e))
+                                    }
+                            } else {
+                                if (count > 0) {
+                                    batch.commit()
+                                        .addOnSuccessListener {
+                                            if (continuation.isActive) continuation.resume(Result.success(count))
+                                        }
+                                        .addOnFailureListener { e ->
+                                            if (continuation.isActive) continuation.resume(Result.failure(e))
+                                        }
+                                } else {
+                                    if (continuation.isActive) continuation.resume(Result.success(0))
+                                }
+                            }
+                        }
+                        .addOnFailureListener { e ->
+                            if (continuation.isActive) continuation.resume(Result.failure(e))
+                        }
+                } else {
+                    if (count > 0) {
+                        batch.commit()
+                            .addOnSuccessListener {
+                                if (continuation.isActive) continuation.resume(Result.success(count))
+                            }
+                            .addOnFailureListener { e ->
+                                if (continuation.isActive) continuation.resume(Result.failure(e))
+                            }
+                    } else {
+                        if (continuation.isActive) continuation.resume(Result.success(0))
+                    }
+                }
+            }
+            .addOnFailureListener { e ->
+                if (continuation.isActive) continuation.resume(Result.failure(e))
+            }
+    }
 }
 
 class RoomTransactionRepository(context: Context) : TransactionRepository {
@@ -534,6 +637,29 @@ class RoomTransactionRepository(context: Context) : TransactionRepository {
         return try {
             dao.clearAuditDeletedItems(userEmail)
             Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun bulkUpdateCategory(
+        userEmail: String,
+        oldCategory: String,
+        newCategory: String,
+        includeRecurring: Boolean,
+        includeForecast: Boolean
+    ): Result<Int> {
+        return try {
+            val trimmedOld = oldCategory.trim()
+            val trimmedNew = newCategory.trim()
+            var count = dao.bulkUpdateTransactionCategory(trimmedOld, trimmedNew)
+            if (includeRecurring) {
+                count += dao.bulkUpdateRecurringCategory(trimmedOld, trimmedNew)
+            }
+            if (includeForecast) {
+                count += dao.bulkUpdateForecastCategory(userEmail, trimmedOld, trimmedNew)
+            }
+            Result.success(count)
         } catch (e: Exception) {
             Result.failure(e)
         }

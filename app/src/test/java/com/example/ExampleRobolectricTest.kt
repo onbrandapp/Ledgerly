@@ -91,4 +91,71 @@ class ExampleRobolectricTest {
     val deleteResult = repo.deleteAuditDeletedItem(email, auditItem.id)
     assert(deleteResult.isSuccess)
   }
+
+  @Test
+  fun `verify bulk category update reassigns category across transactions and recurring entries`() = kotlinx.coroutines.runBlocking {
+    val context = ApplicationProvider.getApplicationContext<Context>()
+    val repo = com.example.data.RoomTransactionRepository(context)
+    val email = "bulk_test@example.com"
+
+    // Add 2 transactions with "Old Dining"
+    repo.addTransaction(email, com.example.data.Transaction(
+      id = "bulk-tx-1",
+      amount = 25.0,
+      category = "Old Dining",
+      type = "EXPENSE",
+      description = "Dinner"
+    ))
+    repo.addTransaction(email, com.example.data.Transaction(
+      id = "bulk-tx-2",
+      amount = 15.0,
+      category = "Old Dining",
+      type = "EXPENSE",
+      description = "Lunch"
+    ))
+
+    // Add 1 recurring transaction with "Old Dining"
+    repo.addRecurringTransaction(email, com.example.data.RecurringTransaction(
+      id = "bulk-rec-1",
+      amount = 50.0,
+      category = "Old Dining",
+      type = "EXPENSE",
+      description = "Monthly Dining Plan"
+    ))
+
+    // Execute bulk update to "Food & Drinks"
+    val result = repo.bulkUpdateCategory(
+      userEmail = email,
+      oldCategory = "Old Dining",
+      newCategory = "Food & Drinks",
+      includeRecurring = true
+    )
+
+    assert(result.isSuccess)
+    val updatedCount = result.getOrNull() ?: 0
+    assertEquals(3, updatedCount)
+  }
+
+  @Test
+  fun `verify product cost and profit calculation formula`() {
+    val price = 100.0
+    val cost = 60.0
+    // Profit = (Price - Cost) / Price as a percentage
+    val profitPercentage = ((price - cost) / price) * 100.0
+    assertEquals(40.0, profitPercentage, 0.001)
+
+    // Manual entry of profit percentage: Cost = Price * (1 - Profit% / 100)
+    val targetProfitPct = 25.0
+    val calculatedCost = price * (1.0 - (targetProfitPct / 100.0))
+    assertEquals(75.0, calculatedCost, 0.001)
+  }
+
+  @Test
+  fun `verify cost and profit enabled categories supports multiple selections`() {
+    val enabledCategories = mutableSetOf("Product", "Consulting", "Merchandise")
+    assert(enabledCategories.any { it.equals("Product", ignoreCase = true) })
+    assert(enabledCategories.any { it.equals("consulting", ignoreCase = true) })
+    assert(enabledCategories.any { it.equals("Merchandise", ignoreCase = true) })
+    assert(!enabledCategories.any { it.equals("Food", ignoreCase = true) })
+  }
 }

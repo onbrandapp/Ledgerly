@@ -98,3 +98,11 @@ data class AuditDeletedItem(
     constructor() : this("", "", "", "", 0.0, "", "", "User Action", System.currentTimeMillis(), 0L, "", "")
 }
 
+data class CategoryUsage(
+    val name: String = "",
+    val transactionCount: Int = 0,
+    val recurringCount: Int = 0,
+    val forecastCount: Int = 0,
+    val totalCount: Int = transactionCount + recurringCount + forecastCount
+)
+

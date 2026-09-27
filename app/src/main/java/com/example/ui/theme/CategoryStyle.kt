@@ -64,6 +64,7 @@ object CategoryConstants {
         CategoryIconItem("build", "Repairs & Tools", Icons.Default.Build, "EXPENSE"),
         CategoryIconItem("receipt", "Bills & Fees", Icons.Default.Receipt, "EXPENSE"),
         CategoryIconItem("store", "Retail & Store", Icons.Default.Store, "EXPENSE"),
+        CategoryIconItem("product", "Product", Icons.Default.Inventory2, "BOTH"),
 
         // Income & Investments
         CategoryIconItem("attach_money", "Salary & Wages", Icons.Default.AttachMoney, "INCOME"),
@@ -91,6 +92,7 @@ object CategoryConstants {
                 "salary", "attach_money" -> Icons.Default.AttachMoney
                 "investment", "show_chart" -> Icons.Default.ShowChart
                 "housing", "home" -> Icons.Default.Home
+                "product", "store" -> Icons.Default.Store
                 else -> Icons.Default.Category
             }
     }
@@ -136,6 +138,7 @@ object CategoryConstants {
             "salary" -> CategoryStyle(Icons.Default.AttachMoney, Color(0xFF2E7D32))
             "investment" -> CategoryStyle(Icons.Default.ShowChart, Color(0xFF00695C))
             "housing" -> CategoryStyle(Icons.Default.Home, Color(0xFF0277BD))
+            "product" -> CategoryStyle(Icons.Default.Store, Color(0xFF00897B))
             else -> {
                 val colors = listOf(
                     Color(0xFF8D6E63),

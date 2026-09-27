@@ -63,7 +63,9 @@ import com.example.data.DuplicateTransactionDetector
 import com.example.data.CurrencyHelper
 import com.example.ui.components.BackupRestoreSheet
 import com.example.ui.components.BiometricSettingsCard
+import com.example.ui.components.BulkCategoryReassignmentDialog
 import com.example.ui.components.CategoryCustomizationDialog
+import com.example.ui.components.CostProfitCategoriesDialog
 import com.example.ui.components.TransactionSearchOverlay
 import com.example.ui.components.CurrencySelectorChip
 import com.example.ui.components.CurrencySelectionBottomSheet
@@ -102,6 +104,9 @@ fun DashboardScreen(
     val customCategoriesList by viewModel.customCategories.collectAsState()
     val isDarkMode by viewModel.isDarkMode.collectAsState()
     var showGlobalCategoryDialog by remember { mutableStateOf(false) }
+    var showBulkCategoryDialog by remember { mutableStateOf(false) }
+    var showCostProfitCategoriesDialog by remember { mutableStateOf(false) }
+    val costProfitCategories by viewModel.costProfitCategories.collectAsState()
 
     val primaryColorHex by viewModel.primaryColor.collectAsState()
     val secondaryColorHex by viewModel.secondaryColor.collectAsState()
@@ -1566,6 +1571,24 @@ fun DashboardScreen(
     CategoryCustomizationDialog(
         isOpen = showGlobalCategoryDialog,
         onDismiss = { showGlobalCategoryDialog = false },
+        viewModel = viewModel,
+        onOpenBulkReassign = {
+            showGlobalCategoryDialog = false
+            showBulkCategoryDialog = true
+        }
+    )
+
+    // --- BULK CATEGORY REASSIGNMENT DIALOG ---
+    BulkCategoryReassignmentDialog(
+        isOpen = showBulkCategoryDialog,
+        onDismiss = { showBulkCategoryDialog = false },
+        viewModel = viewModel
+    )
+
+    // --- COST & PROFIT CATEGORIES SETTINGS DIALOG ---
+    CostProfitCategoriesDialog(
+        isOpen = showCostProfitCategoriesDialog,
+        onDismiss = { showCostProfitCategoriesDialog = false },
         viewModel = viewModel
     )
 
@@ -1962,6 +1985,131 @@ fun DashboardScreen(
                         }
                     }
 
+                    Card(
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                        ),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 8.dp)
+                            .clickable {
+                                showBudgetDialog = false
+                                showBulkCategoryDialog = true
+                            }
+                            .testTag("bulk_category_reassign_settings_card")
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(14.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(36.dp)
+                                        .background(MaterialTheme.colorScheme.secondary.copy(alpha = 0.15f), CircleShape),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.SwapHoriz,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.secondary,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                                Column {
+                                    Text(
+                                        text = "Bulk Category Reassignment",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Text(
+                                        text = "Reassign all entries from one category to another",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                            Icon(
+                                imageVector = Icons.Default.ChevronRight,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+                    }
+
+                    Card(
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                        ),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 8.dp)
+                            .clickable {
+                                showBudgetDialog = false
+                                showCostProfitCategoriesDialog = true
+                            }
+                            .testTag("cost_profit_settings_card")
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(14.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(36.dp)
+                                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f), CircleShape),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Calculate,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                                Column {
+                                    Text(
+                                        text = "Cost & Profit Fields",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Text(
+                                        text = if (costProfitCategories.isEmpty()) "Disabled for all categories"
+                                               else "${costProfitCategories.size} categories active (${costProfitCategories.joinToString(", ")})",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+                            }
+                            Icon(
+                                imageVector = Icons.Default.ChevronRight,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+                    }
+
                     HorizontalDivider(
                         modifier = Modifier.padding(vertical = 12.dp),
                         color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
@@ -2122,6 +2270,7 @@ fun DashboardScreen(
                     viewModel = viewModel,
                     initialTransaction = editingTransaction,
                     initialRecurringTransaction = editingRecurringTransaction,
+                    onOpenCostProfitSettings = { showCostProfitCategoriesDialog = true },
                     onSubmit = { id, amount, category, type, description, isRecurring, frequency, selectedDate, numInstances, forceAdd, currency, originalAmount, exchangeRate ->
                         if (editingTransaction != null) {
                             if (isRecurring) {
@@ -2282,9 +2431,11 @@ fun ManualAddForm(
     ) -> Unit,
     initialTransaction: Transaction? = null,
     initialRecurringTransaction: com.example.data.RecurringTransaction? = null,
+    onOpenCostProfitSettings: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val primaryCurrency by viewModel.primaryCurrency.collectAsState()
+    val costProfitCategories by viewModel.costProfitCategories.collectAsState()
     var selectedCurrency by remember(initialTransaction, initialRecurringTransaction, primaryCurrency) {
         mutableStateOf(
             initialTransaction?.currency?.ifBlank { primaryCurrency }
@@ -2322,11 +2473,29 @@ fun ManualAddForm(
     var category by remember(initialTransaction, initialRecurringTransaction) {
         mutableStateOf(initialTransaction?.category ?: initialRecurringTransaction?.category ?: "Food")
     }
+    val showCostProfitFields = remember(category, costProfitCategories) {
+        costProfitCategories.any { it.equals(category.trim(), ignoreCase = true) }
+    }
     var type by remember(initialTransaction, initialRecurringTransaction) {
         mutableStateOf(initialTransaction?.type ?: initialRecurringTransaction?.type ?: "EXPENSE")
     }
+    val costProfitRegex = remember { Regex("""\s*\[Cost:\s*[^0-9]*([0-9.]+)(?:\s*\|\s*Profit:\s*([0-9.-]+)%?)?\]""") }
+    val rawInitialDesc = remember(initialTransaction, initialRecurringTransaction) {
+        initialTransaction?.description ?: initialRecurringTransaction?.description ?: ""
+    }
+    val costProfitMatch = remember(rawInitialDesc) { costProfitRegex.find(rawInitialDesc) }
+    val initialCost = remember(costProfitMatch) { costProfitMatch?.groupValues?.getOrNull(1) ?: "" }
+    val initialProfit = remember(costProfitMatch) { costProfitMatch?.groupValues?.getOrNull(2) ?: "" }
+    val cleanInitialDesc = remember(rawInitialDesc, costProfitMatch) {
+        if (costProfitMatch != null) rawInitialDesc.replace(costProfitRegex, "").trim() else rawInitialDesc
+    }
+
+    var costText by remember(initialTransaction, initialRecurringTransaction) { mutableStateOf(initialCost) }
+    var profitPercentText by remember(initialTransaction, initialRecurringTransaction) { mutableStateOf(initialProfit) }
+    var lastEditedField by remember { mutableStateOf(if (initialCost.isNotBlank()) "COST" else "NONE") }
+
     var description by remember(initialTransaction, initialRecurringTransaction) {
-        mutableStateOf(initialTransaction?.description ?: initialRecurringTransaction?.description ?: "")
+        mutableStateOf(cleanInitialDesc)
     }
     var isRecurring by remember(initialTransaction, initialRecurringTransaction) {
         mutableStateOf(initialRecurringTransaction != null)
@@ -2385,7 +2554,7 @@ fun ManualAddForm(
         )
     }
 
-    val defaultCategories = remember { listOf("Food", "Transport", "Utilities", "Entertainment", "Shopping", "Salary", "Investment", "Housing", "Others") }
+    val defaultCategories = remember { listOf("Food", "Product", "Transport", "Utilities", "Entertainment", "Shopping", "Salary", "Investment", "Housing", "Others") }
     val customCategoriesList by viewModel.customCategories.collectAsState()
     val allCategories = remember(customCategoriesList) {
         defaultCategories + customCategoriesList.map { it.name }
@@ -2469,7 +2638,27 @@ fun ManualAddForm(
 
                 OutlinedTextField(
                     value = amountText,
-                    onValueChange = { amountText = it },
+                    onValueChange = { input ->
+                        amountText = input
+                        val newPrice = input.toDoubleOrNull() ?: 0.0
+                        if (showCostProfitFields) {
+                            if (lastEditedField == "PROFIT" && profitPercentText.isNotBlank()) {
+                                val p = profitPercentText.toDoubleOrNull()
+                                if (p != null && newPrice > 0.0) {
+                                    val calculatedCost = newPrice * (1.0 - (p / 100.0))
+                                    costText = if (calculatedCost < 0.0) "0.00"
+                                    else if (calculatedCost % 1.0 == 0.0) String.format(Locale.US, "%.0f", calculatedCost)
+                                    else String.format(Locale.US, "%.2f", calculatedCost)
+                                }
+                            } else if (costText.isNotBlank()) {
+                                val c = costText.toDoubleOrNull()
+                                if (c != null && newPrice > 0.0) {
+                                    val p = ((newPrice - c) / newPrice) * 100.0
+                                    profitPercentText = String.format(Locale.US, "%.1f", p)
+                                }
+                            }
+                        }
+                    },
                     label = { Text("Amount") },
                     prefix = {
                         Text(
@@ -2514,6 +2703,166 @@ fun ManualAddForm(
                 )
             } else {
                 Spacer(modifier = Modifier.height(4.dp))
+            }
+
+            // Two new fields on a separate line below the amount field: Cost & Profit (visible only when category is in costProfitCategories)
+            AnimatedVisibility(visible = showCostProfitFields) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 12.dp)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 4.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Cost & Profit Margin ($category)",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        if (onOpenCostProfitSettings != null) {
+                            Text(
+                                text = "Settings",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier
+                                    .clickable { onOpenCostProfitSettings() }
+                                    .padding(horizontal = 4.dp, vertical = 2.dp)
+                                    .testTag("cost_profit_settings_shortcut")
+                            )
+                        }
+                    }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        // Cost: (Manual Entry)
+                        OutlinedTextField(
+                            value = costText,
+                            onValueChange = { input ->
+                                costText = input
+                                lastEditedField = "COST"
+                                val enteredCost = input.toDoubleOrNull()
+                                val price = amountText.toDoubleOrNull() ?: 0.0
+                                if (enteredCost != null && price > 0.0) {
+                                    val profitPct = ((price - enteredCost) / price) * 100.0
+                                    profitPercentText = String.format(Locale.US, "%.1f", profitPct)
+                                } else if (input.isBlank()) {
+                                    profitPercentText = ""
+                                }
+                            },
+                            label = { Text("Cost") },
+                            placeholder = { Text("0.00") },
+                            prefix = {
+                                Text(
+                                    text = CurrencyHelper.getSymbol(selectedCurrency) + " ",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            },
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier
+                                .weight(1f)
+                                .testTag("manual_cost_input")
+                        )
+
+                        // Profit= Price-Cost / Price reflected as a percentage (Allows manual entry of profit percentage)
+                        OutlinedTextField(
+                            value = profitPercentText,
+                            onValueChange = { input ->
+                                profitPercentText = input
+                                lastEditedField = "PROFIT"
+                                val enteredProfitPct = input.toDoubleOrNull()
+                                val price = amountText.toDoubleOrNull() ?: 0.0
+                                if (enteredProfitPct != null && price > 0.0) {
+                                    val calculatedCost = price * (1.0 - (enteredProfitPct / 100.0))
+                                    costText = if (calculatedCost < 0.0) "0.00"
+                                    else if (calculatedCost % 1.0 == 0.0) String.format(Locale.US, "%.0f", calculatedCost)
+                                    else String.format(Locale.US, "%.2f", calculatedCost)
+                                } else if (input.isBlank()) {
+                                    costText = ""
+                                }
+                            },
+                            label = { Text("Profit") },
+                            placeholder = { Text("0.0") },
+                            suffix = {
+                                Text(
+                                    text = "%",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            },
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier
+                                .weight(1f)
+                                .testTag("manual_profit_input")
+                        )
+                    }
+
+                    // Live Profit Summary Card
+                    val price = amountText.toDoubleOrNull() ?: 0.0
+                    val cost = costText.toDoubleOrNull()
+                    val profitPct = profitPercentText.toDoubleOrNull()
+                    if (price > 0.0 && cost != null) {
+                        val profitAmount = price - cost
+                        val isProfitPositive = profitAmount >= 0.0
+                        val profitColor = if (isProfitPositive) Color(0xFF16A34A) else MaterialTheme.colorScheme.error
+
+                        Surface(
+                            shape = RoundedCornerShape(10.dp),
+                            color = profitColor.copy(alpha = 0.08f),
+                            border = BorderStroke(1.dp, profitColor.copy(alpha = 0.25f)),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 8.dp)
+                                .testTag("profit_summary_badge")
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                                verticalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = if (isProfitPositive) Icons.Default.TrendingUp else Icons.Default.TrendingDown,
+                                        contentDescription = null,
+                                        tint = profitColor,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Text(
+                                        text = if (isProfitPositive) "Profit = (Price − Cost) / Price" else "Loss = (Price − Cost) / Price",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                                Text(
+                                    text = "${if (isProfitPositive) "+" else ""}${CurrencyHelper.getSymbol(selectedCurrency)}${String.format(Locale.US, "%.2f", profitAmount)} (${profitPct?.let { String.format(Locale.US, "%.1f", it) } ?: "0.0"}%)",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = profitColor,
+                                    modifier = Modifier.padding(start = 22.dp)
+                                )
+                            }
+                        }
+                    }
+                }
             }
 
             // Category Selection Header with Edit Button for Custom Category Management
@@ -2838,12 +3187,27 @@ fun ManualAddForm(
                     } else {
                         entered * currentRate
                     }
+                    val isCostProfitEnabled = costProfitCategories.any { it.equals(category.trim(), ignoreCase = true) }
+                    val finalDescription = if (isCostProfitEnabled && costText.isNotBlank()) {
+                        val clean = description.replace(costProfitRegex, "").trim()
+                        val cVal = costText.toDoubleOrNull()
+                        val pVal = profitPercentText.toDoubleOrNull()
+                        if (cVal != null) {
+                            val sym = CurrencyHelper.getSymbol(selectedCurrency)
+                            val tag = "[Cost: $sym${String.format(Locale.US, "%.2f", cVal)}${if (pVal != null) " | Profit: ${String.format(Locale.US, "%.1f", pVal)}%" else ""}]"
+                            if (clean.isBlank()) tag else "$clean $tag"
+                        } else {
+                            clean
+                        }
+                    } else {
+                        description
+                    }
                     onSubmit(
                         id,
                         primaryAmount,
                         category,
                         type,
-                        description,
+                        finalDescription,
                         isRecurring,
                         frequency,
                         selectedDate,
@@ -2854,6 +3218,9 @@ fun ManualAddForm(
                         currentRate
                     )
                     amountText = ""
+                    costText = ""
+                    profitPercentText = ""
+                    lastEditedField = "NONE"
                     description = ""
                     type = "EXPENSE"
                     category = "Food"

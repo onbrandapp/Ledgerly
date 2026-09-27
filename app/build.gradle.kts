@@ -17,19 +17,27 @@ android {
     applicationId = "com.aistudio.expensetracker.mvkqxl"
     minSdk = 24
     targetSdk = 36
-    versionCode = 89
-    versionName = "89.0"
+    versionCode = 93
+    versionName = "93.0"
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
   }
 
   signingConfigs {
     create("release") {
-      val keystorePath = System.getenv("KEYSTORE_PATH") ?: "${rootDir}/my-upload-key.jks"
-      storeFile = file(keystorePath)
-      storePassword = System.getenv("STORE_PASSWORD")
-      keyAlias = "upload"
-      keyPassword = System.getenv("KEY_PASSWORD")
+      val keystorePath = System.getenv("KEYSTORE_PATH")
+      val uploadKey = if (keystorePath != null) file(keystorePath) else file("${rootDir}/my-upload-key.jks")
+      if (uploadKey.exists()) {
+        storeFile = uploadKey
+        storePassword = System.getenv("STORE_PASSWORD")
+        keyAlias = "upload"
+        keyPassword = System.getenv("KEY_PASSWORD")
+      } else {
+        storeFile = file("${rootDir}/debug.keystore")
+        storePassword = "android"
+        keyAlias = "androiddebugkey"
+        keyPassword = "android"
+      }
     }
     create("debugConfig") {
       storeFile = file("${rootDir}/debug.keystore")
