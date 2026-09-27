@@ -66,6 +66,7 @@ import com.example.ui.components.BiometricSettingsCard
 import com.example.ui.components.BulkCategoryReassignmentDialog
 import com.example.ui.components.CategoryCustomizationDialog
 import com.example.ui.components.CostProfitCategoriesDialog
+import com.example.ui.components.DuplicateReviewDialog
 import com.example.ui.components.TransactionSearchOverlay
 import com.example.ui.components.CurrencySelectorChip
 import com.example.ui.components.CurrencySelectionBottomSheet
@@ -137,9 +138,11 @@ fun DashboardScreen(
     var allTimeSortOption by remember { mutableStateOf("date_desc") }
     var showSortMenu by remember { mutableStateOf(false) }
 
-    val duplicateTxIds = remember(transactions) {
-        DuplicateTransactionDetector.findAllDuplicateIds(transactions)
+    val reconciledDuplicatePairs by viewModel.reconciledDuplicatePairs.collectAsState()
+    val duplicateTxIds = remember(transactions, reconciledDuplicatePairs) {
+        DuplicateTransactionDetector.findAllDuplicateIds(transactions, reconciledPairs = reconciledDuplicatePairs)
     }
+    var showDuplicateReviewDialog by remember { mutableStateOf(false) }
     var filterOnlyDuplicatesTab0 by remember { mutableStateOf(false) }
     var filterOnlyDuplicatesTab1 by remember { mutableStateOf(false) }
 
@@ -1254,7 +1257,8 @@ fun DashboardScreen(
                                 PotentialDuplicateLedgerBanner(
                                     duplicateCount = monthDuplicates.size,
                                     isFiltering = filterOnlyDuplicatesTab0,
-                                    onToggleFilter = { filterOnlyDuplicatesTab0 = !filterOnlyDuplicatesTab0 }
+                                    onToggleFilter = { filterOnlyDuplicatesTab0 = !filterOnlyDuplicatesTab0 },
+                                    onReviewClick = { showDuplicateReviewDialog = true }
                                 )
                             }
 
@@ -1262,8 +1266,14 @@ fun DashboardScreen(
                                 TransactionRowItem(
                                     transaction = tx,
                                     isDuplicate = tx.id in duplicateTxIds,
-                                    duplicateMatchingTx = remember(tx.id, transactions) {
-                                        DuplicateTransactionDetector.findMatchingDuplicatesFor(tx, transactions).firstOrNull()
+                                    duplicateMatchingTx = remember(tx.id, transactions, reconciledDuplicatePairs) {
+                                        DuplicateTransactionDetector.findMatchingDuplicatesFor(tx, transactions, reconciledDuplicatePairs).firstOrNull()
+                                    },
+                                    onReconcileDuplicate = {
+                                        val matching = DuplicateTransactionDetector.findMatchingDuplicatesFor(tx, transactions, reconciledDuplicatePairs)
+                                        if (matching.isNotEmpty()) {
+                                            viewModel.reconcileTransactionWithMatches(tx.id, matching.map { it.id })
+                                        }
                                     },
                                     onEdit = {
                                         if (tx.recurringId.isNotEmpty()) {
@@ -1354,7 +1364,8 @@ fun DashboardScreen(
                                 PotentialDuplicateLedgerBanner(
                                     duplicateCount = allTimeDuplicates.size,
                                     isFiltering = filterOnlyDuplicatesTab1,
-                                    onToggleFilter = { filterOnlyDuplicatesTab1 = !filterOnlyDuplicatesTab1 }
+                                    onToggleFilter = { filterOnlyDuplicatesTab1 = !filterOnlyDuplicatesTab1 },
+                                    onReviewClick = { showDuplicateReviewDialog = true }
                                 )
                             }
 
@@ -1362,8 +1373,14 @@ fun DashboardScreen(
                                 TransactionRowItem(
                                     transaction = tx,
                                     isDuplicate = tx.id in duplicateTxIds,
-                                    duplicateMatchingTx = remember(tx.id, transactions) {
-                                        DuplicateTransactionDetector.findMatchingDuplicatesFor(tx, transactions).firstOrNull()
+                                    duplicateMatchingTx = remember(tx.id, transactions, reconciledDuplicatePairs) {
+                                        DuplicateTransactionDetector.findMatchingDuplicatesFor(tx, transactions, reconciledDuplicatePairs).firstOrNull()
+                                    },
+                                    onReconcileDuplicate = {
+                                        val matching = DuplicateTransactionDetector.findMatchingDuplicatesFor(tx, transactions, reconciledDuplicatePairs)
+                                        if (matching.isNotEmpty()) {
+                                            viewModel.reconcileTransactionWithMatches(tx.id, matching.map { it.id })
+                                        }
                                     },
                                     onEdit = {
                                         if (tx.recurringId.isNotEmpty()) {
@@ -1589,6 +1606,13 @@ fun DashboardScreen(
     CostProfitCategoriesDialog(
         isOpen = showCostProfitCategoriesDialog,
         onDismiss = { showCostProfitCategoriesDialog = false },
+        viewModel = viewModel
+    )
+
+    // --- DUPLICATE REVIEW DIALOG ---
+    DuplicateReviewDialog(
+        isOpen = showDuplicateReviewDialog,
+        onDismiss = { showDuplicateReviewDialog = false },
         viewModel = viewModel
     )
 
@@ -2094,6 +2118,70 @@ fun DashboardScreen(
                                     Text(
                                         text = if (costProfitCategories.isEmpty()) "Disabled for all categories"
                                                else "${costProfitCategories.size} categories active (${costProfitCategories.joinToString(", ")})",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+                            }
+                            Icon(
+                                imageVector = Icons.Default.ChevronRight,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+                    }
+
+                    Card(
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                        ),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 8.dp)
+                            .clickable {
+                                showBudgetDialog = false
+                                showDuplicateReviewDialog = true
+                            }
+                            .testTag("duplicate_reconciliation_settings_card")
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(14.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(36.dp)
+                                        .background(Color(0xFFFFF8E1), CircleShape),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.WarningAmber,
+                                        contentDescription = null,
+                                        tint = Color(0xFFD97706),
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                                Column {
+                                    Text(
+                                        text = "Duplicate Reconciliation",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Text(
+                                        text = if (duplicateTxIds.isEmpty()) "${reconciledDuplicatePairs.size} reconciled • No pending duplicates"
+                                               else "${duplicateTxIds.size} flagged duplicates to review",
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         maxLines = 1,
@@ -3590,6 +3678,7 @@ fun PotentialDuplicateLedgerBanner(
     duplicateCount: Int,
     isFiltering: Boolean,
     onToggleFilter: () -> Unit,
+    onReviewClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Surface(
@@ -3634,24 +3723,44 @@ fun PotentialDuplicateLedgerBanner(
                 }
             }
             Spacer(modifier = Modifier.width(8.dp))
-            OutlinedButton(
-                onClick = onToggleFilter,
-                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
-                border = BorderStroke(1.dp, Color(0xFFD97706)),
-                shape = RoundedCornerShape(8.dp),
-                colors = ButtonDefaults.outlinedButtonColors(
-                    containerColor = if (isFiltering) Color(0xFFD97706) else Color.Transparent,
-                    contentColor = if (isFiltering) Color.White else Color(0xFFD97706)
-                ),
-                modifier = Modifier
-                    .height(32.dp)
-                    .testTag("filter_duplicates_button")
-            ) {
-                Text(
-                    text = if (isFiltering) "Show All" else "Review",
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.Bold
-                )
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Button(
+                    onClick = onReviewClick,
+                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                    shape = RoundedCornerShape(8.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFFD97706),
+                        contentColor = Color.White
+                    ),
+                    modifier = Modifier
+                        .height(32.dp)
+                        .testTag("review_duplicates_button")
+                ) {
+                    Text(
+                        text = "Review",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+                OutlinedButton(
+                    onClick = onToggleFilter,
+                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+                    border = BorderStroke(1.dp, Color(0xFFD97706).copy(alpha = 0.7f)),
+                    shape = RoundedCornerShape(8.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        containerColor = if (isFiltering) Color(0xFFD97706).copy(alpha = 0.15f) else Color.Transparent,
+                        contentColor = Color(0xFFD97706)
+                    ),
+                    modifier = Modifier
+                        .height(32.dp)
+                        .testTag("filter_duplicates_button")
+                ) {
+                    Text(
+                        text = if (isFiltering) "All" else "Filter",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
             }
         }
     }
@@ -3663,6 +3772,7 @@ fun TransactionRowItem(
     onEdit: () -> Unit,
     onDelete: () -> Unit,
     onTogglePaid: (() -> Unit)? = null,
+    onReconcileDuplicate: (() -> Unit)? = null,
     customCategories: List<CustomCategory> = emptyList(),
     isDuplicate: Boolean = false,
     duplicateMatchingTx: Transaction? = null,
@@ -3827,6 +3937,36 @@ fun TransactionRowItem(
                             }
                         }
 
+                        if (onReconcileDuplicate != null) {
+                            Surface(
+                                onClick = { onReconcileDuplicate() },
+                                shape = RoundedCornerShape(8.dp),
+                                color = Color(0xFF2E7D32).copy(alpha = 0.12f),
+                                border = BorderStroke(1.dp, Color(0xFF2E7D32).copy(alpha = 0.35f)),
+                                modifier = Modifier.testTag("quick_reconcile_${transaction.id}")
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(3.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Check,
+                                        contentDescription = "Reconciled",
+                                        tint = Color(0xFF2E7D32),
+                                        modifier = Modifier.size(11.dp)
+                                    )
+                                    Text(
+                                        text = "Reconciled",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = FontWeight.ExtraBold,
+                                        color = Color(0xFF2E7D32),
+                                        fontSize = 10.sp
+                                    )
+                                }
+                            }
+                        }
+
                         if (showDuplicateInfoDialog) {
                             AlertDialog(
                                 onDismissRequest = { showDuplicateInfoDialog = false },
@@ -3878,29 +4018,49 @@ fun TransactionRowItem(
                                             }
                                         }
                                         Text(
-                                            text = "If this entry was logged by mistake, you can edit or delete it.",
+                                            text = "If these entries are legitimate separate transactions, tap 'Reconciled'. Both entries will be removed from the duplicate list and this scenario will not come up between them again.",
                                             style = MaterialTheme.typography.bodySmall,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
                                     }
                                 },
                                 confirmButton = {
-                                    TextButton(
-                                        onClick = { showDuplicateInfoDialog = false },
-                                        modifier = Modifier.testTag("duplicate_info_close_button")
+                                    Button(
+                                        onClick = {
+                                            showDuplicateInfoDialog = false
+                                            onReconcileDuplicate?.invoke()
+                                        },
+                                        colors = ButtonDefaults.buttonColors(
+                                            containerColor = Color(0xFF2E7D32)
+                                        ),
+                                        modifier = Modifier.testTag("duplicate_reconciled_button")
                                     ) {
-                                        Text("Got it")
+                                        Icon(
+                                            imageVector = Icons.Default.Check,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Text("Reconciled")
                                     }
                                 },
                                 dismissButton = {
-                                    TextButton(
-                                        onClick = {
-                                            showDuplicateInfoDialog = false
-                                            onDelete()
-                                        },
-                                        modifier = Modifier.testTag("duplicate_info_delete_button")
-                                    ) {
-                                        Text("Delete Entry", color = MaterialTheme.colorScheme.error)
+                                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        TextButton(
+                                            onClick = {
+                                                showDuplicateInfoDialog = false
+                                                onDelete()
+                                            },
+                                            modifier = Modifier.testTag("duplicate_info_delete_button")
+                                        ) {
+                                            Text("Delete Entry", color = MaterialTheme.colorScheme.error)
+                                        }
+                                        TextButton(
+                                            onClick = { showDuplicateInfoDialog = false },
+                                            modifier = Modifier.testTag("duplicate_info_close_button")
+                                        ) {
+                                            Text("Cancel")
+                                        }
                                     }
                                 },
                                 modifier = Modifier.testTag("duplicate_info_dialog")

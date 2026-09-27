@@ -164,6 +164,44 @@ class ExpenseViewModel(application: Application) : AndroidViewModel(application)
         budgetPrefs.edit().putStringSet("cost_profit_categories", defaultSet).apply()
     }
 
+    // Reconciled Duplicate Pairs (Pairs of transaction IDs reviewed and confirmed not to be duplicates)
+    private val savedReconciledDuplicates = budgetPrefs.getStringSet("reconciled_duplicate_pairs", null) ?: emptySet()
+    private val _reconciledDuplicatePairs = MutableStateFlow<Set<String>>(savedReconciledDuplicates)
+    val reconciledDuplicatePairs = _reconciledDuplicatePairs.asStateFlow()
+
+    fun reconcileDuplicatePair(id1: String, id2: String) {
+        if (id1.isBlank() || id2.isBlank() || id1 == id2) return
+        val key = DuplicateTransactionDetector.getPairKey(id1, id2)
+        val current = _reconciledDuplicatePairs.value.toMutableSet()
+        if (current.add(key)) {
+            _reconciledDuplicatePairs.value = current
+            budgetPrefs.edit().putStringSet("reconciled_duplicate_pairs", current).apply()
+        }
+    }
+
+    fun reconcileTransactionWithMatches(txId: String, matchingTxIds: List<String>) {
+        if (txId.isBlank() || matchingTxIds.isEmpty()) return
+        val current = _reconciledDuplicatePairs.value.toMutableSet()
+        var changed = false
+        matchingTxIds.forEach { matchId ->
+            if (matchId.isNotBlank() && matchId != txId) {
+                val key = DuplicateTransactionDetector.getPairKey(txId, matchId)
+                if (current.add(key)) {
+                    changed = true
+                }
+            }
+        }
+        if (changed) {
+            _reconciledDuplicatePairs.value = current
+            budgetPrefs.edit().putStringSet("reconciled_duplicate_pairs", current).apply()
+        }
+    }
+
+    fun resetReconciledDuplicates() {
+        _reconciledDuplicatePairs.value = emptySet()
+        budgetPrefs.edit().remove("reconciled_duplicate_pairs").apply()
+    }
+
     // Theme Mode State (Light / Dark - defaults to Light Mode for new installs)
     private val _isDarkMode = MutableStateFlow(budgetPrefs.getBoolean("is_dark_mode", false))
     val isDarkMode = _isDarkMode.asStateFlow()

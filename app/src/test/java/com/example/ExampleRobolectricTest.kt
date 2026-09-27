@@ -158,4 +158,48 @@ class ExampleRobolectricTest {
     assert(enabledCategories.any { it.equals("Merchandise", ignoreCase = true) })
     assert(!enabledCategories.any { it.equals("Food", ignoreCase = true) })
   }
+
+  @Test
+  fun `verify potential duplicate reconciliation removes entries and stops flagging scenario`() {
+    val now = System.currentTimeMillis()
+    val tx1 = com.example.data.Transaction(
+      id = "dup_1",
+      description = "Morning Coffee",
+      amount = 4.50,
+      category = "Food",
+      date = now
+    )
+    val tx2 = com.example.data.Transaction(
+      id = "dup_2",
+      description = "Morning Coffee",
+      amount = 4.50,
+      category = "Food",
+      date = now
+    )
+    val txList = listOf(tx1, tx2)
+
+    // Initially flagged as duplicates
+    val initialDuplicates = com.example.data.DuplicateTransactionDetector.findAllDuplicateIds(txList, emptySet())
+    assertEquals(2, initialDuplicates.size)
+    assert(initialDuplicates.contains("dup_1"))
+    assert(initialDuplicates.contains("dup_2"))
+
+    val initialPairs = com.example.data.DuplicateTransactionDetector.findDuplicatePairs(txList, emptySet())
+    assertEquals(1, initialPairs.size)
+
+    // User determines they are not duplicates and marks them Reconciled
+    val pairKey = com.example.data.DuplicateTransactionDetector.getPairKey(tx1.id, tx2.id)
+    val reconciledPairs = setOf(pairKey)
+
+    // Both entries are removed from the duplicate list
+    val afterReconciledDuplicates = com.example.data.DuplicateTransactionDetector.findAllDuplicateIds(txList, reconciledPairs)
+    assertEquals(0, afterReconciledDuplicates.size)
+
+    val afterPairs = com.example.data.DuplicateTransactionDetector.findDuplicatePairs(txList, reconciledPairs)
+    assertEquals(0, afterPairs.size)
+
+    // And matching duplicates for tx1 returns empty list
+    val matching = com.example.data.DuplicateTransactionDetector.findMatchingDuplicatesFor(tx1, txList, reconciledPairs)
+    assertEquals(0, matching.size)
+  }
 }

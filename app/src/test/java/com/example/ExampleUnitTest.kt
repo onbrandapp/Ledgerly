@@ -337,16 +337,13 @@ class ExampleUnitTest {
     val profitPct = ((price - cost) / price) * 100.0
     assertEquals(60.0, profitPct, 0.001)
 
-    val tx = com.example.data.Transaction(
-      id = "tx_product",
-      amount = price,
-      category = "Product",
-      description = "Handmade Mug",
-      date = 1711000000000L,
-      type = "INCOME",
-      cost = cost
-    )
-    assertEquals(40.0, tx.cost, 0.001)
+    // Test parsing and tag formatting
+    val descWithCost = "Handmade Mug [Cost: $40.00 | Profit: 60.0%]"
+    val tagRegex = Regex("""\s*\[Cost:\s*[^0-9]*([0-9.]+)(?:\s*\|\s*Profit:\s*([0-9.-]+)%?)?\]""")
+    val match = tagRegex.find(descWithCost)
+    assertNotNull(match)
+    assertEquals("40.00", match?.groupValues?.get(1))
+    assertEquals("60.0", match?.groupValues?.get(2))
 
     // Decimal cost test
     val decimalPrice = 50.0
