@@ -261,16 +261,16 @@ fun BiometricLockScreen(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Button(
+                    FilledTonalButton(
                         onClick = {
                             promptTriggerCount++
                             triggerPrompt()
                         },
                         shape = RoundedCornerShape(16.dp),
                         contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.primary,
-                            contentColor = MaterialTheme.colorScheme.onPrimary
+                        colors = ButtonDefaults.filledTonalButtonColors(
+                            containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.85f),
+                            contentColor = Color.Black
                         ),
                         modifier = Modifier
                             .weight(1f)
@@ -282,16 +282,18 @@ fun BiometricLockScreen(
                             horizontalArrangement = Arrangement.Center
                         ) {
                             Icon(
-                                imageVector = Icons.Default.Fingerprint,
-                                contentDescription = null,
+                                imageVector = Icons.Default.LockOpen,
+                                contentDescription = "Biometrics Icon",
+                                tint = Color.Black,
                                 modifier = Modifier.size(20.dp)
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                text = "Unlock with Biometrics",
+                                text = "Biometrics",
                                 style = MaterialTheme.typography.labelLarge,
                                 fontWeight = FontWeight.Bold,
-                                fontSize = 14.sp,
+                                color = Color.Black,
+                                fontSize = 15.sp,
                                 maxLines = 1,
                                 softWrap = false
                             )
@@ -307,7 +309,7 @@ fun BiometricLockScreen(
                         shape = RoundedCornerShape(16.dp),
                         colors = IconButtonDefaults.filledTonalIconButtonColors(
                             containerColor = MaterialTheme.colorScheme.primaryContainer,
-                            contentColor = MaterialTheme.colorScheme.primary
+                            contentColor = Color.Black
                         ),
                         modifier = Modifier
                             .size(52.dp)
@@ -316,6 +318,7 @@ fun BiometricLockScreen(
                         Icon(
                             imageVector = Icons.Default.LockOpen,
                             contentDescription = "Manual Unlock Trigger",
+                            tint = Color.Black,
                             modifier = Modifier.size(22.dp)
                         )
                     }

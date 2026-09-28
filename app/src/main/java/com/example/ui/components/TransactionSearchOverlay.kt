@@ -44,6 +44,7 @@ import androidx.compose.ui.window.DialogProperties
 import com.example.data.CustomCategory
 import com.example.data.DuplicateTransactionDetector
 import com.example.data.Transaction
+import com.example.ui.screens.reports.ProfitMarginHelper
 import com.example.ui.theme.CategoryConstants
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -290,7 +291,12 @@ fun TransactionSearchOverlay(
     val totalExpense = remember(filteredTransactions) {
         filteredTransactions.filter { !it.type.equals("INCOME", ignoreCase = true) }.sumOf { it.amount }
     }
-    val netBalance = totalIncome - totalExpense
+    val totalCost = remember(filteredTransactions) {
+        filteredTransactions.sumOf { tx ->
+            ProfitMarginHelper.parseTransaction(tx).cost ?: 0.0
+        }
+    }
+    val netBalance = totalIncome - totalCost - totalExpense
 
     LaunchedEffect(Unit) {
         // Auto-request focus for quick searching
@@ -691,65 +697,103 @@ fun TransactionSearchOverlay(
                 // 4. RESULTS STATS STRIP
                 Surface(
                     shape = RoundedCornerShape(12.dp),
-                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)),
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 14.dp)
                 ) {
-                    Row(
+                    Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 14.dp, vertical = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
+                            .padding(horizontal = 14.dp, vertical = 9.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
+                        // First line: Results count and Income / Cost / Expense breakdown
                         Row(
+                            modifier = Modifier.fillMaxWidth(),
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            Text(
-                                text = "${filteredTransactions.size} Results",
-                                style = MaterialTheme.typography.labelMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            if (isFilterActive) {
-                                Surface(
-                                    shape = CircleShape,
-                                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
-                                ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Text(
+                                    text = "${filteredTransactions.size} Results",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                if (isFilterActive) {
+                                    Surface(
+                                        shape = CircleShape,
+                                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+                                    ) {
+                                        Text(
+                                            text = "Filtered",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            fontSize = 10.sp,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                        )
+                                    }
+                                }
+                            }
+
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Text(
+                                    text = String.format(Locale.US, "+$%.2f", totalIncome),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color(0xFF10B981)
+                                )
+                                if (totalCost > 0) {
                                     Text(
-                                        text = "Filtered",
+                                        text = String.format(Locale.US, "Cost: -$%.2f", totalCost),
                                         style = MaterialTheme.typography.labelSmall,
-                                        fontSize = 10.sp,
                                         fontWeight = FontWeight.SemiBold,
-                                        color = MaterialTheme.colorScheme.primary,
-                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                 }
+                                Text(
+                                    text = String.format(Locale.US, "-$%.2f", totalExpense),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (totalExpense > 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
+                                )
                             }
                         }
 
+                        HorizontalDivider(
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f),
+                            thickness = 0.5.dp
+                        )
+
+                        // Second line: Net Value moved down to its own line
                         Row(
+                            modifier = Modifier.fillMaxWidth(),
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                            horizontalArrangement = Arrangement.SpaceBetween
                         ) {
                             Text(
-                                text = String.format(Locale.US, "+$%.2f", totalIncome),
+                                text = if (totalCost > 0) "Net Value (less cost):" else "Net Value:",
                                 style = MaterialTheme.typography.labelSmall,
-                                fontWeight = FontWeight.Bold,
-                                color = Color(0xFF10B981)
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
+
                             Text(
-                                text = String.format(Locale.US, "-$%.2f", totalExpense),
-                                style = MaterialTheme.typography.labelSmall,
-                                fontWeight = FontWeight.Bold,
-                                color = if (totalExpense > 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Text(
-                                text = String.format(Locale.US, "Net: $%.2f", netBalance),
-                                style = MaterialTheme.typography.labelSmall,
+                                text = String.format(
+                                    Locale.US,
+                                    if (netBalance >= 0) "+$%.2f" else "-$%.2f",
+                                    kotlin.math.abs(netBalance)
+                                ),
+                                style = MaterialTheme.typography.labelMedium,
                                 fontWeight = FontWeight.ExtraBold,
                                 color = if (netBalance >= 0) Color(0xFF10B981) else MaterialTheme.colorScheme.error
                             )

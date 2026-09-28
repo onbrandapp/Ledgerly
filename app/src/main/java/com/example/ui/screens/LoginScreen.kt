@@ -23,6 +23,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -408,7 +409,7 @@ fun LoginScreen(
                                 text = "Sign in with Google",
                                 style = MaterialTheme.typography.labelLarge,
                                 fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface,
+                                color = Color.Black,
                                 fontSize = 16.sp
                             )
                         }
@@ -456,7 +457,7 @@ fun LoginScreen(
                             contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp),
                             colors = ButtonDefaults.filledTonalButtonColors(
                                 containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f),
-                                contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                                contentColor = Color.Black
                             ),
                             modifier = Modifier
                                 .weight(1f)
@@ -468,17 +469,18 @@ fun LoginScreen(
                                 horizontalArrangement = Arrangement.Center
                             ) {
                                 Icon(
-                                    imageVector = Icons.Default.Fingerprint,
-                                    contentDescription = "Biometric Icon",
-                                    tint = MaterialTheme.colorScheme.primary,
+                                    imageVector = Icons.Default.LockOpen,
+                                    contentDescription = "Biometrics Icon",
+                                    tint = Color.Black,
                                     modifier = Modifier.size(20.dp)
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
-                                    text = "Unlock with Biometrics",
+                                    text = "Biometrics",
                                     style = MaterialTheme.typography.labelLarge,
                                     fontWeight = FontWeight.Bold,
-                                    fontSize = 14.sp,
+                                    color = Color.Black,
+                                    fontSize = 15.sp,
                                     maxLines = 1,
                                     softWrap = false
                                 )
@@ -492,7 +494,7 @@ fun LoginScreen(
                             shape = RoundedCornerShape(16.dp),
                             colors = IconButtonDefaults.filledTonalIconButtonColors(
                                 containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.85f),
-                                contentColor = MaterialTheme.colorScheme.primary
+                                contentColor = Color.Black
                             ),
                             modifier = Modifier
                                 .size(52.dp)
@@ -501,6 +503,7 @@ fun LoginScreen(
                             Icon(
                                 imageVector = Icons.Default.LockOpen,
                                 contentDescription = "Manual Unlock Trigger",
+                                tint = Color.Black,
                                 modifier = Modifier.size(22.dp)
                             )
                         }

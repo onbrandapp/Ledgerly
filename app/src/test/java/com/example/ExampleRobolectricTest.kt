@@ -336,4 +336,46 @@ class ExampleRobolectricTest {
     assertEquals(25.0, metrics[0].totalCost, 0.001)
     assertEquals(50.0, metrics[0].totalRevenue, 0.001)
   }
+
+  @Test
+  fun `verify search results net value is less the cost`() {
+    val tx1 = com.example.data.Transaction(
+      id = "s1",
+      description = "Rick [Cost: CA$30.00 | Profit: 53.8%]",
+      amount = 65.0,
+      type = "INCOME",
+      category = "Product Sale",
+      date = System.currentTimeMillis()
+    )
+    val tx2 = com.example.data.Transaction(
+      id = "s2",
+      description = "Rick [Cost: CA$50.00 | Profit: 50.0%]",
+      amount = 100.0,
+      type = "INCOME",
+      category = "Product Sale",
+      date = System.currentTimeMillis()
+    )
+    val tx3 = com.example.data.Transaction(
+      id = "s3",
+      description = "Shipping Fee",
+      amount = 15.0,
+      type = "EXPENSE",
+      category = "Shipping",
+      date = System.currentTimeMillis()
+    )
+
+    val results = listOf(tx1, tx2, tx3)
+    val totalIncome = results.filter { it.type.equals("INCOME", ignoreCase = true) }.sumOf { it.amount }
+    val totalExpense = results.filter { !it.type.equals("INCOME", ignoreCase = true) }.sumOf { it.amount }
+    val totalCost = results.sumOf { tx ->
+      com.example.ui.screens.reports.ProfitMarginHelper.parseTransaction(tx).cost ?: 0.0
+    }
+    val netBalance = totalIncome - totalCost - totalExpense
+
+    assertEquals(165.0, totalIncome, 0.001)
+    assertEquals(15.0, totalExpense, 0.001)
+    assertEquals(80.0, totalCost, 0.001)
+    // Net Value is less the cost: 165 - 80 - 15 = 70.0
+    assertEquals(70.0, netBalance, 0.001)
+  }
 }
