@@ -202,6 +202,70 @@ class ExpenseViewModel(application: Application) : AndroidViewModel(application)
         budgetPrefs.edit().remove("reconciled_duplicate_pairs").apply()
     }
 
+    // Visible Overview Metric Cards State (Customizable dashboard focus)
+    companion object {
+        const val CARD_BUDGET = "budget_card"
+        const val CARD_EXPENSES = "expenses_card"
+        const val CARD_INCOME = "income_card"
+        const val CARD_NET_SAVINGS = "net_savings_card"
+        const val CARD_RECONCILIATION = "reconciliation_card"
+        const val CARD_AI_INPUT = "ai_input_card"
+
+        val DEFAULT_OVERVIEW_CARDS = setOf(
+            CARD_BUDGET,
+            CARD_EXPENSES,
+            CARD_INCOME,
+            CARD_RECONCILIATION,
+            CARD_AI_INPUT
+        )
+    }
+
+    private val savedOverviewCards = budgetPrefs.getStringSet("overview_metric_cards", null)
+        ?: DEFAULT_OVERVIEW_CARDS
+    private val _visibleOverviewCards = MutableStateFlow<Set<String>>(savedOverviewCards)
+    val visibleOverviewCards = _visibleOverviewCards.asStateFlow()
+
+    fun toggleOverviewCard(cardId: String) {
+        val current = _visibleOverviewCards.value.toMutableSet()
+        if (current.contains(cardId)) {
+            if (current.size > 1) {
+                current.remove(cardId)
+            }
+        } else {
+            current.add(cardId)
+        }
+        _visibleOverviewCards.value = current
+        budgetPrefs.edit().putStringSet("overview_metric_cards", current).apply()
+    }
+
+    fun setOverviewCardVisibility(cardId: String, isVisible: Boolean) {
+        val current = _visibleOverviewCards.value.toMutableSet()
+        if (isVisible) {
+            current.add(cardId)
+        } else {
+            if (current.size > 1) {
+                current.remove(cardId)
+            }
+        }
+        _visibleOverviewCards.value = current
+        budgetPrefs.edit().putStringSet("overview_metric_cards", current).apply()
+    }
+
+    fun setVisibleOverviewCards(cards: Set<String>) {
+        if (cards.isEmpty()) return
+        _visibleOverviewCards.value = cards
+        budgetPrefs.edit().putStringSet("overview_metric_cards", cards).apply()
+    }
+
+    fun resetOverviewCardsToDefault() {
+        _visibleOverviewCards.value = DEFAULT_OVERVIEW_CARDS
+        budgetPrefs.edit().putStringSet("overview_metric_cards", DEFAULT_OVERVIEW_CARDS).apply()
+    }
+
+    fun isOverviewCardVisible(cardId: String): Boolean {
+        return _visibleOverviewCards.value.contains(cardId)
+    }
+
     // Theme Mode State (Light / Dark - defaults to Light Mode for new installs)
     private val _isDarkMode = MutableStateFlow(budgetPrefs.getBoolean("is_dark_mode", false))
     val isDarkMode = _isDarkMode.asStateFlow()

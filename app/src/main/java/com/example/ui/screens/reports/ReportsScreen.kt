@@ -44,6 +44,7 @@ fun ReportsScreen(
     val customCategories by viewModel.customCategories.collectAsState()
     val currentUserEmail by viewModel.currentUserEmail.collectAsState()
     val monthlyBudget by viewModel.monthlyBudget.collectAsState()
+    val primaryCurrency by viewModel.primaryCurrency.collectAsState()
 
     Column(
         modifier = modifier
@@ -176,6 +177,14 @@ fun ReportsScreen(
                         transactions = transactions,
                         customCategories = customCategories,
                         monthlyBudget = monthlyBudget,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
+                ReportCategory.PROFIT_MARGIN -> {
+                    ProfitPercentageReportView(
+                        transactions = transactions,
+                        userEmail = currentUserEmail,
+                        primaryCurrency = primaryCurrency,
                         modifier = Modifier.fillMaxSize()
                     )
                 }

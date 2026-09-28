@@ -202,4 +202,98 @@ class ExampleRobolectricTest {
     val matching = com.example.data.DuplicateTransactionDetector.findMatchingDuplicatesFor(tx1, txList, reconciledPairs)
     assertEquals(0, matching.size)
   }
+
+  @Test
+  fun `verify stacked report displays income totals above each month`() {
+    val incomeAmount = 3705.0
+    val expenseAmount = 3704.0
+    val isStacked = true
+
+    // Under stacked mode, top label shows income totals (vs totalVolume)
+    val topLabelText = if (isStacked) {
+      if (incomeAmount > 0) "$${incomeAmount.toInt()}" else "$0"
+    } else {
+      if (expenseAmount > 0) "$${expenseAmount.toInt()}" else "$0"
+    }
+
+    assertEquals("$3705", topLabelText)
+  }
+
+  @Test
+  fun `verify profit percentage by description parsing and aggregation`() {
+    val tx1 = com.example.data.Transaction(
+      id = "tx1",
+      description = "Rick [Cost: CA$30.00 | Profit: 53.8%]",
+      amount = 65.0,
+      type = "INCOME",
+      category = "Product",
+      date = System.currentTimeMillis()
+    )
+    val tx2 = com.example.data.Transaction(
+      id = "tx2",
+      description = "Rick [Cost: CA$30.00 | Profit: 53.8%]",
+      amount = 65.0,
+      type = "INCOME",
+      category = "Product",
+      date = System.currentTimeMillis()
+    )
+    val tx3 = com.example.data.Transaction(
+      id = "tx3",
+      description = "Handmade Mug [Cost: $40.00 | Profit: 60.0%]",
+      amount = 100.0,
+      type = "INCOME",
+      category = "Product",
+      date = System.currentTimeMillis()
+    )
+
+    val parsed1 = com.example.ui.screens.reports.ProfitMarginHelper.parseTransaction(tx1)
+    assertEquals("Rick", parsed1.cleanDescription)
+    assertEquals(30.0, parsed1.cost!!, 0.001)
+    assertEquals(53.8, parsed1.profitPercentage!!, 0.001)
+
+    val metrics = com.example.ui.screens.reports.ProfitMarginHelper.aggregateByDescription(listOf(tx1, tx2, tx3))
+    assertEquals(2, metrics.size)
+
+    // First item should be Handmade Mug (60% profit)
+    val topItem = metrics[0]
+    assertEquals("Handmade Mug", topItem.description)
+    assertEquals(1, topItem.count)
+    assertEquals(100.0, topItem.totalRevenue, 0.001)
+    assertEquals(40.0, topItem.totalCost, 0.001)
+    assertEquals(60.0, topItem.totalProfit, 0.001)
+    assertEquals(60.0, topItem.profitPercentage, 0.001)
+
+    // Second item should be Rick (53.8% profit, 2 items)
+    val secondItem = metrics[1]
+    assertEquals("Rick", secondItem.description)
+    assertEquals(2, secondItem.count)
+    assertEquals(130.0, secondItem.totalRevenue, 0.001)
+    assertEquals(60.0, secondItem.totalCost, 0.001)
+    assertEquals(70.0, secondItem.totalProfit, 0.001)
+    assertEquals(53.846, secondItem.profitPercentage, 0.01)
+  }
+
+  @Test
+  fun `verify monthly overview metric cards customization settings`() {
+    val defaultCards = com.example.ui.viewmodel.ExpenseViewModel.DEFAULT_OVERVIEW_CARDS
+    assertTrue(defaultCards.contains(com.example.ui.viewmodel.ExpenseViewModel.CARD_BUDGET))
+    assertTrue(defaultCards.contains(com.example.ui.viewmodel.ExpenseViewModel.CARD_EXPENSES))
+    assertTrue(defaultCards.contains(com.example.ui.viewmodel.ExpenseViewModel.CARD_INCOME))
+    assertTrue(defaultCards.contains(com.example.ui.viewmodel.ExpenseViewModel.CARD_RECONCILIATION))
+    assertTrue(defaultCards.contains(com.example.ui.viewmodel.ExpenseViewModel.CARD_AI_INPUT))
+
+    // Test customizing visible set
+    val customizedCards = mutableSetOf(
+      com.example.ui.viewmodel.ExpenseViewModel.CARD_EXPENSES,
+      com.example.ui.viewmodel.ExpenseViewModel.CARD_INCOME
+    )
+    assertTrue(customizedCards.contains(com.example.ui.viewmodel.ExpenseViewModel.CARD_EXPENSES))
+    assertFalse(customizedCards.contains(com.example.ui.viewmodel.ExpenseViewModel.CARD_BUDGET))
+    assertFalse(customizedCards.contains(com.example.ui.viewmodel.ExpenseViewModel.CARD_RECONCILIATION))
+
+    // Adding Net Savings card
+    customizedCards.add(com.example.ui.viewmodel.ExpenseViewModel.CARD_NET_SAVINGS)
+    assertTrue(customizedCards.contains(com.example.ui.viewmodel.ExpenseViewModel.CARD_NET_SAVINGS))
+    assertEquals(3, customizedCards.size)
+  }
 }

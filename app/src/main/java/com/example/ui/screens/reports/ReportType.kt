@@ -1,6 +1,7 @@
 package com.example.ui.screens.reports
 
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.Assessment
 import androidx.compose.material.icons.filled.ReceiptLong
 import androidx.compose.material.icons.filled.ShowChart
@@ -26,6 +27,14 @@ enum class ReportCategory(
         subtitle = "Spending distribution & 6-month financial trends",
         icon = Icons.Default.ShowChart,
         exportFormats = emptyList()
+    ),
+    PROFIT_MARGIN(
+        id = "profit_margin",
+        title = "Profit by Description",
+        shortTitle = "Profit %",
+        subtitle = "Profit margin performance ranked by item description",
+        icon = Icons.AutoMirrored.Filled.TrendingUp,
+        exportFormats = listOf("CSV", "PDF")
     ),
     LEDGER(
         id = "ledger",

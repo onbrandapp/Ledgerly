@@ -624,9 +624,8 @@ fun MonthlyTrendBarItem(
                 onHoverChange(!isHovered)
             }
     ) {
-        val totalVolume = (trend.incomeAmount + trend.expenseAmount).toInt()
         val topLabelText = if (isStacked) {
-            if (totalVolume > 0) "$$totalVolume" else "$0"
+            if (trend.incomeAmount > 0) "$${trend.incomeAmount.toInt()}" else "$0"
         } else {
             if (trend.expenseAmount > 0) "$${trend.expenseAmount.toInt()}" else "$0"
         }

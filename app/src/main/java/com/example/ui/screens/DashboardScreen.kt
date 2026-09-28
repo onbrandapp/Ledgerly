@@ -66,6 +66,7 @@ import com.example.ui.components.BiometricSettingsCard
 import com.example.ui.components.BulkCategoryReassignmentDialog
 import com.example.ui.components.CategoryCustomizationDialog
 import com.example.ui.components.CostProfitCategoriesDialog
+import com.example.ui.components.CustomizeOverviewCardsDialog
 import com.example.ui.components.DuplicateReviewDialog
 import com.example.ui.components.TransactionSearchOverlay
 import com.example.ui.components.CurrencySelectorChip
@@ -143,6 +144,8 @@ fun DashboardScreen(
         DuplicateTransactionDetector.findAllDuplicateIds(transactions, reconciledPairs = reconciledDuplicatePairs)
     }
     var showDuplicateReviewDialog by remember { mutableStateOf(false) }
+    val visibleOverviewCards by viewModel.visibleOverviewCards.collectAsState()
+    var showCustomizeOverviewCardsDialog by remember { mutableStateOf(false) }
     var filterOnlyDuplicatesTab0 by remember { mutableStateOf(false) }
     var filterOnlyDuplicatesTab1 by remember { mutableStateOf(false) }
 
@@ -399,6 +402,7 @@ fun DashboardScreen(
                 ) {
 
                 // --- 1. AI CHAT INPUT BOX AT THE TOP ---
+                if (visibleOverviewCards.contains(ExpenseViewModel.CARD_AI_INPUT)) {
                 Card(
                     colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.surfaceVariant
@@ -614,8 +618,46 @@ fun DashboardScreen(
                         }
                     }
                 }
+                } // End of AI Chat Input Card
 
                 // --- 2. THE BUDGET SUMMARY PANEL & ENTRANCE COUNT-UP ANIMATIONS ---
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 8.dp, bottom = 4.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Monthly Overview",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+
+                    AssistChip(
+                        onClick = { showCustomizeOverviewCardsDialog = true },
+                        leadingIcon = {
+                            Icon(
+                                imageVector = Icons.Default.Tune,
+                                contentDescription = null,
+                                modifier = Modifier.size(14.dp),
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        },
+                        label = {
+                            Text(
+                                text = "Customize Focus",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        },
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier
+                            .height(28.dp)
+                            .testTag("customize_overview_cards_button")
+                    )
+                }
                 val remainingBudget = monthlyBudget + monthlySummary.totalIncome - monthlySummary.totalExpense
                 val isBudgetAlert = remainingBudget < 0.1 * monthlyBudget
                 val totalBudget = monthlyBudget + monthlySummary.totalIncome
@@ -697,6 +739,7 @@ fun DashboardScreen(
                 }
 
                 // Bento Card 1: Remaining Budget Panel (Span 2)
+                if (visibleOverviewCards.contains(ExpenseViewModel.CARD_BUDGET)) {
                 Card(
                     colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.surface
@@ -837,8 +880,14 @@ fun DashboardScreen(
                         }
                     }
                 }
+                } // End of Budget Card
 
                 // Bento Cards Row: Expenses & Income (Grid of 2 items)
+                val showExpenses = visibleOverviewCards.contains(ExpenseViewModel.CARD_EXPENSES)
+                val showIncome = visibleOverviewCards.contains(ExpenseViewModel.CARD_INCOME)
+                val showNetSavings = visibleOverviewCards.contains(ExpenseViewModel.CARD_NET_SAVINGS)
+
+                if (showExpenses && showIncome) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -952,6 +1001,192 @@ fun DashboardScreen(
                                     color = MaterialTheme.colorScheme.onSurface,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                        }
+                    }
+                }
+                } else if (showExpenses) {
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 8.dp)
+                            .graphicsLayer {
+                                alpha = expensesCardAlpha.value
+                                translationY = expensesCardSlideY.value
+                            },
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surface
+                        ),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                        shape = RoundedCornerShape(24.dp)
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(40.dp)
+                                    .background(
+                                        MaterialTheme.colorScheme.primary.copy(alpha = 0.10f),
+                                        RoundedCornerShape(12.dp)
+                                    ),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Payments,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Column {
+                                Text(
+                                    text = "EXPENSES",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Text(
+                                    text = "$${String.format(Locale.US, "%,.2f", animatedExpenses.value)}",
+                                    style = MaterialTheme.typography.titleLarge,
+                                    fontWeight = FontWeight.Black,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                        }
+                    }
+                } else if (showIncome) {
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 8.dp)
+                            .graphicsLayer {
+                                alpha = incomeCardAlpha.value
+                                translationY = incomeCardSlideY.value
+                            },
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surface
+                        ),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                        shape = RoundedCornerShape(24.dp)
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(40.dp)
+                                    .background(
+                                        MaterialTheme.colorScheme.primary.copy(alpha = 0.10f),
+                                        RoundedCornerShape(12.dp)
+                                    ),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.TrendingUp,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Column {
+                                Text(
+                                    text = "INCOME",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Text(
+                                    text = "$${String.format(Locale.US, "%,.2f", animatedIncome.value)}",
+                                    style = MaterialTheme.typography.titleLarge,
+                                    fontWeight = FontWeight.Black,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                        }
+                    }
+                }
+
+                if (showNetSavings) {
+                    val netSavingsAmount = monthlySummary.totalIncome - monthlySummary.totalExpense
+                    val isSurplus = netSavingsAmount >= 0
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 8.dp)
+                            .testTag("net_savings_card"),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                        shape = RoundedCornerShape(24.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                modifier = Modifier.weight(1f, fill = false)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(40.dp)
+                                        .background(
+                                            if (isSurplus) Color(0xFF10B981).copy(alpha = 0.12f) else MaterialTheme.colorScheme.error.copy(alpha = 0.12f),
+                                            RoundedCornerShape(12.dp)
+                                        ),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = if (isSurplus) Icons.Default.Savings else Icons.Default.TrendingDown,
+                                        contentDescription = null,
+                                        tint = if (isSurplus) Color(0xFF10B981) else MaterialTheme.colorScheme.error,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                                Column {
+                                    Text(
+                                        text = "NET CASH FLOW",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = FontWeight.ExtraBold,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                    val sign = if (netSavingsAmount >= 0) "+" else "-"
+                                    Text(
+                                        text = "$sign$${String.format(Locale.US, "%,.2f", kotlin.math.abs(netSavingsAmount))}",
+                                        style = MaterialTheme.typography.titleLarge,
+                                        fontWeight = FontWeight.Black,
+                                        color = if (isSurplus) Color(0xFF047857) else MaterialTheme.colorScheme.error,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+                            }
+
+                            Surface(
+                                shape = RoundedCornerShape(50),
+                                color = if (isSurplus) Color(0xFF10B981).copy(alpha = 0.15f) else MaterialTheme.colorScheme.error.copy(alpha = 0.15f),
+                                border = BorderStroke(1.dp, if (isSurplus) Color(0xFF10B981).copy(alpha = 0.35f) else MaterialTheme.colorScheme.error.copy(alpha = 0.35f))
+                            ) {
+                                Text(
+                                    text = if (isSurplus) "SURPLUS" else "DEFICIT",
+                                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Black, letterSpacing = 0.5.sp),
+                                    color = if (isSurplus) Color(0xFF047857) else MaterialTheme.colorScheme.error,
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
                                 )
                             }
                         }
@@ -1251,7 +1486,9 @@ fun DashboardScreen(
                                 .testTag("transactions_list"),
                             verticalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
-                            ExpenseReconciliationHeader(transactions = monthlySummary.currentMonthList)
+                            if (visibleOverviewCards.contains(ExpenseViewModel.CARD_RECONCILIATION)) {
+                                ExpenseReconciliationHeader(transactions = monthlySummary.currentMonthList)
+                            }
 
                             if (monthDuplicates.isNotEmpty()) {
                                 PotentialDuplicateLedgerBanner(
@@ -1358,7 +1595,9 @@ fun DashboardScreen(
                                 .testTag("all_time_transactions_list"),
                             verticalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
-                            ExpenseReconciliationHeader(transactions = allTimeList)
+                            if (visibleOverviewCards.contains(ExpenseViewModel.CARD_RECONCILIATION)) {
+                                ExpenseReconciliationHeader(transactions = allTimeList)
+                            }
 
                             if (allTimeDuplicates.isNotEmpty()) {
                                 PotentialDuplicateLedgerBanner(
@@ -1613,6 +1852,13 @@ fun DashboardScreen(
     DuplicateReviewDialog(
         isOpen = showDuplicateReviewDialog,
         onDismiss = { showDuplicateReviewDialog = false },
+        viewModel = viewModel
+    )
+
+    // --- CUSTOMIZE OVERVIEW CARDS DIALOG ---
+    CustomizeOverviewCardsDialog(
+        isOpen = showCustomizeOverviewCardsDialog,
+        onDismiss = { showCustomizeOverviewCardsDialog = false },
         viewModel = viewModel
     )
 
@@ -2182,6 +2428,69 @@ fun DashboardScreen(
                                     Text(
                                         text = if (duplicateTxIds.isEmpty()) "${reconciledDuplicatePairs.size} reconciled • No pending duplicates"
                                                else "${duplicateTxIds.size} flagged duplicates to review",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+                            }
+                            Icon(
+                                imageVector = Icons.Default.ChevronRight,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+                    }
+
+                    Card(
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                        ),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 8.dp)
+                            .clickable {
+                                showBudgetDialog = false
+                                showCustomizeOverviewCardsDialog = true
+                            }
+                            .testTag("overview_cards_customization_card")
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(14.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(36.dp)
+                                        .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f), CircleShape),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.DashboardCustomize,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                                Column {
+                                    Text(
+                                        text = "Overview Metric Cards",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Text(
+                                        text = "${visibleOverviewCards.size} cards visible • Focus your dashboard metrics",
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         maxLines = 1,
@@ -4920,9 +5229,8 @@ fun MonthlyTrendBarItem(
                 onHoverChange(!isHovered)
             }
     ) {
-        val totalVolume = (trend.incomeAmount + trend.expenseAmount).toInt()
         val topLabelText = if (isStacked) {
-            if (totalVolume > 0) "$$totalVolume" else "$0"
+            if (trend.incomeAmount > 0) "$${trend.incomeAmount.toInt()}" else "$0"
         } else {
             if (trend.expenseAmount > 0) "$${trend.expenseAmount.toInt()}" else "$0"
         }
