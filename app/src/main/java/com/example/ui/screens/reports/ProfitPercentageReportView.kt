@@ -51,7 +51,6 @@ fun ProfitPercentageReportView(
     var selectedDateFilter by remember { mutableStateOf("All Time") }
     var searchQuery by remember { mutableStateOf("") }
     var selectedSort by remember { mutableStateOf("MARGIN_DESC") }
-    var onlyWithCostData by remember { mutableStateOf(false) } // show all or only with explicit cost
     var selectedViewMode by remember { mutableStateOf("CHART") } // "CHART" or "TABLE"
 
     // Date Range calculation
@@ -108,9 +107,9 @@ fun ProfitPercentageReportView(
         }
     }
 
-    // Aggregate by description
-    val rawAggregatedItems = remember(filteredTransactions, onlyWithCostData) {
-        ProfitMarginHelper.aggregateByDescription(filteredTransactions, onlyWithCostData = onlyWithCostData)
+    // Aggregate by description - strictly includes only transactions with an inputted cost
+    val rawAggregatedItems = remember(filteredTransactions) {
+        ProfitMarginHelper.aggregateByDescription(filteredTransactions, onlyWithCostData = true)
     }
 
     // Filter by search & sort
@@ -437,21 +436,30 @@ fun ProfitPercentageReportView(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(6.dp),
-                            modifier = Modifier.clickable { onlyWithCostData = !onlyWithCostData }
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f),
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.25f))
                         ) {
-                            Checkbox(
-                                checked = onlyWithCostData,
-                                onCheckedChange = { onlyWithCostData = it },
-                                modifier = Modifier.size(24.dp)
-                            )
-                            Text(
-                                text = "Only with recorded Cost",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
+                            Row(
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.FilterAlt,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(13.dp)
+                                )
+                                Text(
+                                    text = "Cost Inputted Only",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    fontSize = 11.sp
+                                )
+                            }
                         }
 
                         // Sort toggle button
@@ -514,17 +522,13 @@ fun ProfitPercentageReportView(
                             modifier = Modifier.size(48.dp)
                         )
                         Text(
-                            text = "No Profit Margin Data Found",
+                            text = "No Cost-Inputted Items Found",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
-                            text = if (onlyWithCostData) {
-                                "Uncheck 'Only with recorded Cost' or enter Cost & Profit % when creating ledger entries to view profit margin analytics."
-                            } else {
-                                "No income transactions found for the selected date range. Try switching to 'All Time' or logging sales."
-                            },
+                            text = "This report exclusively tracks transactions with an inputted cost. Enter the Cost & Profit % when recording income to view profit margin analytics.",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             textAlign = androidx.compose.ui.text.style.TextAlign.Center

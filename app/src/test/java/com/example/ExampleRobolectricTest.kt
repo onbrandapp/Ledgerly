@@ -4,6 +4,8 @@ import android.content.Context
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -295,5 +297,43 @@ class ExampleRobolectricTest {
     customizedCards.add(com.example.ui.viewmodel.ExpenseViewModel.CARD_NET_SAVINGS)
     assertTrue(customizedCards.contains(com.example.ui.viewmodel.ExpenseViewModel.CARD_NET_SAVINGS))
     assertEquals(3, customizedCards.size)
+  }
+
+  @Test
+  fun `verify profit report only includes transactions that have a cost inputted`() {
+    val txWithCost = com.example.data.Transaction(
+      id = "tx1",
+      description = "Product A [Cost: $25.00 | Profit: 50.0%]",
+      amount = 50.0,
+      type = "INCOME",
+      category = "Sales",
+      date = System.currentTimeMillis()
+    )
+    val txWithoutCost = com.example.data.Transaction(
+      id = "tx2",
+      description = "Product B Without Cost",
+      amount = 75.0,
+      type = "INCOME",
+      category = "Sales",
+      date = System.currentTimeMillis()
+    )
+    val txExpense = com.example.data.Transaction(
+      id = "tx3",
+      description = "Office Supplies [Cost: $10.00]",
+      amount = 10.0,
+      type = "EXPENSE",
+      category = "Supplies",
+      date = System.currentTimeMillis()
+    )
+
+    val metrics = com.example.ui.screens.reports.ProfitMarginHelper.aggregateByDescription(
+      listOf(txWithCost, txWithoutCost, txExpense),
+      onlyWithCostData = true
+    )
+
+    assertEquals(1, metrics.size)
+    assertEquals("Product A", metrics[0].description)
+    assertEquals(25.0, metrics[0].totalCost, 0.001)
+    assertEquals(50.0, metrics[0].totalRevenue, 0.001)
   }
 }

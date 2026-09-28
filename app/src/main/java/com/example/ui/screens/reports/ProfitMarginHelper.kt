@@ -36,7 +36,7 @@ object ProfitMarginHelper {
                 cleanDescription = if (clean.isNotBlank()) clean else tx.category.ifBlank { "Item" },
                 cost = costVal,
                 profitPercentage = profitVal,
-                hasCostTag = true
+                hasCostTag = costVal != null
             )
         } else {
             ParsedCostProfit(
@@ -61,7 +61,7 @@ object ProfitMarginHelper {
 
         for (tx in incomeList) {
             val parsed = parseTransaction(tx)
-            if (onlyWithCostData && !parsed.hasCostTag) {
+            if (onlyWithCostData && (!parsed.hasCostTag || parsed.cost == null)) {
                 continue
             }
             val key = parsed.cleanDescription.lowercase(Locale.ROOT)
