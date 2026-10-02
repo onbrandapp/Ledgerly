@@ -22,9 +22,9 @@ enum class ReportCategory(
 ) {
     ANALYTICS(
         id = "analytics",
-        title = "Visual Analytics",
+        title = "Budgeting & Visual Analytics",
         shortTitle = "Analytics",
-        subtitle = "Spending distribution & 6-month financial trends",
+        subtitle = "Spending distribution, 6-month trends & category MoM trajectories",
         icon = Icons.Default.ShowChart,
         exportFormats = emptyList()
     ),

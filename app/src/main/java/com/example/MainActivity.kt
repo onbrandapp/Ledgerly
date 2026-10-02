@@ -9,11 +9,13 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.ui.screens.BiometricLockScreen
 import com.example.ui.screens.DashboardScreen
 import com.example.ui.screens.LoginScreen
+import com.example.ui.theme.AppBackgroundContainer
 import com.example.ui.theme.MyApplicationTheme
 import com.example.ui.viewmodel.ExpenseViewModel
 
@@ -30,6 +32,8 @@ class MainActivity : FragmentActivity() {
             val primaryHex by viewModel.primaryColor.collectAsState()
             val secondaryHex by viewModel.secondaryColor.collectAsState()
             val accentHex by viewModel.accentColor.collectAsState()
+            val backgroundStyle by viewModel.backgroundStyle.collectAsState()
+            val customBackgroundHex by viewModel.customBackgroundHex.collectAsState()
 
             MyApplicationTheme(
                 darkTheme = isDarkMode,
@@ -37,18 +41,25 @@ class MainActivity : FragmentActivity() {
                 secondaryHex = secondaryHex,
                 accentHex = accentHex
             ) {
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background
+                AppBackgroundContainer(
+                    backgroundStyle = backgroundStyle,
+                    customBackgroundHex = customBackgroundHex,
+                    isDarkMode = isDarkMode,
+                    modifier = Modifier.fillMaxSize()
                 ) {
-                    if (isLoggedIn) {
-                        if (isBiometricEnabled && !isBiometricUnlocked) {
-                            BiometricLockScreen(viewModel = viewModel)
+                    Surface(
+                        modifier = Modifier.fillMaxSize(),
+                        color = Color.Transparent
+                    ) {
+                        if (isLoggedIn) {
+                            if (isBiometricEnabled && !isBiometricUnlocked) {
+                                BiometricLockScreen(viewModel = viewModel)
+                            } else {
+                                DashboardScreen(viewModel = viewModel)
+                            }
                         } else {
-                            DashboardScreen(viewModel = viewModel)
+                            LoginScreen(viewModel = viewModel)
                         }
-                    } else {
-                        LoginScreen(viewModel = viewModel)
                     }
                 }
             }

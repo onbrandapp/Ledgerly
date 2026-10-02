@@ -378,4 +378,37 @@ class ExampleRobolectricTest {
     // Net Value is less the cost: 165 - 80 - 15 = 70.0
     assertEquals(70.0, netBalance, 0.001)
   }
+
+  @Test
+  fun `verify background presets and customization`() {
+    val presets = com.example.ui.theme.AppBackgroundPresets.list
+    assertTrue(presets.isNotEmpty())
+    assertTrue(presets.any { it.id == "default" })
+    assertTrue(presets.any { it.id == "aurora" })
+    assertTrue(presets.any { it.id == "ocean" })
+    assertTrue(presets.any { it.id == "warm_linen" })
+    assertTrue(presets.any { it.id == "emerald" })
+    assertTrue(presets.any { it.id == "midnight" })
+    assertTrue(presets.any { it.id == "sunset" })
+    assertTrue(presets.any { it.id == "dot_grid" })
+
+    val oceanPreset = com.example.ui.theme.AppBackgroundPresets.getById("ocean")
+    assertEquals("Ocean Mist", oceanPreset.name)
+    assertEquals(com.example.ui.theme.BackgroundType.LINEAR_GRADIENT, oceanPreset.type)
+
+    val defaultFallback = com.example.ui.theme.AppBackgroundPresets.getById("non_existent_key")
+    assertEquals("default", defaultFallback.id)
+
+    // Test BackupSettings with background fields
+    val settings = com.example.data.BackupSettings(
+      backgroundStyle = "ocean",
+      customBackgroundHex = "#E0F2FE"
+    )
+    val serialized = com.example.data.BackupManager.serializeBackupData(
+      com.example.data.BackupData(settings = settings)
+    )
+    val deserialized = com.example.data.BackupManager.parseBackupData(serialized).getOrThrow()
+    assertEquals("ocean", deserialized.settings.backgroundStyle)
+    assertEquals("#E0F2FE", deserialized.settings.customBackgroundHex)
+  }
 }

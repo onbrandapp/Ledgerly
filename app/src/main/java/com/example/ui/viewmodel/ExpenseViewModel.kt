@@ -296,6 +296,15 @@ class ExpenseViewModel(application: Application) : AndroidViewModel(application)
     private val _secondaryColor = MutableStateFlow(normalizedAccent)
     val secondaryColor = _secondaryColor.asStateFlow()
 
+    // Background Style State
+    private val savedBackgroundStyle = budgetPrefs.getString("background_style", "default") ?: "default"
+    private val _backgroundStyle = MutableStateFlow(savedBackgroundStyle)
+    val backgroundStyle = _backgroundStyle.asStateFlow()
+
+    private val savedCustomBackgroundHex = budgetPrefs.getString("custom_background_hex", "#F8FAFC") ?: "#F8FAFC"
+    private val _customBackgroundHex = MutableStateFlow(savedCustomBackgroundHex)
+    val customBackgroundHex = _customBackgroundHex.asStateFlow()
+
     // Transactions State
     private val _isTransactionsLoading = MutableStateFlow(false)
     val isTransactionsLoading = _isTransactionsLoading.asStateFlow()
@@ -394,6 +403,7 @@ class ExpenseViewModel(application: Application) : AndroidViewModel(application)
 
         var totalIncome = 0.0
         var totalExpense = 0.0
+        var cashOnHand = 0.0
 
         val currentMonthList = list.filter { tx ->
             val txCal = Calendar.getInstance().apply { timeInMillis = tx.date }
@@ -402,7 +412,11 @@ class ExpenseViewModel(application: Application) : AndroidViewModel(application)
 
         currentMonthList.forEach { tx ->
             if (tx.type == "INCOME") {
-                totalIncome += tx.amount
+                if (tx.category.trim().equals("cash", ignoreCase = true)) {
+                    cashOnHand += tx.amount
+                } else {
+                    totalIncome += tx.amount
+                }
             } else {
                 totalExpense += tx.amount
             }
@@ -411,9 +425,10 @@ class ExpenseViewModel(application: Application) : AndroidViewModel(application)
         MonthlySummary(
             totalIncome = totalIncome,
             totalExpense = totalExpense,
+            cashOnHand = cashOnHand,
             currentMonthList = currentMonthList
         )
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), MonthlySummary(0.0, 0.0, emptyList()))
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), MonthlySummary(0.0, 0.0, 0.0, emptyList()))
 
     // Recurring Transactions State Flow
     val recurringTransactions: StateFlow<List<RecurringTransaction>> = currentUserEmail
@@ -1073,6 +1088,26 @@ class ExpenseViewModel(application: Application) : AndroidViewModel(application)
         updateAccentColor("#392720")
     }
 
+    fun updateBackgroundStyle(styleId: String) {
+        val normalized = styleId.lowercase()
+        budgetPrefs.edit().putString("background_style", normalized).apply()
+        _backgroundStyle.value = normalized
+    }
+
+    fun updateCustomBackground(hex: String) {
+        val validHex = if (hex.startsWith("#")) hex else "#$hex"
+        budgetPrefs.edit()
+            .putString("background_style", "custom")
+            .putString("custom_background_hex", validHex)
+            .apply()
+        _backgroundStyle.value = "custom"
+        _customBackgroundHex.value = validHex
+    }
+
+    fun resetBackgroundToDefault() {
+        updateBackgroundStyle("default")
+    }
+
     // Parse with Gemini
     fun parseAndAddTransaction() {
         val text = _promptInput.value
@@ -1636,7 +1671,9 @@ class ExpenseViewModel(application: Application) : AndroidViewModel(application)
             primaryColor = _primaryColor.value,
             secondaryColor = _secondaryColor.value,
             biometricEnabled = _isBiometricEnabled.value,
-            primaryCurrency = _primaryCurrency.value
+            primaryCurrency = _primaryCurrency.value,
+            backgroundStyle = _backgroundStyle.value,
+            customBackgroundHex = _customBackgroundHex.value
         )
         return BackupData(
             version = 1,
@@ -1752,6 +1789,10 @@ class ExpenseViewModel(application: Application) : AndroidViewModel(application)
                     setDarkMode(backupData.settings.isDarkMode)
                     updateAccentColor(backupData.settings.accentColor)
                     setPrimaryCurrency(backupData.settings.primaryCurrency)
+                    updateBackgroundStyle(backupData.settings.backgroundStyle)
+                    if (backupData.settings.backgroundStyle.equals("custom", ignoreCase = true)) {
+                        updateCustomBackground(backupData.settings.customBackgroundHex)
+                    }
                 }
 
                 _isBackupLoading.value = false
@@ -1851,6 +1892,7 @@ class ExpenseViewModel(application: Application) : AndroidViewModel(application)
 data class MonthlySummary(
     val totalIncome: Double,
     val totalExpense: Double,
+    val cashOnHand: Double = 0.0,
     val currentMonthList: List<Transaction>
 )
 

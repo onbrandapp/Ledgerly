@@ -27,7 +27,9 @@ data class BackupSettings(
     val primaryColor: String = "#392720",
     val secondaryColor: String = "#392720",
     val biometricEnabled: Boolean = false,
-    val primaryCurrency: String = "USD"
+    val primaryCurrency: String = "USD",
+    val backgroundStyle: String = "default",
+    val customBackgroundHex: String = "#F8FAFC"
 )
 
 data class BackupData(
@@ -95,6 +97,8 @@ object BackupManager {
                 put("secondaryColor", data.settings.secondaryColor)
                 put("biometricEnabled", data.settings.biometricEnabled)
                 put("primaryCurrency", data.settings.primaryCurrency)
+                put("backgroundStyle", data.settings.backgroundStyle)
+                put("customBackgroundHex", data.settings.customBackgroundHex)
             }
             put("settings", settingsObj)
 
@@ -230,7 +234,9 @@ object BackupManager {
                     primaryColor = settingsObj.optString("primaryColor", "#392720"),
                     secondaryColor = settingsObj.optString("secondaryColor", "#392720"),
                     biometricEnabled = settingsObj.optBoolean("biometricEnabled", false),
-                    primaryCurrency = settingsObj.optString("primaryCurrency", "USD")
+                    primaryCurrency = settingsObj.optString("primaryCurrency", "USD"),
+                    backgroundStyle = settingsObj.optString("backgroundStyle", "default"),
+                    customBackgroundHex = settingsObj.optString("customBackgroundHex", "#F8FAFC")
                 )
             } else {
                 BackupSettings()

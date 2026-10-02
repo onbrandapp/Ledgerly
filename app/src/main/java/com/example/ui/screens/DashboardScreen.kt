@@ -62,6 +62,7 @@ import com.example.data.CustomCategory
 import com.example.data.DuplicateTransactionDetector
 import com.example.data.CurrencyHelper
 import com.example.ui.components.BackupRestoreSheet
+import com.example.ui.components.BackgroundSettingsSection
 import com.example.ui.components.BiometricSettingsCard
 import com.example.ui.components.BulkCategoryReassignmentDialog
 import com.example.ui.components.CategoryCustomizationDialog
@@ -113,6 +114,8 @@ fun DashboardScreen(
     val primaryColorHex by viewModel.primaryColor.collectAsState()
     val secondaryColorHex by viewModel.secondaryColor.collectAsState()
     val accentColorHex by viewModel.accentColor.collectAsState()
+    val backgroundStyle by viewModel.backgroundStyle.collectAsState()
+    val customBackgroundHex by viewModel.customBackgroundHex.collectAsState()
 
     val promptInput by viewModel.promptInput.collectAsState()
     val isParsing by viewModel.isParsing.collectAsState()
@@ -318,7 +321,7 @@ fun DashboardScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background,
+                    containerColor = if (backgroundStyle.equals("default", ignoreCase = true)) MaterialTheme.colorScheme.background else Color.Transparent,
                     titleContentColor = MaterialTheme.colorScheme.onBackground
                 )
             )
@@ -385,13 +388,14 @@ fun DashboardScreen(
                 }
             }
         },
+        containerColor = if (backgroundStyle.equals("default", ignoreCase = true)) MaterialTheme.colorScheme.background else Color.Transparent,
         modifier = modifier
     ) { innerPadding ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .background(MaterialTheme.colorScheme.background)
+                .background(if (backgroundStyle.equals("default", ignoreCase = true)) MaterialTheme.colorScheme.background else Color.Transparent)
         ) {
             if (currentMainSection == 0) {
                 Column(
@@ -1002,6 +1006,17 @@ fun DashboardScreen(
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis
                                 )
+                                if (monthlySummary.cashOnHand > 0) {
+                                    Spacer(modifier = Modifier.height(2.dp))
+                                    Text(
+                                        text = "Cash on Hand: +$${String.format(Locale.US, "%,.2f", monthlySummary.cashOnHand)}",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.tertiary,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
                             }
                         }
                     }
@@ -1113,6 +1128,17 @@ fun DashboardScreen(
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis
                                 )
+                                if (monthlySummary.cashOnHand > 0) {
+                                    Spacer(modifier = Modifier.height(2.dp))
+                                    Text(
+                                        text = "Cash on Hand: +$${String.format(Locale.US, "%,.2f", monthlySummary.cashOnHand)}",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.tertiary,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
                             }
                         }
                     }
@@ -2188,6 +2214,21 @@ fun DashboardScreen(
                         color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
                     )
 
+                    // App Background Customization Option
+                    BackgroundSettingsSection(
+                        currentStyle = backgroundStyle,
+                        customHex = customBackgroundHex,
+                        isDarkMode = isDarkMode,
+                        onSelectStyle = { styleId -> viewModel.updateBackgroundStyle(styleId) },
+                        onOpenCustomColorPicker = { activeColorPickerTarget = "background" },
+                        onResetDefault = { viewModel.resetBackgroundToDefault() }
+                    )
+
+                    HorizontalDivider(
+                        modifier = Modifier.padding(vertical = 10.dp),
+                        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
+                    )
+
                     Text(
                         text = "Categories & Icons",
                         style = MaterialTheme.typography.titleSmall,
@@ -2793,14 +2834,19 @@ fun DashboardScreen(
 
     // --- CUSTOM COLOR PICKER BOTTOM DRAWER ---
     activeColorPickerTarget?.let { target ->
+        val isBackgroundTarget = target == "background"
         ColorPickerBottomSheet(
-            title = "App Accent Color",
-            initialColorHex = tempAccentHex,
+            title = if (isBackgroundTarget) "Custom Background Color" else "App Accent Color",
+            initialColorHex = if (isBackgroundTarget) customBackgroundHex else tempAccentHex,
             onColorSelected = { hex ->
-                tempPrimaryHex = hex
-                tempSecondaryHex = hex
-                tempAccentHex = hex
-                viewModel.updateAccentColor(hex)
+                if (isBackgroundTarget) {
+                    viewModel.updateCustomBackground(hex)
+                } else {
+                    tempPrimaryHex = hex
+                    tempSecondaryHex = hex
+                    tempAccentHex = hex
+                    viewModel.updateAccentColor(hex)
+                }
             },
             onDismiss = { activeColorPickerTarget = null }
         )

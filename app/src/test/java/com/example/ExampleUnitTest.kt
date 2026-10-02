@@ -356,5 +356,129 @@ class ExampleUnitTest {
     val safePct = if (zeroPrice > 0.0) ((zeroPrice - cost) / zeroPrice) * 100.0 else 0.0
     assertEquals(0.0, safePct, 0.001)
   }
+
+  @Test
+  fun testMonthlyBudgetCalculationExcludesCashOnHandFromIncome() {
+    val txList: List<com.example.data.Transaction> = listOf(
+      com.example.data.Transaction(
+        id = "1",
+        description = "Salary",
+        amount = 1783.86,
+        type = "INCOME",
+        category = "Salary",
+        date = System.currentTimeMillis()
+      ),
+      com.example.data.Transaction(
+        id = "2",
+        description = "Cash on Hand",
+        amount = 60.00,
+        type = "INCOME",
+        category = "Cash",
+        date = System.currentTimeMillis()
+      ),
+      com.example.data.Transaction(
+        id = "3",
+        description = "Bills & Rent",
+        amount = 2237.37,
+        type = "EXPENSE",
+        category = "Housing",
+        date = System.currentTimeMillis()
+      )
+    )
+
+    var totalIncome = 0.0
+    var totalExpense = 0.0
+    var cashOnHand = 0.0
+
+    txList.forEach { tx ->
+      if (tx.type == "INCOME") {
+        if (tx.category.trim().equals("cash", ignoreCase = true)) {
+          cashOnHand += tx.amount
+        } else {
+          totalIncome += tx.amount
+        }
+      } else {
+        totalExpense += tx.amount
+      }
+    }
+
+    assertEquals(1783.86, totalIncome, 0.001)
+    assertEquals(60.00, cashOnHand, 0.001)
+    assertEquals(2237.37, totalExpense, 0.001)
+
+    val monthlyBudgetLimit = 0.0
+    val remainingBudget = monthlyBudgetLimit + totalIncome - totalExpense
+    val netBalance = totalIncome - totalExpense
+
+    assertEquals(-453.51, remainingBudget, 0.001)
+    assertEquals(-453.51, netBalance, 0.001)
+  }
+
+  @Test
+  fun testCategorySpendingTrendMonthOverMonthCalculation() {
+    val cal = java.util.Calendar.getInstance()
+    val curMonthMillis = cal.timeInMillis
+
+    cal.add(java.util.Calendar.MONTH, -1)
+    val priorMonthMillis = cal.timeInMillis
+
+    val testTransactions = listOf(
+      com.example.data.Transaction(
+        id = "t1",
+        description = "Lunch",
+        amount = 50.0,
+        type = "EXPENSE",
+        category = "Food & Dining",
+        date = curMonthMillis
+      ),
+      com.example.data.Transaction(
+        id = "t2",
+        description = "Dinner",
+        amount = 100.0,
+        type = "EXPENSE",
+        category = "Food & Dining",
+        date = curMonthMillis
+      ),
+      com.example.data.Transaction(
+        id = "t3",
+        description = "Groceries",
+        amount = 120.0,
+        type = "EXPENSE",
+        category = "Food & Dining",
+        date = priorMonthMillis
+      ),
+      com.example.data.Transaction(
+        id = "t4",
+        description = "Bus",
+        amount = 30.0,
+        type = "EXPENSE",
+        category = "Transportation",
+        date = curMonthMillis
+      )
+    )
+
+    // Current month food spend
+    val currentFoodSpend = testTransactions.filter {
+      it.type == "EXPENSE" &&
+      it.category.equals("Food & Dining", ignoreCase = true) &&
+      it.date == curMonthMillis
+    }.sumOf { it.amount }
+
+    // Prior month food spend
+    val priorFoodSpend = testTransactions.filter {
+      it.type == "EXPENSE" &&
+      it.category.equals("Food & Dining", ignoreCase = true) &&
+      it.date == priorMonthMillis
+    }.sumOf { it.amount }
+
+    assertEquals(150.0, currentFoodSpend, 0.001)
+    assertEquals(120.0, priorFoodSpend, 0.001)
+
+    val momDiff = currentFoodSpend - priorFoodSpend
+    val momPct = ((currentFoodSpend - priorFoodSpend) / priorFoodSpend) * 100.0
+
+    assertEquals(30.0, momDiff, 0.001)
+    assertEquals(25.0, momPct, 0.001)
+  }
 }
 

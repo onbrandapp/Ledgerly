@@ -64,6 +64,7 @@ fun LoginScreen(
     val isAuthLoading by viewModel.isAuthLoading.collectAsState()
     val authError by viewModel.authError.collectAsState()
     val isFirebaseMode = viewModel.isFirebaseMode
+    val backgroundStyle by viewModel.backgroundStyle.collectAsState()
 
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
@@ -72,12 +73,21 @@ fun LoginScreen(
         modifier = modifier
             .fillMaxSize()
             .background(
-                Brush.verticalGradient(
-                    colors = listOf(
-                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f),
-                        MaterialTheme.colorScheme.background
+                if (backgroundStyle.equals("default", ignoreCase = true)) {
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f),
+                            MaterialTheme.colorScheme.background
+                        )
                     )
-                )
+                } else {
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            Color.Transparent,
+                            Color.Transparent
+                        )
+                    )
+                }
             )
             .windowInsetsPadding(WindowInsets.safeDrawing)
     ) {

@@ -54,6 +54,7 @@ fun BiometricLockScreen(
 
     var authErrorMessage by remember { mutableStateOf<String?>(null) }
     var promptTriggerCount by remember { mutableIntStateOf(0) }
+    val backgroundStyle by viewModel.backgroundStyle.collectAsState()
 
     val infiniteTransition = rememberInfiniteTransition(label = "pulse_transition")
     val pulseScale by infiniteTransition.animateFloat(
@@ -98,12 +99,21 @@ fun BiometricLockScreen(
         modifier = modifier
             .fillMaxSize()
             .background(
-                Brush.verticalGradient(
-                    colors = listOf(
-                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f),
-                        MaterialTheme.colorScheme.background
+                if (backgroundStyle.equals("default", ignoreCase = true)) {
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f),
+                            MaterialTheme.colorScheme.background
+                        )
                     )
-                )
+                } else {
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            Color.Transparent,
+                            Color.Transparent
+                        )
+                    )
+                }
             )
             .windowInsetsPadding(WindowInsets.safeDrawing)
             .padding(24.dp),

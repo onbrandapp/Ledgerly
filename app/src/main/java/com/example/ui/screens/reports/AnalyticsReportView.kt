@@ -84,6 +84,13 @@ fun AnalyticsReportView(
             transactions = transactions,
             customCategories = customCategories
         )
+
+        // New Visual Card: Month-over-Month Category Spending Trend Line Chart
+        CategorySpendingTrendCard(
+            transactions = transactions,
+            customCategories = customCategories,
+            modifier = Modifier.fillMaxWidth()
+        )
     }
 }
 
@@ -147,7 +154,8 @@ fun VisualAnalyticsSection(
                 val txCal = Calendar.getInstance().apply { timeInMillis = tx.date }
                 txCal.get(Calendar.MONTH) == targetMonth &&
                         txCal.get(Calendar.YEAR) == targetYear &&
-                        tx.type == "INCOME"
+                        tx.type == "INCOME" &&
+                        !tx.category.trim().equals("cash", ignoreCase = true)
             }.sumOf { it.amount }
 
             trends.add(
