@@ -29,6 +29,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -63,6 +64,7 @@ fun LedgerReportView(
     var pendingCsvExportList by remember { mutableStateOf<List<Transaction>?>(null) }
     var pendingCsvStartDate by remember { mutableStateOf<Long?>(null) }
     var pendingCsvEndDate by remember { mutableStateOf<Long?>(null) }
+    var selectedLedgerTab by remember { mutableStateOf("All") }
 
     // Automatic date range calculations
     LaunchedEffect(ledgerSelectedFilter) {
@@ -552,397 +554,283 @@ fun LedgerReportView(
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // Dual-Column Synchronized Layout
+        // Transaction Type Filter Tabs: All, Income, Expenses
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(540.dp)
-                .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(16.dp))
-                .clip(RoundedCornerShape(16.dp))
-                .background(MaterialTheme.colorScheme.surface),
-            horizontalArrangement = Arrangement.spacedBy(1.dp)
+                .padding(vertical = 4.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            // Left Column (Income)
-            Column(
+            val allCount = if (hidePaidExpenses) filteredTransactions.filter { it.type.uppercase() == "INCOME" || !it.paid }.size else filteredTransactions.size
+            listOf(
+                "All" to allCount,
+                "Income" to incomeList.size,
+                "Expenses" to expenseList.size
+            ).forEach { (tabName, count) ->
+                val isSelected = selectedLedgerTab == tabName
+                FilterChip(
+                    selected = isSelected,
+                    onClick = { selectedLedgerTab = tabName },
+                    label = {
+                        Text(
+                            text = "$tabName ($count)",
+                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    },
+                    leadingIcon = {
+                        when (tabName) {
+                            "Income" -> Icon(
+                                imageVector = Icons.AutoMirrored.Filled.TrendingUp,
+                                contentDescription = null,
+                                modifier = Modifier.size(14.dp),
+                                tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.tertiary
+                            )
+                            "Expenses" -> Icon(
+                                imageVector = Icons.AutoMirrored.Filled.TrendingDown,
+                                contentDescription = null,
+                                modifier = Modifier.size(14.dp),
+                                tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+                            )
+                            else -> null
+                        }
+                    },
+                    modifier = Modifier.testTag("ledger_tab_${tabName.lowercase()}")
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(4.dp))
+
+        // Full-Width Transactions List
+        val displayTransactions = remember(selectedLedgerTab, filteredTransactions, incomeList, expenseList, hidePaidExpenses) {
+            when (selectedLedgerTab) {
+                "Income" -> incomeList
+                "Expenses" -> expenseList
+                else -> if (hidePaidExpenses) filteredTransactions.filter { it.type.uppercase() == "INCOME" || !it.paid }.sortedByDescending { it.date }
+                        else filteredTransactions.sortedByDescending { it.date }
+            }
+        }
+
+        if (displayTransactions.isEmpty()) {
+            Card(
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
+                ),
+                shape = RoundedCornerShape(12.dp),
                 modifier = Modifier
-                    .weight(1f)
-                    .fillMaxHeight()
-                    .background(MaterialTheme.colorScheme.surface)
+                    .fillMaxWidth()
+                    .padding(vertical = 12.dp)
             ) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(MaterialTheme.colorScheme.tertiary.copy(alpha = 0.15f))
-                        .padding(vertical = 6.dp, horizontal = 10.dp),
-                    contentAlignment = Alignment.CenterStart
+                        .padding(24.dp),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.TrendingUp,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.tertiary,
-                            modifier = Modifier.size(14.dp)
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            text = "INCOME",
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.ExtraBold,
-                            color = MaterialTheme.colorScheme.tertiary
-                        )
-                    }
+                    Text(
+                        text = when (selectedLedgerTab) {
+                            "Income" -> "No income records in this period"
+                            "Expenses" -> if (hidePaidExpenses) "No unpaid expenses in this period" else "No expense records in this period"
+                            else -> "No transactions found for the selected period"
+                        },
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                        textAlign = TextAlign.Center
+                    )
                 }
+            }
+        } else {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("ledger_transactions_list"),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                displayTransactions.forEach { item ->
+                    val isIncome = item.type.equals("INCOME", ignoreCase = true)
+                    val isCash = item.category.trim().equals("cash", ignoreCase = true)
+                    val catStyle = CategoryConstants.resolveCategoryStyle(item.category, customCategories)
 
-                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-
-                if (incomeList.isEmpty()) {
-                    Box(
+                    Card(
+                        colors = CardDefaults.cardColors(
+                            containerColor = if (item.paid) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f) else MaterialTheme.colorScheme.surface
+                        ),
+                        shape = RoundedCornerShape(12.dp),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)),
                         modifier = Modifier
                             .fillMaxWidth()
-                            .weight(1f),
-                        contentAlignment = Alignment.Center
+                            .testTag("ledger_item_${item.id}")
                     ) {
-                        Text(
-                            text = "No income records",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-                        )
-                    }
-                } else {
-                    LazyColumn(
-                        modifier = Modifier
-                            .weight(1f)
-                            .fillMaxWidth()
-                            .padding(horizontal = 6.dp),
-                        verticalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        items(incomeList, key = { it.id }) { item ->
-                            val catStyle = CategoryConstants.resolveCategoryStyle(item.category, customCategories)
-                            val isCash = item.category.trim().equals("cash", ignoreCase = true)
-                            Card(
-                                colors = CardDefaults.cardColors(
-                                    containerColor = if (item.paid) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f) else MaterialTheme.colorScheme.surface
-                                ),
-                                shape = RoundedCornerShape(8.dp),
-                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 12.dp, vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            // Category Visual Icon Box
+                            Box(
                                 modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 1.dp)
+                                    .size(40.dp)
+                                    .background(catStyle.color.copy(alpha = 0.15f), CircleShape),
+                                contentAlignment = Alignment.Center
                             ) {
-                                Column(modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp)) {
-                                    // Row 1: Date & Amount on a clean single line with ample spacing
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically
+                                Icon(
+                                    imageVector = catStyle.icon,
+                                    contentDescription = item.category,
+                                    tint = catStyle.color,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.width(12.dp))
+
+                            // Text Info Column (Description, Category chip, Date, Status chip)
+                            Column(
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text(
+                                    text = item.description,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+
+                                Spacer(modifier = Modifier.height(4.dp))
+
+                                // Category chip and date
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    Surface(
+                                        color = catStyle.color.copy(alpha = 0.15f),
+                                        shape = RoundedCornerShape(6.dp)
                                     ) {
                                         Text(
-                                            text = ledgerFormatter.format(Date(item.date)),
+                                            text = item.category,
                                             style = MaterialTheme.typography.labelSmall,
-                                            fontSize = 10.sp,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            maxLines = 1
-                                        )
-                                        Text(
-                                            text = "+$${String.format(Locale.US, "%,.2f", item.amount)}",
-                                            style = MaterialTheme.typography.labelMedium,
+                                            color = catStyle.color,
                                             fontWeight = FontWeight.Bold,
-                                            fontSize = 12.sp,
-                                            color = MaterialTheme.colorScheme.tertiary,
-                                            maxLines = 1,
-                                            softWrap = false
+                                            fontSize = 11.sp,
+                                            modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.dp)
                                         )
                                     }
 
-                                    Spacer(modifier = Modifier.height(3.dp))
-
-                                    // Row 2: Description fully visible without ellipsis
-                                    Text(
-                                        text = item.description,
-                                        style = MaterialTheme.typography.bodySmall,
-                                        fontWeight = FontWeight.SemiBold,
-                                        fontSize = 12.sp
+                                    Box(
+                                        modifier = Modifier
+                                            .size(3.dp)
+                                            .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f), CircleShape)
                                     )
 
-                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Text(
+                                        text = ledgerFormatter.format(Date(item.date)),
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        fontSize = 11.sp
+                                    )
+                                }
 
-                                    // Row 3: Edit button at far left, Category badge & Status chip in center, Delete button at far right
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically
+                                Spacer(modifier = Modifier.height(6.dp))
+
+                                // Status Chip (Clickable toggle)
+                                if (isIncome) {
+                                    if (!isCash) {
+                                        Surface(
+                                            color = if (item.paid) Color(0xFF10B981).copy(alpha = 0.18f) else Color(0xFFF59E0B).copy(alpha = 0.18f),
+                                            shape = RoundedCornerShape(6.dp),
+                                            border = BorderStroke(
+                                                1.dp,
+                                                if (item.paid) Color(0xFF10B981).copy(alpha = 0.4f) else Color(0xFFF59E0B).copy(alpha = 0.4f)
+                                            ),
+                                            modifier = Modifier
+                                                .clip(RoundedCornerShape(6.dp))
+                                                .clickable { onTogglePaid(item.id) }
+                                                .testTag("ledger_received_toggle_${item.id}")
+                                        ) {
+                                            Text(
+                                                text = if (item.paid) "Received" else "Pending",
+                                                style = MaterialTheme.typography.labelSmall,
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 10.sp,
+                                                color = if (item.paid) Color(0xFF10B981) else Color(0xFFD97706),
+                                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                                            )
+                                        }
+                                    }
+                                } else {
+                                    Surface(
+                                        color = if (item.paid) Color(0xFF10B981).copy(alpha = 0.18f) else MaterialTheme.colorScheme.error.copy(alpha = 0.18f),
+                                        shape = RoundedCornerShape(6.dp),
+                                        border = BorderStroke(
+                                            1.dp,
+                                            if (item.paid) Color(0xFF10B981).copy(alpha = 0.4f) else MaterialTheme.colorScheme.error.copy(alpha = 0.4f)
+                                        ),
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(6.dp))
+                                            .clickable { onTogglePaid(item.id) }
+                                            .testTag("ledger_paid_toggle_${item.id}")
                                     ) {
-                                        // Far Left: Edit Button
-                                        IconButton(
-                                            onClick = { onEditTransaction(item) },
-                                            modifier = Modifier
-                                                .size(24.dp)
-                                                .testTag("ledger_edit_${item.id}")
-                                        ) {
-                                            Icon(
-                                                imageVector = Icons.Default.Edit,
-                                                contentDescription = "Edit",
-                                                tint = MaterialTheme.colorScheme.primary,
-                                                modifier = Modifier.size(13.dp)
-                                            )
-                                        }
-
-                                        // Middle: Category badge and Status chip
-                                        Row(
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.spacedBy(4.dp),
-                                            modifier = Modifier
-                                                .weight(1f, fill = false)
-                                                .padding(horizontal = 2.dp)
-                                        ) {
-                                            Surface(
-                                                color = catStyle.color.copy(alpha = 0.18f),
-                                                shape = RoundedCornerShape(4.dp),
-                                                modifier = Modifier.weight(1f, fill = false)
-                                            ) {
-                                                Text(
-                                                    text = item.category,
-                                                    style = MaterialTheme.typography.labelSmall,
-                                                    color = catStyle.color,
-                                                    fontWeight = FontWeight.Bold,
-                                                    fontSize = 9.sp,
-                                                    modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
-                                                )
-                                            }
-
-                                            if (!isCash) {
-                                                Surface(
-                                                    color = if (item.paid) Color(0xFF10B981).copy(alpha = 0.2f) else Color(0xFFF59E0B).copy(alpha = 0.2f),
-                                                    shape = RoundedCornerShape(4.dp),
-                                                    modifier = Modifier
-                                                        .clip(RoundedCornerShape(4.dp))
-                                                        .clickable { onTogglePaid(item.id) }
-                                                        .testTag("ledger_received_toggle_${item.id}")
-                                                ) {
-                                                    Text(
-                                                        text = if (item.paid) "Received" else "Pending",
-                                                        style = MaterialTheme.typography.labelSmall,
-                                                        fontWeight = FontWeight.ExtraBold,
-                                                        fontSize = 9.sp,
-                                                        maxLines = 1,
-                                                        color = if (item.paid) Color(0xFF10B981) else Color(0xFFD97706),
-                                                        modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
-                                                    )
-                                                }
-                                            }
-                                        }
-
-                                        // Far Right: Delete Button
-                                        IconButton(
-                                            onClick = { pendingDeleteTransaction = item },
-                                            modifier = Modifier
-                                                .size(24.dp)
-                                                .testTag("ledger_delete_${item.id}")
-                                        ) {
-                                            Icon(
-                                                imageVector = Icons.Default.DeleteOutline,
-                                                contentDescription = "Delete",
-                                                tint = MaterialTheme.colorScheme.error,
-                                                modifier = Modifier.size(13.dp)
-                                            )
-                                        }
+                                        Text(
+                                            text = if (item.paid) "Paid" else "Unpaid",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 10.sp,
+                                            color = if (item.paid) Color(0xFF10B981) else MaterialTheme.colorScheme.error,
+                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                                        )
                                     }
                                 }
                             }
-                        }
-                    }
-                }
-            }
 
-            // Vertical Divider separating Income and Expense
-            Box(
-                modifier = Modifier
-                    .fillMaxHeight()
-                    .width(1.dp)
-                    .background(MaterialTheme.colorScheme.outlineVariant)
-            )
+                            Spacer(modifier = Modifier.width(8.dp))
 
-            // Right Column (Expenses)
-            Column(
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxHeight()
-                    .background(MaterialTheme.colorScheme.surface)
-            ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(MaterialTheme.colorScheme.error.copy(alpha = 0.12f))
-                        .padding(vertical = 6.dp, horizontal = 10.dp),
-                    contentAlignment = Alignment.CenterStart
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.TrendingDown,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.error,
-                            modifier = Modifier.size(14.dp)
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            text = "EXPENSES",
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.ExtraBold,
-                            color = MaterialTheme.colorScheme.error
-                        )
-                    }
-                }
-
-                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-
-                if (expenseList.isEmpty()) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .weight(1f),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = if (hidePaidExpenses) "No unpaid expenses" else "No expense records",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-                        )
-                    }
-                } else {
-                    LazyColumn(
-                        modifier = Modifier
-                            .weight(1f)
-                            .fillMaxWidth()
-                            .padding(horizontal = 6.dp),
-                        verticalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        items(expenseList, key = { it.id }) { item ->
-                            val catStyle = CategoryConstants.resolveCategoryStyle(item.category, customCategories)
-                            Card(
-                                colors = CardDefaults.cardColors(
-                                    containerColor = if (item.paid) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f) else MaterialTheme.colorScheme.surface
-                                ),
-                                shape = RoundedCornerShape(8.dp),
-                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 1.dp)
+                            // Right Side: Amount & Action buttons
+                            Column(
+                                horizontalAlignment = Alignment.End
                             ) {
-                                Column(modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp)) {
-                                    // Row 1: Date & Amount on a clean single line with ample spacing
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically
+                                Text(
+                                    text = if (isIncome) "+$${String.format(Locale.US, "%,.2f", item.amount)}"
+                                    else "-$${String.format(Locale.US, "%,.2f", item.amount)}",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    fontSize = 15.sp,
+                                    color = if (isIncome) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.error
+                                )
+
+                                Spacer(modifier = Modifier.height(6.dp))
+
+                                Row(
+                                    horizontalArrangement = Arrangement.spacedBy(2.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    IconButton(
+                                        onClick = { onEditTransaction(item) },
+                                        modifier = Modifier
+                                            .size(32.dp)
+                                            .testTag("ledger_edit_${item.id}")
                                     ) {
-                                        Text(
-                                            text = ledgerFormatter.format(Date(item.date)),
-                                            style = MaterialTheme.typography.labelSmall,
-                                            fontSize = 10.sp,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            maxLines = 1
-                                        )
-                                        Text(
-                                            text = "-$${String.format(Locale.US, "%,.2f", item.amount)}",
-                                            style = MaterialTheme.typography.labelMedium,
-                                            fontWeight = FontWeight.Bold,
-                                            fontSize = 12.sp,
-                                            color = MaterialTheme.colorScheme.error,
-                                            maxLines = 1,
-                                            softWrap = false
+                                        Icon(
+                                            imageVector = Icons.Default.Edit,
+                                            contentDescription = "Edit",
+                                            tint = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.size(16.dp)
                                         )
                                     }
 
-                                    Spacer(modifier = Modifier.height(3.dp))
-
-                                    // Row 2: Description fully visible without ellipsis
-                                    Text(
-                                        text = item.description,
-                                        style = MaterialTheme.typography.bodySmall,
-                                        fontWeight = FontWeight.SemiBold,
-                                        fontSize = 12.sp
-                                    )
-
-                                    Spacer(modifier = Modifier.height(4.dp))
-
-                                    // Row 3: Edit button at far left, Category badge & Status chip in center, Delete button at far right
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically
+                                    IconButton(
+                                        onClick = { pendingDeleteTransaction = item },
+                                        modifier = Modifier
+                                            .size(32.dp)
+                                            .testTag("ledger_delete_${item.id}")
                                     ) {
-                                        // Far Left: Edit Button
-                                        IconButton(
-                                            onClick = { onEditTransaction(item) },
-                                            modifier = Modifier
-                                                .size(24.dp)
-                                                .testTag("ledger_edit_${item.id}")
-                                        ) {
-                                            Icon(
-                                                imageVector = Icons.Default.Edit,
-                                                contentDescription = "Edit",
-                                                tint = MaterialTheme.colorScheme.primary,
-                                                modifier = Modifier.size(13.dp)
-                                            )
-                                        }
-
-                                        // Middle: Category badge and Status chip
-                                        Row(
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.spacedBy(4.dp),
-                                            modifier = Modifier
-                                                .weight(1f, fill = false)
-                                                .padding(horizontal = 2.dp)
-                                        ) {
-                                            Surface(
-                                                color = catStyle.color.copy(alpha = 0.18f),
-                                                shape = RoundedCornerShape(4.dp),
-                                                modifier = Modifier.weight(1f, fill = false)
-                                            ) {
-                                                Text(
-                                                    text = item.category,
-                                                    style = MaterialTheme.typography.labelSmall,
-                                                    color = catStyle.color,
-                                                    fontWeight = FontWeight.Bold,
-                                                    fontSize = 9.sp,
-                                                    modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
-                                                )
-                                            }
-
-                                            Surface(
-                                                color = if (item.paid) Color(0xFF10B981).copy(alpha = 0.2f) else MaterialTheme.colorScheme.error.copy(alpha = 0.2f),
-                                                shape = RoundedCornerShape(4.dp),
-                                                modifier = Modifier
-                                                    .clip(RoundedCornerShape(4.dp))
-                                                    .clickable { onTogglePaid(item.id) }
-                                                    .testTag("ledger_paid_toggle_${item.id}")
-                                            ) {
-                                                Text(
-                                                    text = if (item.paid) "Paid" else "Unpaid",
-                                                    style = MaterialTheme.typography.labelSmall,
-                                                    fontWeight = FontWeight.ExtraBold,
-                                                    fontSize = 9.sp,
-                                                    maxLines = 1,
-                                                    color = if (item.paid) Color(0xFF10B981) else MaterialTheme.colorScheme.error,
-                                                    modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
-                                                )
-                                            }
-                                        }
-
-                                        // Far Right: Delete Button
-                                        IconButton(
-                                            onClick = { pendingDeleteTransaction = item },
-                                            modifier = Modifier
-                                                .size(24.dp)
-                                                .testTag("ledger_delete_${item.id}")
-                                        ) {
-                                            Icon(
-                                                imageVector = Icons.Default.DeleteOutline,
-                                                contentDescription = "Delete",
-                                                tint = MaterialTheme.colorScheme.error,
-                                                modifier = Modifier.size(13.dp)
-                                            )
-                                        }
+                                        Icon(
+                                            imageVector = Icons.Default.DeleteOutline,
+                                            contentDescription = "Delete",
+                                            tint = MaterialTheme.colorScheme.error,
+                                            modifier = Modifier.size(16.dp)
+                                        )
                                     }
                                 }
                             }
