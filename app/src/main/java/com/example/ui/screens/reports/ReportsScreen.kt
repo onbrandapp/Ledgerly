@@ -26,6 +26,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.Transaction
 import com.example.ui.screens.ForecastIncomeSection
+import com.example.ui.components.HorizontalScrollWithNavArrows
 import com.example.ui.viewmodel.ExpenseViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -96,9 +97,7 @@ fun ReportsScreen(
                             Text(
                                 text = selectedCategory.subtitle,
                                 style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }
@@ -126,13 +125,13 @@ fun ReportsScreen(
 
                 Spacer(modifier = Modifier.height(6.dp))
 
-                // Scalable Category Selector Bar
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .horizontalScroll(rememberScrollState()),
+                // Scalable Category Selector Bar with Navigation Arrows below
+                val reportTabsScrollState = rememberScrollState()
+                HorizontalScrollWithNavArrows(
+                    scrollState = reportTabsScrollState,
+                    testTagPrefix = "report_tabs_nav",
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                    modifier = Modifier.fillMaxWidth()
                 ) {
                     ReportCategory.allReports.forEach { category ->
                         val isSelected = selectedCategory == category

@@ -309,9 +309,7 @@ fun VisualAnalyticsSection(
                                     style = MaterialTheme.typography.labelSmall,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.onSurface,
-                                    modifier = Modifier.weight(1f),
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
+                                    modifier = Modifier.weight(1f)
                                 )
                                 Text(
                                     text = "$${String.format(Locale.US, "%.0f", amt)} ($pct%)",
@@ -386,11 +384,10 @@ fun VisualAnalyticsSection(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
-                // Controls Row: Legend on the left, Grouped / Stacked toggle aligned on the right
-                Row(
+                // Controls: Legend and Toggle listed vertically vs crammed horizontally
+                Column(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     // Legend
                     Row(
@@ -642,9 +639,7 @@ fun MonthlyTrendBarItem(
             text = topLabelText,
             style = MaterialTheme.typography.labelSmall,
             fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Spacer(modifier = Modifier.height(4.dp))
         Box(

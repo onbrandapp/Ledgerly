@@ -131,16 +131,12 @@ fun BulkCategoryReassignmentDialog(
                         text = "Bulk Category Utility",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
                         text = "Reassign all entries from one category to another",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
                     )
                 }
             }
@@ -500,9 +496,10 @@ fun BulkCategoryReassignmentDialog(
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
 
-                                LazyRow(
+                                LazyRowWithNavArrows(
                                     horizontalArrangement = Arrangement.spacedBy(6.dp),
-                                    modifier = Modifier.fillMaxWidth()
+                                    modifier = Modifier.fillMaxWidth(),
+                                    testTagPrefix = "bulk_reassign_suggestions_nav"
                                 ) {
                                     items(availableTargetSuggestions.take(12)) { suggestion ->
                                         val isSelected = targetCategoryName.equals(suggestion, ignoreCase = true)
@@ -684,16 +681,15 @@ fun BulkCategoryReassignmentDialog(
                                     modifier = Modifier.padding(12.dp),
                                     verticalArrangement = Arrangement.spacedBy(8.dp)
                                 ) {
-                                    Row(
+                                    Column(
                                         modifier = Modifier.fillMaxWidth(),
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.SpaceBetween
+                                        verticalArrangement = Arrangement.spacedBy(8.dp)
                                     ) {
                                         // Source Tag
                                         Row(
                                             verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.spacedBy(6.dp),
-                                            modifier = Modifier.weight(1f)
+                                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                            modifier = Modifier.fillMaxWidth()
                                         ) {
                                             Box(
                                                 modifier = Modifier
@@ -709,28 +705,36 @@ fun BulkCategoryReassignmentDialog(
                                                 )
                                             }
                                             Text(
-                                                text = selectedSourceCategory?.name.orEmpty(),
+                                                text = "From: ${selectedSourceCategory?.name.orEmpty()}",
                                                 style = MaterialTheme.typography.bodyMedium,
-                                                fontWeight = FontWeight.Bold,
-                                                maxLines = 1,
-                                                overflow = TextOverflow.Ellipsis
+                                                fontWeight = FontWeight.Bold
                                             )
                                         }
 
-                                        Icon(
-                                            imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                                            contentDescription = null,
-                                            tint = MaterialTheme.colorScheme.primary,
-                                            modifier = Modifier
-                                                .padding(horizontal = 8.dp)
-                                                .size(20.dp)
-                                        )
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                            modifier = Modifier.padding(start = 6.dp)
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.ArrowDownward,
+                                                contentDescription = null,
+                                                tint = MaterialTheme.colorScheme.primary,
+                                                modifier = Modifier.size(16.dp)
+                                            )
+                                            Text(
+                                                text = "Reassigning all entries to",
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = MaterialTheme.colorScheme.primary,
+                                                fontWeight = FontWeight.SemiBold
+                                            )
+                                        }
 
                                         // Target Tag
                                         Row(
                                             verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.spacedBy(6.dp),
-                                            modifier = Modifier.weight(1f)
+                                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                            modifier = Modifier.fillMaxWidth()
                                         ) {
                                             Box(
                                                 modifier = Modifier
@@ -746,12 +750,10 @@ fun BulkCategoryReassignmentDialog(
                                                 )
                                             }
                                             Text(
-                                                text = targetCategoryName.trim(),
+                                                text = "To: ${targetCategoryName.trim()}",
                                                 style = MaterialTheme.typography.bodyMedium,
                                                 fontWeight = FontWeight.Bold,
-                                                color = targetStyle.color,
-                                                maxLines = 1,
-                                                overflow = TextOverflow.Ellipsis
+                                                color = targetStyle.color
                                             )
                                         }
                                     }

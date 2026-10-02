@@ -95,13 +95,13 @@ fun BackgroundSettingsSection(
             modifier = Modifier.padding(bottom = 12.dp)
         )
 
-        // Scrollable Row of Preset Cards
-        Row(
+        // Scrollable Row of Preset Cards with navigation arrows directly below
+        HorizontalScrollWithNavArrows(
             modifier = Modifier
                 .fillMaxWidth()
-                .horizontalScroll(rememberScrollState())
                 .padding(vertical = 2.dp),
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            testTagPrefix = "bg_preset_cards_nav"
         ) {
             AppBackgroundPresets.list.forEach { preset ->
                 val isSelected = currentStyle.equals(preset.id, ignoreCase = true)

@@ -99,16 +99,12 @@ fun CostProfitCategoriesDialog(
                         text = "Cost & Profit Categories",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
                         text = "Show Cost & Profit % fields for chosen categories",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
                     )
                 }
             }
@@ -267,9 +263,7 @@ fun CostProfitCategoriesDialog(
                                             text = catName,
                                             style = MaterialTheme.typography.bodyMedium,
                                             fontWeight = if (isChecked) FontWeight.Bold else FontWeight.Medium,
-                                            color = MaterialTheme.colorScheme.onSurface,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis
+                                            color = MaterialTheme.colorScheme.onSurface
                                         )
                                         if (usage != null && usage.totalCount > 0) {
                                             Text(

@@ -94,16 +94,12 @@ fun CategoryCustomizationDialog(
                         Text(
                             text = "Custom Categories",
                             style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
+                            fontWeight = FontWeight.Bold
                         )
                         Text(
                             text = "Vector icons & custom colors",
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                         )
                     }
                 }
@@ -279,9 +275,7 @@ fun CategoryCustomizationDialog(
                                                 text = if (newCategoryName.isNotBlank()) newCategoryName else "Category Preview",
                                                 style = MaterialTheme.typography.bodyMedium,
                                                 fontWeight = FontWeight.Bold,
-                                                color = MaterialTheme.colorScheme.onSurface,
-                                                maxLines = 1,
-                                                overflow = TextOverflow.Ellipsis
+                                                color = MaterialTheme.colorScheme.onSurface
                                             )
                                             Row(
                                                 verticalAlignment = Alignment.CenterVertically,
@@ -403,10 +397,11 @@ fun CategoryCustomizationDialog(
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
 
-                                    // Predefined color presets
-                                    LazyRow(
+                                    // Predefined color presets with navigation arrows directly below
+                                    LazyRowWithNavArrows(
                                         horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                        modifier = Modifier.fillMaxWidth()
+                                        modifier = Modifier.fillMaxWidth(),
+                                        testTagPrefix = "category_color_presets_nav"
                                     ) {
                                         items(CategoryConstants.COLOR_PRESETS) { hex ->
                                             val color = CategoryConstants.parseColor(hex)
@@ -612,9 +607,7 @@ fun CategoryCustomizationDialog(
                                             text = cat.name,
                                             style = MaterialTheme.typography.bodyMedium,
                                             fontWeight = FontWeight.Bold,
-                                            color = MaterialTheme.colorScheme.onSurface,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis
+                                            color = MaterialTheme.colorScheme.onSurface
                                         )
                                         Row(
                                             verticalAlignment = Alignment.CenterVertically,

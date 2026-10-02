@@ -35,6 +35,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.ForecastIncome
 import com.example.data.FutureIncomeNote
+import com.example.ui.components.LazyRowWithNavArrows
 import com.example.ui.viewmodel.ExpenseViewModel
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -342,10 +343,11 @@ fun ForecastIncomeSection(
                 }
             }
 
-            // Quick filter chips (comfortable horizontal scrolling row, never truncated)
-            LazyRow(
+            // Quick filter chips with navigation arrows directly below when items exit off-screen
+            LazyRowWithNavArrows(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                testTagPrefix = "forecast_filter_nav"
             ) {
                 val filters = listOf(
                     "ALL" to "All Active",

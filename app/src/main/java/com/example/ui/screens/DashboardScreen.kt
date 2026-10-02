@@ -70,6 +70,7 @@ import com.example.ui.components.CostProfitCategoriesDialog
 import com.example.ui.components.CustomizeOverviewCardsDialog
 import com.example.ui.components.DuplicateReviewDialog
 import com.example.ui.components.TransactionSearchOverlay
+import com.example.ui.components.HorizontalScrollWithNavArrows
 import com.example.ui.components.CurrencySelectorChip
 import com.example.ui.components.CurrencySelectionBottomSheet
 import com.example.ui.components.CurrencyConversionHelperCard
@@ -200,10 +201,7 @@ fun DashboardScreen(
                             text = currentMonthYear.uppercase(Locale.getDefault()),
                             style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.1.sp, fontSize = 10.sp),
                             fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary,
-                            maxLines = 1,
-                            softWrap = false,
-                            overflow = TextOverflow.Ellipsis
+                            color = MaterialTheme.colorScheme.primary
                         )
                         Text(
                             text = "Ledgerly",
@@ -946,9 +944,7 @@ fun DashboardScreen(
                                     text = "$${String.format(Locale.US, "%,.2f", animatedExpenses.value)}",
                                     style = MaterialTheme.typography.titleLarge,
                                     fontWeight = FontWeight.Black,
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
+                                    color = MaterialTheme.colorScheme.onSurface
                                 )
                             }
                         }
@@ -1002,9 +998,7 @@ fun DashboardScreen(
                                     text = "$${String.format(Locale.US, "%,.2f", animatedIncome.value)}",
                                     style = MaterialTheme.typography.titleLarge,
                                     fontWeight = FontWeight.Black,
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
+                                    color = MaterialTheme.colorScheme.onSurface
                                 )
                                 if (monthlySummary.cashOnHand > 0) {
                                     Spacer(modifier = Modifier.height(2.dp))
@@ -1012,9 +1006,7 @@ fun DashboardScreen(
                                         text = "Cash on Hand: +$${String.format(Locale.US, "%,.2f", monthlySummary.cashOnHand)}",
                                         style = MaterialTheme.typography.labelSmall,
                                         fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.tertiary,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
+                                        color = MaterialTheme.colorScheme.tertiary
                                     )
                                 }
                             }
@@ -1069,9 +1061,7 @@ fun DashboardScreen(
                                     text = "$${String.format(Locale.US, "%,.2f", animatedExpenses.value)}",
                                     style = MaterialTheme.typography.titleLarge,
                                     fontWeight = FontWeight.Black,
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
+                                    color = MaterialTheme.colorScheme.onSurface
                                 )
                             }
                         }
@@ -1124,9 +1114,7 @@ fun DashboardScreen(
                                     text = "$${String.format(Locale.US, "%,.2f", animatedIncome.value)}",
                                     style = MaterialTheme.typography.titleLarge,
                                     fontWeight = FontWeight.Black,
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
+                                    color = MaterialTheme.colorScheme.onSurface
                                 )
                                 if (monthlySummary.cashOnHand > 0) {
                                     Spacer(modifier = Modifier.height(2.dp))
@@ -1134,9 +1122,7 @@ fun DashboardScreen(
                                         text = "Cash on Hand: +$${String.format(Locale.US, "%,.2f", monthlySummary.cashOnHand)}",
                                         style = MaterialTheme.typography.labelSmall,
                                         fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.tertiary,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
+                                        color = MaterialTheme.colorScheme.tertiary
                                     )
                                 }
                             }
@@ -1196,9 +1182,7 @@ fun DashboardScreen(
                                         text = "$sign$${String.format(Locale.US, "%,.2f", kotlin.math.abs(netSavingsAmount))}",
                                         style = MaterialTheme.typography.titleLarge,
                                         fontWeight = FontWeight.Black,
-                                        color = if (isSurplus) Color(0xFF047857) else MaterialTheme.colorScheme.error,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
+                                        color = if (isSurplus) Color(0xFF047857) else MaterialTheme.colorScheme.error
                                     )
                                 }
                             }
@@ -1232,84 +1216,30 @@ fun DashboardScreen(
                     val filterScrollState = rememberScrollState()
                     val coroutineScope = rememberCoroutineScope()
 
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically
+                    HorizontalScrollWithNavArrows(
+                        scrollState = filterScrollState,
+                        testTagPrefix = "dashboard_filter_tabs_nav",
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.fillMaxWidth()
                     ) {
-                        AnimatedVisibility(
-                            visible = filterScrollState.canScrollBackward,
-                            enter = fadeIn() + expandHorizontally(),
-                            exit = fadeOut() + shrinkHorizontally()
-                        ) {
-                            IconButton(
-                                onClick = {
-                                    coroutineScope.launch {
-                                        filterScrollState.animateScrollTo((filterScrollState.value - 300).coerceAtLeast(0))
-                                    }
-                                },
-                                modifier = Modifier
-                                    .size(32.dp)
-                                    .padding(end = 2.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.ChevronLeft,
-                                    contentDescription = "Scroll tabs left",
-                                    tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.size(22.dp)
-                                )
-                            }
-                        }
-
-                        Row(
-                            modifier = Modifier
-                                .weight(1f)
-                                .horizontalScroll(filterScrollState),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            FilterChip(
-                                selected = selectedTab == 0,
-                                onClick = { selectedTab = 0 },
-                                label = { Text("Recent", fontWeight = FontWeight.ExtraBold) },
-                                modifier = Modifier.testTag("tab_transactions")
-                            )
-                            FilterChip(
-                                selected = selectedTab == 1,
-                                onClick = { selectedTab = 1 },
-                                label = { Text("All Time", fontWeight = FontWeight.ExtraBold) },
-                                modifier = Modifier.testTag("tab_all_time")
-                            )
-                            FilterChip(
-                                selected = selectedTab == 2,
-                                onClick = { selectedTab = 2 },
-                                label = { Text("Recurring", fontWeight = FontWeight.ExtraBold) },
-                                modifier = Modifier.testTag("tab_recurring")
-                            )
-                        }
-
-                        AnimatedVisibility(
-                            visible = filterScrollState.canScrollForward,
-                            enter = fadeIn() + expandHorizontally(),
-                            exit = fadeOut() + shrinkHorizontally()
-                        ) {
-                            IconButton(
-                                onClick = {
-                                    coroutineScope.launch {
-                                        filterScrollState.animateScrollTo((filterScrollState.value + 300).coerceAtMost(filterScrollState.maxValue))
-                                    }
-                                },
-                                modifier = Modifier
-                                    .size(32.dp)
-                                    .padding(start = 2.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.ChevronRight,
-                                    contentDescription = "Scroll tabs right",
-                                    tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.size(22.dp)
-                                )
-                            }
-                        }
+                        FilterChip(
+                            selected = selectedTab == 0,
+                            onClick = { selectedTab = 0 },
+                            label = { Text("Recent", fontWeight = FontWeight.ExtraBold) },
+                            modifier = Modifier.testTag("tab_transactions")
+                        )
+                        FilterChip(
+                            selected = selectedTab == 1,
+                            onClick = { selectedTab = 1 },
+                            label = { Text("All Time", fontWeight = FontWeight.ExtraBold) },
+                            modifier = Modifier.testTag("tab_all_time")
+                        )
+                        FilterChip(
+                            selected = selectedTab == 2,
+                            onClick = { selectedTab = 2 },
+                            label = { Text("Recurring", fontWeight = FontWeight.ExtraBold) },
+                            modifier = Modifier.testTag("tab_recurring")
+                        )
                     }
 
                     Spacer(modifier = Modifier.height(4.dp))
@@ -2153,14 +2083,15 @@ fun DashboardScreen(
                         modifier = Modifier.padding(bottom = 10.dp)
                     )
 
-                    // Curated Preset Accent Swatches
-                    Row(
+                    // Curated Preset Accent Swatches with Navigation Arrows below
+                    val accentScrollState = rememberScrollState()
+                    HorizontalScrollWithNavArrows(
+                        scrollState = accentScrollState,
+                        testTagPrefix = "accent_swatches_nav",
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
                         modifier = Modifier
                             .fillMaxWidth()
-                            .horizontalScroll(rememberScrollState())
-                            .padding(vertical = 4.dp),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                            .padding(vertical = 4.dp)
                     ) {
                         AppAccentPresets.forEach { preset ->
                             val isSelected = tempAccentHex.equals(preset.hex, ignoreCase = true)
@@ -2406,9 +2337,7 @@ fun DashboardScreen(
                                         text = if (costProfitCategories.isEmpty()) "Disabled for all categories"
                                                else "${costProfitCategories.size} categories active (${costProfitCategories.joinToString(", ")})",
                                         style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                 }
                             }
@@ -2470,9 +2399,7 @@ fun DashboardScreen(
                                         text = if (duplicateTxIds.isEmpty()) "${reconciledDuplicatePairs.size} reconciled • No pending duplicates"
                                                else "${duplicateTxIds.size} flagged duplicates to review",
                                         style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                 }
                             }
@@ -2533,9 +2460,7 @@ fun DashboardScreen(
                                     Text(
                                         text = "${visibleOverviewCards.size} cards visible • Focus your dashboard metrics",
                                         style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                 }
                             }
@@ -3389,9 +3314,7 @@ fun ManualAddForm(
                                             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
                                             fontSize = 11.sp
                                         ),
-                                        color = if (isSelected) style.color else MaterialTheme.colorScheme.onSurfaceVariant,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
+                                        color = if (isSelected) style.color else MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                 }
                             }
@@ -3595,9 +3518,7 @@ fun ManualAddForm(
                                         Text(
                                             text = dup.description.ifBlank { "No description" },
                                             style = MaterialTheme.typography.labelMedium,
-                                            fontWeight = FontWeight.SemiBold,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis
+                                            fontWeight = FontWeight.SemiBold
                                         )
                                         Text(
                                             text = "${dup.category} • ${dateFormatter.format(Date(dup.date))}",
@@ -3855,10 +3776,7 @@ fun ExpenseReconciliationHeader(
                             text = "Expense Reconciliation",
                             style = MaterialTheme.typography.titleSmall,
                             fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            maxLines = 1,
-                            softWrap = false,
-                            overflow = TextOverflow.Ellipsis
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
                             text = if (isFullyReconciled) "All expenses cleared"
@@ -3965,9 +3883,7 @@ fun ExpenseReconciliationHeader(
                             fontWeight = FontWeight.Black,
                             fontSize = 15.sp,
                             color = Color(0xFF2E7D32),
-                            maxLines = 1,
                             softWrap = false,
-                            overflow = TextOverflow.Ellipsis,
                             modifier = Modifier.testTag("reconciliation_paid_amount")
                         )
                     }
@@ -4016,9 +3932,7 @@ fun ExpenseReconciliationHeader(
                             fontWeight = FontWeight.Black,
                             fontSize = 15.sp,
                             color = if (unpaidExpenses.isEmpty()) Color(0xFF757575) else Color(0xFFE65100),
-                            maxLines = 1,
                             softWrap = false,
-                            overflow = TextOverflow.Ellipsis,
                             modifier = Modifier.testTag("reconciliation_unpaid_amount")
                         )
                     }
@@ -4178,10 +4092,7 @@ fun TransactionRowItem(
                     text = transaction.description,
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = 1,
-                    softWrap = false,
-                    overflow = TextOverflow.Ellipsis
+                    color = MaterialTheme.colorScheme.onSurface
                 )
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -4191,10 +4102,7 @@ fun TransactionRowItem(
                         text = transaction.category,
                         style = MaterialTheme.typography.labelSmall,
                         color = categoryStyle.color,
-                        fontWeight = FontWeight.SemiBold,
-                        maxLines = 1,
-                        softWrap = false,
-                        overflow = TextOverflow.Ellipsis
+                        fontWeight = FontWeight.SemiBold
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Box(
@@ -4210,7 +4118,6 @@ fun TransactionRowItem(
                         text = formatter.format(Date(transaction.date)),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                        maxLines = 1,
                         softWrap = false
                     )
                 }
@@ -4579,6 +4486,9 @@ fun RecurringRowItem(
     val categoryStyle = getCategoryStyle(recurring.category, customCategories)
     val isExpense = recurring.type == "EXPENSE"
     val formatter = remember { SimpleDateFormat("MMM d, yyyy", Locale.getDefault()) }
+    val valSign = if (isExpense) "-" else "+"
+    val valColor = if (isExpense) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.tertiary
+    val primarySymbol = CurrencyHelper.getSymbol(primaryCurrency)
 
     Card(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -4592,7 +4502,7 @@ fun RecurringRowItem(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(14.dp),
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.Top
         ) {
             // Category Visual Icon Box
             Box(
@@ -4614,114 +4524,127 @@ fun RecurringRowItem(
 
             Spacer(modifier = Modifier.width(14.dp))
 
-            // Text Metadata Column
+            // Main Content Column
             Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = recurring.description,
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
+                // Row 1: Title and Amount (clean layout, full title visible)
                 Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.padding(top = 2.dp)
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.Top
                 ) {
                     Text(
-                        text = recurring.category,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = categoryStyle.color,
-                        fontWeight = FontWeight.SemiBold
+                        text = recurring.description,
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.weight(1f, fill = false)
                     )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Box(
-                        modifier = Modifier
-                            .size(3.dp)
-                            .background(
-                                MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
-                                CircleShape
+
+                    Spacer(modifier = Modifier.width(8.dp))
+
+                    Column(horizontalAlignment = Alignment.End) {
+                        Text(
+                            text = "$valSign$primarySymbol${String.format(Locale.US, "%.2f", recurring.amount)}",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = valColor,
+                            softWrap = false
+                        )
+                        if (recurring.currency.isNotBlank() && !recurring.currency.equals(primaryCurrency, ignoreCase = true) && recurring.originalAmount > 0.0) {
+                            Text(
+                                text = CurrencyHelper.formatAmount(recurring.originalAmount, recurring.currency, includeCode = true),
+                                style = MaterialTheme.typography.labelSmall,
+                                fontSize = 10.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.85f),
+                                softWrap = false
                             )
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    
-                    // Frequency Chip Style Tag
-                    Text(
-                        text = recurring.frequency.uppercase(Locale.getDefault()),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.primary,
-                        fontWeight = FontWeight.ExtraBold
-                    )
+                        }
+                    }
                 }
 
-                Spacer(modifier = Modifier.height(2.dp))
+                Spacer(modifier = Modifier.height(6.dp))
 
+                // Row 2: Category badge & Frequency tag on left, Edit & Delete buttons on right
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        modifier = Modifier.weight(1f, fill = false)
+                    ) {
+                        Surface(
+                            shape = RoundedCornerShape(6.dp),
+                            color = categoryStyle.color.copy(alpha = 0.12f),
+                            border = BorderStroke(1.dp, categoryStyle.color.copy(alpha = 0.3f))
+                        ) {
+                            Text(
+                                text = recurring.category,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = categoryStyle.color,
+                                fontWeight = FontWeight.SemiBold,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
+                        }
+
+                        Surface(
+                            shape = RoundedCornerShape(6.dp),
+                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.3f))
+                        ) {
+                            Text(
+                                text = recurring.frequency.uppercase(Locale.getDefault()),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.primary,
+                                fontWeight = FontWeight.ExtraBold,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
+                        }
+                    }
+
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        IconButton(
+                            onClick = onEdit,
+                            modifier = Modifier
+                                .size(28.dp)
+                                .testTag("edit_recurring_${recurring.id}")
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Edit,
+                                contentDescription = "Edit recurring rule",
+                                tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+                        IconButton(
+                            onClick = onDelete,
+                            modifier = Modifier
+                                .size(28.dp)
+                                .testTag("delete_recurring_${recurring.id}")
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.DeleteOutline,
+                                contentDescription = "Delete recurring rule",
+                                tint = MaterialTheme.colorScheme.error.copy(alpha = 0.7f),
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                // Row 3: Starts Date
                 Text(
                     text = "Starts ${formatter.format(Date(recurring.startDate))}",
                     style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                 )
-            }
-
-            Spacer(modifier = Modifier.width(8.dp))
-
-            // Value Amount Text
-            val valSign = if (isExpense) "-" else "+"
-            val valColor = if (isExpense) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.tertiary
-            val primarySymbol = CurrencyHelper.getSymbol(primaryCurrency)
-
-            Column(
-                horizontalAlignment = Alignment.End,
-                verticalArrangement = Arrangement.Center
-            ) {
-                Text(
-                    text = "$valSign$primarySymbol${String.format(Locale.US, "%.2f", recurring.amount)}",
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = valColor
-                )
-                if (recurring.currency.isNotBlank() && !recurring.currency.equals(primaryCurrency, ignoreCase = true) && recurring.originalAmount > 0.0) {
-                    Text(
-                        text = CurrencyHelper.formatAmount(recurring.originalAmount, recurring.currency, includeCode = true),
-                        style = MaterialTheme.typography.labelSmall,
-                        fontSize = 10.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.85f),
-                        maxLines = 1,
-                        softWrap = false
-                    )
-                }
-
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(4.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    IconButton(
-                        onClick = onEdit,
-                        modifier = Modifier
-                            .size(28.dp)
-                            .testTag("edit_recurring_${recurring.id}")
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Edit,
-                            contentDescription = "Edit recurring rule",
-                            tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
-                            modifier = Modifier.size(16.dp)
-                        )
-                    }
-                    IconButton(
-                        onClick = onDelete,
-                        modifier = Modifier
-                            .size(28.dp)
-                            .testTag("delete_recurring_${recurring.id}")
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.DeleteOutline,
-                            contentDescription = "Delete recurring rule",
-                            tint = MaterialTheme.colorScheme.error.copy(alpha = 0.7f),
-                            modifier = Modifier.size(16.dp)
-                        )
-                    }
-                }
             }
         }
     }
@@ -4946,9 +4869,7 @@ fun VisualAnalyticsSection(
                                     style = MaterialTheme.typography.labelSmall,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.onSurface,
-                                    modifier = Modifier.weight(1f),
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
+                                    modifier = Modifier.weight(1f)
                                 )
                                 Text(
                                     text = "$${String.format("%.0f", amt)} ($pct%)",
@@ -5285,9 +5206,7 @@ fun MonthlyTrendBarItem(
             text = topLabelText,
             style = MaterialTheme.typography.labelSmall,
             fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Spacer(modifier = Modifier.height(4.dp))
         Box(

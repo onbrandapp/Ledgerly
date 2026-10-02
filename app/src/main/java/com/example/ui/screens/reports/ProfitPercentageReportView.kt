@@ -32,6 +32,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.CurrencyHelper
 import com.example.data.Transaction
+import com.example.ui.components.HorizontalScrollWithNavArrows
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
@@ -253,9 +254,7 @@ fun ProfitPercentageReportView(
                             text = "Rev: $currencySymbol${String.format(Locale.US, "%,.0f", totalRevenue)} • Cost: $currencySymbol${String.format(Locale.US, "%,.0f", totalCost)}",
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            fontSize = 10.sp,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
+                            fontSize = 10.sp
                         )
                     }
                 }
@@ -333,12 +332,13 @@ fun ProfitPercentageReportView(
                         }
                     }
 
-                    // Date Filter Chips
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .horizontalScroll(rememberScrollState()),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    // Date Filter Chips with Navigation Arrows below
+                    val dateFilterScrollState = rememberScrollState()
+                    HorizontalScrollWithNavArrows(
+                        scrollState = dateFilterScrollState,
+                        testTagPrefix = "profit_date_filters_nav",
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        modifier = Modifier.fillMaxWidth()
                     ) {
                         listOf("All Time", "Current Month", "Last 30 Days", "Last 90 Days", "This Year").forEach { filter ->
                             val isSelected = selectedDateFilter == filter
@@ -628,9 +628,7 @@ fun ProfitPercentageReportView(
                                             text = item.description,
                                             style = MaterialTheme.typography.bodyMedium,
                                             fontWeight = FontWeight.Bold,
-                                            color = MaterialTheme.colorScheme.onSurface,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis
+                                            color = MaterialTheme.colorScheme.onSurface
                                         )
                                         Text(
                                             text = "${item.count} order${if (item.count == 1) "" else "s"} • Latest: ${dateFormatter.format(Date(item.latestDate))}",
@@ -729,9 +727,7 @@ fun ProfitPercentageReportView(
                                     text = item.description,
                                     style = MaterialTheme.typography.bodyMedium,
                                     fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
+                                    color = MaterialTheme.colorScheme.onSurface
                                 )
                                 Text(
                                     text = "Rev: $currencySymbol${String.format(Locale.US, "%.2f", item.totalRevenue)} • Cost: $currencySymbol${String.format(Locale.US, "%.2f", item.totalCost)} • Qty: ${item.count}",

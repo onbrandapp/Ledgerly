@@ -84,9 +84,7 @@ fun DuplicateReviewDialog(
                         text = "Review Potential Duplicates",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
                         text = "${duplicatePairs.size} flagged pair${if (duplicatePairs.size == 1) "" else "s"}",
@@ -209,9 +207,7 @@ fun DuplicateReviewDialog(
                                                 Text(
                                                     text = "Entry #1: ${pair.tx1.description.ifBlank { "No description" }}",
                                                     style = MaterialTheme.typography.bodySmall,
-                                                    fontWeight = FontWeight.SemiBold,
-                                                    maxLines = 1,
-                                                    overflow = TextOverflow.Ellipsis
+                                                    fontWeight = FontWeight.SemiBold
                                                 )
                                                 Text(
                                                     text = dateFormatter.format(Date(pair.tx1.date)),
@@ -251,9 +247,7 @@ fun DuplicateReviewDialog(
                                                 Text(
                                                     text = "Entry #2: ${pair.tx2.description.ifBlank { "No description" }}",
                                                     style = MaterialTheme.typography.bodySmall,
-                                                    fontWeight = FontWeight.SemiBold,
-                                                    maxLines = 1,
-                                                    overflow = TextOverflow.Ellipsis
+                                                    fontWeight = FontWeight.SemiBold
                                                 )
                                                 Text(
                                                     text = dateFormatter.format(Date(pair.tx2.date)),

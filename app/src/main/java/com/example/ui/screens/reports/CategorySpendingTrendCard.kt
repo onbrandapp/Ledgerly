@@ -13,6 +13,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -40,6 +42,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.CustomCategory
 import com.example.data.Transaction
+import com.example.ui.components.HorizontalScrollWithNavArrows
 import com.example.ui.theme.CategoryConstants
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -153,7 +156,7 @@ fun CategorySpendingTrendCard(
         mutableStateOf(monthPoints.lastIndex.coerceAtLeast(0))
     }
 
-    var isCategoryDropdownOpen by remember { mutableStateOf(false) }
+    var isCategoryDrawerOpen by remember { mutableStateOf(false) }
 
     // Animation progress when switching categories
     val animProgress = remember { androidx.compose.animation.core.Animatable(0f) }
@@ -177,15 +180,14 @@ fun CategorySpendingTrendCard(
                 .fillMaxWidth()
                 .padding(20.dp)
         ) {
-            // Header: Icon, Title & Category Selector Button
-            Row(
+            // 1. Header: Listed Vertically
+            Column(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.weight(1f, fill = false)
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     Box(
                         modifier = Modifier
@@ -200,111 +202,97 @@ fun CategorySpendingTrendCard(
                             modifier = Modifier.size(20.dp)
                         )
                     }
-                    Spacer(modifier = Modifier.width(10.dp))
-                    Column {
-                        Text(
-                            text = "Category Spending Trend",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Text(
-                            text = "Month-over-month trajectory",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
+                    Text(
+                        text = "Category Spending Trend",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
                 }
+                Text(
+                    text = "Month-over-month trajectory for $selectedCategory",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
 
-                // Category Selector Dropdown Button
-                Box {
-                    Surface(
-                        onClick = { isCategoryDropdownOpen = true },
-                        shape = RoundedCornerShape(12.dp),
-                        color = themeColor.copy(alpha = 0.12f),
-                        border = BorderStroke(1.dp, themeColor.copy(alpha = 0.35f)),
-                        modifier = Modifier.testTag("category_trend_selector_button")
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(4.dp),
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
-                        ) {
-                            Text(
-                                text = selectedCategory,
-                                style = MaterialTheme.typography.labelMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = themeColor,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                            Icon(
-                                imageVector = Icons.Default.ArrowDropDown,
-                                contentDescription = "Change Category",
-                                tint = themeColor,
-                                modifier = Modifier.size(18.dp)
-                            )
-                        }
-                    }
+            Spacer(modifier = Modifier.height(12.dp))
 
-                    DropdownMenu(
-                        expanded = isCategoryDropdownOpen,
-                        onDismissRequest = { isCategoryDropdownOpen = false },
-                        modifier = Modifier
-                            .widthIn(min = 180.dp, max = 260.dp)
-                            .testTag("category_trend_dropdown")
+            // 2. Category Selector Button (Opens bottom drawer)
+            Surface(
+                onClick = { isCategoryDrawerOpen = true },
+                shape = RoundedCornerShape(14.dp),
+                color = themeColor.copy(alpha = 0.12f),
+                border = BorderStroke(1.dp, themeColor.copy(alpha = 0.35f)),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("category_trend_selector_button")
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 14.dp, vertical = 10.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.weight(1f, fill = false)
                     ) {
-                        allAvailableCategories.forEach { cat ->
-                            val catStyleItem = CategoryConstants.resolveCategoryStyle(cat, customCategories)
-                            DropdownMenuItem(
-                                text = {
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                    ) {
-                                        Box(
-                                            modifier = Modifier
-                                                .size(22.dp)
-                                                .background(catStyleItem.color.copy(alpha = 0.15f), RoundedCornerShape(6.dp)),
-                                            contentAlignment = Alignment.Center
-                                        ) {
-                                            Icon(
-                                                imageVector = catStyleItem.icon,
-                                                contentDescription = null,
-                                                tint = catStyleItem.color,
-                                                modifier = Modifier.size(13.dp)
-                                            )
-                                        }
-                                        Text(
-                                            text = cat,
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            fontWeight = if (cat == selectedCategory) FontWeight.Bold else FontWeight.Normal,
-                                            color = if (cat == selectedCategory) themeColor else MaterialTheme.colorScheme.onSurface,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis
-                                        )
-                                    }
-                                },
-                                onClick = {
-                                    selectedCategory = cat
-                                    isCategoryDropdownOpen = false
-                                },
-                                modifier = Modifier.testTag("category_option_$cat")
-                            )
-                        }
+                        Icon(
+                            imageVector = categoryStyle.icon,
+                            contentDescription = null,
+                            tint = themeColor,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Text(
+                            text = "Category: $selectedCategory",
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = themeColor
+                        )
                     }
+                    Icon(
+                        imageVector = Icons.Default.ArrowDropDown,
+                        contentDescription = "Open Category Drawer",
+                        tint = themeColor,
+                        modifier = Modifier.size(20.dp)
+                    )
                 }
             }
 
-            Spacer(modifier = Modifier.height(14.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
-            // Quick Category Filter Chips Row
-            val quickCategories = remember(allAvailableCategories) { allAvailableCategories.take(6) }
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            // 3. Quick Category Filter Chips with Navigation Arrows on the far right mirroring design
+            val quickCategories = remember(allAvailableCategories) { allAvailableCategories.take(8) }
+            val chipsScrollState = rememberScrollState()
+
+            HorizontalScrollWithNavArrows(
+                scrollState = chipsScrollState,
+                testTagPrefix = "category_trend_chips_nav",
+                arrowsOnTop = true,
+                label = {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.FilterList,
+                            contentDescription = null,
+                            tint = themeColor,
+                            modifier = Modifier.size(15.dp)
+                        )
+                        Text(
+                            text = "QUICK CATEGORIES",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            letterSpacing = 0.5.sp
+                        )
+                    }
+                },
+                modifier = Modifier.fillMaxWidth()
             ) {
                 quickCategories.forEach { cat ->
                     val isSelected = cat.equals(selectedCategory, ignoreCase = true)
@@ -344,100 +332,119 @@ fun CategorySpendingTrendCard(
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(10.dp))
 
-            // 3 KPI Metric Cards (Current Month, MoM Change, 6-Mo Average)
-            Row(
+            // 4. KPI Metrics: Listed Vertically vs Horizontally to avoid wrapping numbers
+            val isIncrease = momDifference > 0.0
+            val isDecrease = momDifference < 0.0
+            val momColor = when {
+                isIncrease -> MaterialTheme.colorScheme.error // More expense
+                isDecrease -> Color(0xFF10B981) // Less expense = savings
+                else -> MaterialTheme.colorScheme.onSurfaceVariant
+            }
+
+            Surface(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                shape = RoundedCornerShape(16.dp),
+                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.7f),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.25f))
             ) {
-                // KPI 1: Current Month
-                Surface(
-                    modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(14.dp),
-                    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.7f),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.25f))
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 14.dp, vertical = 12.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    Column(modifier = Modifier.padding(10.dp)) {
+                    // Vertical Item 1: Current Month Spend with MoM status badge
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
                         Text(
-                            text = "Current Month",
+                            text = "Current Month Spend",
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            fontSize = 10.sp
+                            fontSize = 11.sp
                         )
-                        Spacer(modifier = Modifier.height(2.dp))
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Text(
+                                text = "$${String.format(Locale.US, "%,.2f", currentMonthSpend)}",
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Black,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            // MoM Status Pill
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = momColor.copy(alpha = 0.12f),
+                                border = BorderStroke(1.dp, momColor.copy(alpha = 0.25f))
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    if (isIncrease || isDecrease) {
+                                        Icon(
+                                            imageVector = if (isIncrease) Icons.AutoMirrored.Filled.TrendingUp else Icons.AutoMirrored.Filled.TrendingDown,
+                                            contentDescription = null,
+                                            tint = momColor,
+                                            modifier = Modifier.size(14.dp)
+                                        )
+                                    }
+                                    val sign = if (isIncrease) "+" else if (isDecrease) "-" else ""
+                                    Text(
+                                        text = "MoM: $sign${String.format(Locale.US, "%.1f", abs(momPercentage))}%",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = FontWeight.Bold,
+                                        color = momColor
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
+
+                    // Vertical Item 2: Prior Month Spend
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(2.dp)
+                    ) {
                         Text(
-                            text = "$${String.format(Locale.US, "%,.2f", currentMonthSpend)}",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Black,
+                            text = "Prior Month Spend",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontSize = 11.sp
+                        )
+                        Text(
+                            text = "$${String.format(Locale.US, "%,.2f", priorMonthSpend)}",
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface
                         )
                     }
-                }
 
-                // KPI 2: MoM Change
-                val isIncrease = momDifference > 0.0
-                val isDecrease = momDifference < 0.0
-                val momColor = when {
-                    isIncrease -> MaterialTheme.colorScheme.error // More expense
-                    isDecrease -> Color(0xFF10B981) // Less expense = savings
-                    else -> MaterialTheme.colorScheme.onSurfaceVariant
-                }
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
 
-                Surface(
-                    modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(14.dp),
-                    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.7f),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.25f))
-                ) {
-                    Column(modifier = Modifier.padding(10.dp)) {
+                    // Vertical Item 3: 6-Month Monthly Average
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(2.dp)
+                    ) {
                         Text(
-                            text = "MoM Change",
+                            text = "6-Mo Monthly Average",
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            fontSize = 10.sp
+                            fontSize = 11.sp
                         )
-                        Spacer(modifier = Modifier.height(2.dp))
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            if (isIncrease || isDecrease) {
-                                Icon(
-                                    imageVector = if (isIncrease) Icons.AutoMirrored.Filled.TrendingUp else Icons.AutoMirrored.Filled.TrendingDown,
-                                    contentDescription = null,
-                                    tint = momColor,
-                                    modifier = Modifier.size(14.dp)
-                                )
-                                Spacer(modifier = Modifier.width(3.dp))
-                            }
-                            val sign = if (isIncrease) "+" else if (isDecrease) "-" else ""
-                            Text(
-                                text = "$sign${String.format(Locale.US, "%.1f", abs(momPercentage))}%",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Black,
-                                color = momColor
-                            )
-                        }
-                    }
-                }
-
-                // KPI 3: 6-Mo Average
-                Surface(
-                    modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(14.dp),
-                    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.7f),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.25f))
-                ) {
-                    Column(modifier = Modifier.padding(10.dp)) {
                         Text(
-                            text = "6-Mo Average",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            fontSize = 10.sp
-                        )
-                        Spacer(modifier = Modifier.height(2.dp))
-                        Text(
-                            text = "$${String.format(Locale.US, "%,.2f", averageMonthlySpend)}",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Black,
+                            text = "$${String.format(Locale.US, "%,.2f", averageMonthlySpend)} / mo",
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface
                         )
                     }
@@ -742,6 +749,221 @@ fun CategorySpendingTrendCard(
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface
                         )
+                    }
+                }
+            }
+        }
+    }
+
+    // Bottom Drawer for Category Selection
+    if (isCategoryDrawerOpen) {
+        val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+        var categorySearchQuery by remember { mutableStateOf("") }
+        val filteredDrawerCategories = remember(allAvailableCategories, categorySearchQuery) {
+            if (categorySearchQuery.isBlank()) {
+                allAvailableCategories
+            } else {
+                allAvailableCategories.filter {
+                    it.contains(categorySearchQuery.trim(), ignoreCase = true)
+                }
+            }
+        }
+
+        ModalBottomSheet(
+            onDismissRequest = { isCategoryDrawerOpen = false },
+            sheetState = sheetState,
+            containerColor = MaterialTheme.colorScheme.surface,
+            dragHandle = { BottomSheetDefaults.DragHandle() },
+            modifier = Modifier.testTag("category_trend_bottom_drawer")
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp)
+                    .padding(bottom = 28.dp)
+            ) {
+                // Drawer Title & Close Button
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Select Category",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = "Choose category to view spending trend",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    IconButton(
+                        onClick = { isCategoryDrawerOpen = false },
+                        modifier = Modifier.testTag("category_drawer_close_button")
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "Close",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(14.dp))
+
+                // Search Bar to quickly find categories
+                OutlinedTextField(
+                    value = categorySearchQuery,
+                    onValueChange = { categorySearchQuery = it },
+                    placeholder = {
+                        Text(
+                            text = "Search categories...",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Default.Search,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    },
+                    trailingIcon = {
+                        if (categorySearchQuery.isNotEmpty()) {
+                            IconButton(onClick = { categorySearchQuery = "" }) {
+                                Icon(
+                                    imageVector = Icons.Default.Clear,
+                                    contentDescription = "Clear search",
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    },
+                    singleLine = true,
+                    shape = RoundedCornerShape(14.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = themeColor,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)
+                    ),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("category_drawer_search_input")
+                )
+
+                Spacer(modifier = Modifier.height(14.dp))
+
+                // Category Items List
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 420.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    if (filteredDrawerCategories.isEmpty()) {
+                        item {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 36.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = "No categories found matching \"$categorySearchQuery\"",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    } else {
+                        items(filteredDrawerCategories) { cat ->
+                            val isSelected = cat.equals(selectedCategory, ignoreCase = true)
+                            val catStyleItem = remember(cat, customCategories) {
+                                CategoryConstants.resolveCategoryStyle(cat, customCategories)
+                            }
+
+                            Surface(
+                                onClick = {
+                                    selectedCategory = cat
+                                    isCategoryDrawerOpen = false
+                                },
+                                shape = RoundedCornerShape(14.dp),
+                                color = if (isSelected) {
+                                    catStyleItem.color.copy(alpha = 0.14f)
+                                } else {
+                                    MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+                                },
+                                border = BorderStroke(
+                                    width = if (isSelected) 1.5.dp else 1.dp,
+                                    color = if (isSelected) {
+                                        catStyleItem.color.copy(alpha = 0.6f)
+                                    } else {
+                                        MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
+                                    }
+                                ),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .testTag("category_drawer_item_$cat")
+                                    .testTag("category_option_$cat")
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 14.dp, vertical = 12.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                        modifier = Modifier.weight(1f)
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(38.dp)
+                                                .background(
+                                                    catStyleItem.color.copy(alpha = 0.18f),
+                                                    RoundedCornerShape(10.dp)
+                                                ),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Icon(
+                                                imageVector = catStyleItem.icon,
+                                                contentDescription = null,
+                                                tint = catStyleItem.color,
+                                                modifier = Modifier.size(20.dp)
+                                            )
+                                        }
+
+                                        Text(
+                                            text = cat,
+                                            style = MaterialTheme.typography.bodyLarge,
+                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                            color = if (isSelected) catStyleItem.color else MaterialTheme.colorScheme.onSurface
+                                        )
+                                    }
+
+                                    if (isSelected) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(26.dp)
+                                                .background(catStyleItem.color, CircleShape),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Check,
+                                                contentDescription = "Selected",
+                                                tint = Color.White,
+                                                modifier = Modifier.size(16.dp)
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }

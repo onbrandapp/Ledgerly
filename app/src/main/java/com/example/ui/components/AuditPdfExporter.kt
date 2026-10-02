@@ -289,11 +289,11 @@ object AuditPdfExporter {
                 canvas.drawText(typeLabel, badgeRectLeft + 5f, badgeRectTop + 10f, badgeTextPaint)
 
                 // 2. TITLE & DETAILS
-                val titleSafe = if (item.title.length > 32) item.title.substring(0, 32) + "..." else item.title
+                val titleSafe = item.title
                 canvas.drawText(titleSafe, marginX + 64f, currentY + 14f, rowTextPaint)
 
                 val detailsPreview = if (item.details.isNotBlank()) item.details else item.categoryOrStatus
-                val detailsSafe = if (detailsPreview.length > 36) detailsPreview.substring(0, 36) + "..." else detailsPreview
+                val detailsSafe = detailsPreview
                 canvas.drawText(detailsSafe, marginX + 64f, currentY + 28f, rowSecondaryPaint)
 
                 // 3. AMOUNT
@@ -306,11 +306,7 @@ object AuditPdfExporter {
 
                 // 4. SOURCE / DELETED BY
                 val isExternal = !item.sourceOrDeletedBy.contains("User", ignoreCase = true)
-                val sourceTextSafe = if (item.sourceOrDeletedBy.length > 20) {
-                    item.sourceOrDeletedBy.substring(0, 20) + "..."
-                } else {
-                    item.sourceOrDeletedBy
-                }
+                val sourceTextSafe = item.sourceOrDeletedBy
                 if (isExternal) {
                     canvas.drawText(sourceTextSafe, marginX + 320f, currentY + 14f, redAlertPaint)
                     canvas.drawText("External / Cloud Source", marginX + 320f, currentY + 26f, rowSecondaryPaint)

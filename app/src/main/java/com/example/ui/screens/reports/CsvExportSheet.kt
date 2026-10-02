@@ -37,6 +37,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.example.data.CustomCategory
 import com.example.data.Transaction
+import com.example.ui.components.HorizontalScrollWithNavArrows
 import com.example.ui.theme.CategoryConstants
 import com.example.ui.theme.CategoryStyle
 import java.text.SimpleDateFormat
@@ -566,12 +567,11 @@ fun CsvExportSheet(
                     "Custom"
                 )
 
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .horizontalScroll(rememberScrollState()),
+                HorizontalScrollWithNavArrows(
+                    modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalAlignment = Alignment.CenterVertically,
+                    testTagPrefix = "csv_preset_nav"
                 ) {
                     presets.forEach { preset ->
                         val isSelected = selectedPreset == preset
@@ -752,9 +752,7 @@ fun CsvExportSheet(
                                     color = if (isSelected) activeColor else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.75f),
                                     fontSize = 10.sp,
                                     fontWeight = if (isSelected) FontWeight.Medium else FontWeight.Normal,
-                                    textAlign = TextAlign.Center,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
+                                    textAlign = TextAlign.Center
                                 )
                             }
                         }
@@ -835,11 +833,10 @@ fun CsvExportSheet(
                         }
                     }
 
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .horizontalScroll(rememberScrollState()),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    HorizontalScrollWithNavArrows(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        testTagPrefix = "csv_category_nav"
                     ) {
                         // "All Categories" chip
                         FilterChip(
@@ -941,11 +938,10 @@ fun CsvExportSheet(
 
                     // Top description suggestion chips
                     if (topDescriptions.isNotEmpty()) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .horizontalScroll(rememberScrollState()),
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        HorizontalScrollWithNavArrows(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            testTagPrefix = "csv_desc_nav"
                         ) {
                             topDescriptions.forEach { desc ->
                                 val isSelected = selectedDescriptionQuery.equals(desc, ignoreCase = true)
@@ -956,9 +952,7 @@ fun CsvExportSheet(
                                     label = {
                                         Text(
                                             text = desc,
-                                            style = MaterialTheme.typography.labelSmall,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis
+                                            style = MaterialTheme.typography.labelSmall
                                         )
                                     },
                                     colors = SuggestionChipDefaults.suggestionChipColors(
@@ -1139,9 +1133,7 @@ fun CsvExportSheet(
                                                         text = item.category,
                                                         style = MaterialTheme.typography.bodySmall,
                                                         fontWeight = if (isSelected) FontWeight.Bold else FontWeight.SemiBold,
-                                                        color = MaterialTheme.colorScheme.onSurface,
-                                                        maxLines = 1,
-                                                        overflow = TextOverflow.Ellipsis
+                                                        color = MaterialTheme.colorScheme.onSurface
                                                     )
 
                                                     Surface(
@@ -1303,9 +1295,7 @@ fun CsvExportSheet(
                                                             text = item.description,
                                                             style = MaterialTheme.typography.bodySmall,
                                                             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.SemiBold,
-                                                            color = MaterialTheme.colorScheme.onSurface,
-                                                            maxLines = 1,
-                                                            overflow = TextOverflow.Ellipsis
+                                                            color = MaterialTheme.colorScheme.onSurface
                                                         )
                                                         if (item.category.isNotBlank()) {
                                                             Text(
@@ -1584,9 +1574,7 @@ fun CsvExportSheet(
                                 Text(
                                     text = suggestedFileName,
                                     style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
                                 )
                             }
 
@@ -1754,9 +1742,7 @@ private fun TypeSelectCard(
                 text = subtitle,
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.75f),
-                fontSize = 10.sp,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+                fontSize = 10.sp
             )
         }
     }
@@ -1905,9 +1891,7 @@ fun CsvPreDownloadSummaryModal(
                                     text = suggestedFileName,
                                     style = MaterialTheme.typography.bodyMedium,
                                     fontWeight = FontWeight.SemiBold,
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
+                                    color = MaterialTheme.colorScheme.onSurface
                                 )
                             }
 
@@ -2020,11 +2004,10 @@ fun CsvPreDownloadSummaryModal(
                         }
 
                         // Filter Scope Pills Row
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .horizontalScroll(rememberScrollState()),
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        HorizontalScrollWithNavArrows(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            testTagPrefix = "csv_scope_pills_nav"
                         ) {
                             // Date Range Chip
                             Surface(
@@ -2209,9 +2192,7 @@ fun CsvPreDownloadSummaryModal(
                                             text = tx.category.ifBlank { "Uncategorized" },
                                             style = MaterialTheme.typography.bodySmall,
                                             fontWeight = FontWeight.SemiBold,
-                                            color = MaterialTheme.colorScheme.onSurface,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis
+                                            color = MaterialTheme.colorScheme.onSurface
                                         )
                                     }
 
@@ -2225,9 +2206,7 @@ fun CsvPreDownloadSummaryModal(
                                             style = MaterialTheme.typography.bodySmall,
                                             fontWeight = FontWeight.Medium,
                                             color = if (tx.description.isBlank()) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
-                                            else MaterialTheme.colorScheme.onSurface,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis
+                                            else MaterialTheme.colorScheme.onSurface
                                         )
                                         Row(
                                             verticalAlignment = Alignment.CenterVertically,

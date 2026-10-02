@@ -194,8 +194,8 @@ object ProfitReportExporter {
                 yPosition += 16f
             }
 
-            val truncatedDesc = if (item.description.length > 32) item.description.take(30) + "…" else item.description
-            canvas.drawText(truncatedDesc, 45f, yPosition, textPaint)
+            val descText = item.description
+            canvas.drawText(descText, 45f, yPosition, textPaint)
             canvas.drawText(item.count.toString(), 250f, yPosition, rightTextPaint)
             canvas.drawText("$${String.format(Locale.US, "%.2f", item.totalRevenue)}", 325f, yPosition, rightTextPaint)
             canvas.drawText("$${String.format(Locale.US, "%.2f", item.totalCost)}", 400f, yPosition, rightTextPaint)

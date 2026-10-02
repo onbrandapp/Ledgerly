@@ -27,6 +27,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.AuditDeletedItem
 import com.example.ui.components.AuditPdfExporter
+import com.example.ui.components.HorizontalScrollWithNavArrows
 import com.example.ui.viewmodel.ExpenseViewModel
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -236,13 +237,13 @@ fun AuditReportView(
             modifier = Modifier.fillMaxWidth()
         )
 
-        // Type Filter Chips Row
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .horizontalScroll(rememberScrollState()),
+        // Type Filter Chips Row with Navigation Arrows below
+        val typeFilterScrollState = rememberScrollState()
+        HorizontalScrollWithNavArrows(
+            scrollState = typeFilterScrollState,
+            testTagPrefix = "audit_type_filters_nav",
             horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically
+            modifier = Modifier.fillMaxWidth()
         ) {
             val typeFilters = listOf("ALL", "TRANSACTION", "FORECAST", "NOTE", "RECURRING")
             typeFilters.forEach { type ->
@@ -395,9 +396,7 @@ fun AuditReportView(
                                 text = item.title,
                                 style = MaterialTheme.typography.bodyMedium,
                                 fontWeight = FontWeight.SemiBold,
-                                color = MaterialTheme.colorScheme.onSurface,
-                                maxLines = 2,
-                                overflow = TextOverflow.Ellipsis
+                                color = MaterialTheme.colorScheme.onSurface
                             )
 
                             if (item.details.isNotBlank()) {
@@ -405,9 +404,7 @@ fun AuditReportView(
                                 Text(
                                     text = item.details,
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    maxLines = 2,
-                                    overflow = TextOverflow.Ellipsis
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
 

@@ -132,17 +132,12 @@ fun AuditReportSheet(
                         Text(
                             text = "Audit Deletion Report",
                             style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Black,
-                            maxLines = 1,
-                            softWrap = false,
-                            overflow = TextOverflow.Ellipsis
+                            fontWeight = FontWeight.Black
                         )
                         Text(
                             text = "Compliance & forensics audit log",
                             style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 1,
-                            softWrap = false
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
@@ -243,13 +238,13 @@ fun AuditReportSheet(
                 )
             }
 
-            // Breakdown quick pills
-            Row(
+            // Breakdown quick pills with navigation arrows directly below
+            HorizontalScrollWithNavArrows(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .horizontalScroll(rememberScrollState())
                     .padding(bottom = 12.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                testTagPrefix = "audit_breakdown_nav"
             ) {
                 FilterChip(
                     selected = selectedFilterType == "ALL",
@@ -289,14 +284,14 @@ fun AuditReportSheet(
                 }
             }
 
-            // Source Filter & Simulation Buttons Row
-            Row(
+            // Source Filter & Simulation Buttons Row with navigation arrows directly below
+            HorizontalScrollWithNavArrows(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .horizontalScroll(rememberScrollState())
                     .padding(bottom = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
+                horizontalArrangement = Arrangement.SpaceBetween,
+                testTagPrefix = "audit_source_nav"
             ) {
                 // Source segmented toggle
                 Row(
@@ -712,8 +707,6 @@ private fun AuditItemCard(
                     text = item.title.ifBlank { "Untitled ${item.itemType.lowercase().capitalize(Locale.ROOT)}" },
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Bold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f)
                 )
 
@@ -754,9 +747,7 @@ private fun AuditItemCard(
                         Text(
                             text = item.details,
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }

@@ -465,12 +465,11 @@ fun TransactionSearchOverlay(
                         }
                     }
 
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .horizontalScroll(rememberScrollState()),
+                    HorizontalScrollWithNavArrows(
+                        modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(6.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                        verticalAlignment = Alignment.CenterVertically,
+                        testTagPrefix = "search_cat_chips_nav"
                     ) {
                         // "All Categories" chip
                         FilterChip(
@@ -566,12 +565,11 @@ fun TransactionSearchOverlay(
                         }
                     }
 
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .horizontalScroll(rememberScrollState()),
+                    HorizontalScrollWithNavArrows(
+                        modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(6.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                        verticalAlignment = Alignment.CenterVertically,
+                        testTagPrefix = "search_date_chips_nav"
                     ) {
                         SearchDatePreset.values().forEach { preset ->
                             val isSelected = selectedDatePreset == preset
@@ -925,9 +923,7 @@ fun TransactionSearchOverlay(
                                             text = tx.description.ifBlank { "No description" },
                                             style = MaterialTheme.typography.bodyMedium,
                                             fontWeight = FontWeight.SemiBold,
-                                            color = MaterialTheme.colorScheme.onSurface,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis
+                                            color = MaterialTheme.colorScheme.onSurface
                                         )
 
                                         Row(
@@ -938,9 +934,7 @@ fun TransactionSearchOverlay(
                                                 text = tx.category.ifBlank { "Uncategorized" },
                                                 style = MaterialTheme.typography.labelSmall,
                                                 color = catStyle.color,
-                                                fontWeight = FontWeight.Medium,
-                                                maxLines = 1,
-                                                overflow = TextOverflow.Ellipsis
+                                                fontWeight = FontWeight.Medium
                                             )
                                             Text(
                                                 text = "•",

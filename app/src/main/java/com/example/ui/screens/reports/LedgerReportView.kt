@@ -35,6 +35,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.CustomCategory
 import com.example.data.Transaction
+import com.example.ui.components.HorizontalScrollWithNavArrows
 import com.example.ui.theme.CategoryConstants
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -307,14 +308,15 @@ fun LedgerReportView(
             .verticalScroll(pageScrollState)
             .padding(horizontal = 14.dp, vertical = 6.dp)
     ) {
-        // Date Filters Quick Selection Row
-        Row(
+        // Date Filters Quick Selection Row with Navigation Arrows below
+        val dateFiltersScrollState = rememberScrollState()
+        HorizontalScrollWithNavArrows(
+            scrollState = dateFiltersScrollState,
+            testTagPrefix = "ledger_filters_nav",
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
             modifier = Modifier
                 .fillMaxWidth()
-                .horizontalScroll(rememberScrollState())
-                .padding(vertical = 2.dp),
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
-            verticalAlignment = Alignment.CenterVertically
+                .padding(vertical = 2.dp)
         ) {
             val filtersList = listOf("All Time", "Current Month", "Last 30 Days", "Last 60 Days", "Next 30 Days", "Custom")
             filtersList.forEach { filter ->
@@ -654,14 +656,12 @@ fun LedgerReportView(
 
                                     Spacer(modifier = Modifier.height(3.dp))
 
-                                    // Row 2: Description on a single clean line with ellipsis
+                                    // Row 2: Description fully visible without ellipsis
                                     Text(
                                         text = item.description,
                                         style = MaterialTheme.typography.bodySmall,
                                         fontWeight = FontWeight.SemiBold,
-                                        fontSize = 12.sp,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
+                                        fontSize = 12.sp
                                     )
 
                                     Spacer(modifier = Modifier.height(4.dp))
@@ -706,8 +706,6 @@ fun LedgerReportView(
                                                     color = catStyle.color,
                                                     fontWeight = FontWeight.Bold,
                                                     fontSize = 9.sp,
-                                                    maxLines = 1,
-                                                    overflow = TextOverflow.Ellipsis,
                                                     modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
                                                 )
                                             }
@@ -857,14 +855,12 @@ fun LedgerReportView(
 
                                     Spacer(modifier = Modifier.height(3.dp))
 
-                                    // Row 2: Description on a single clean line with ellipsis
+                                    // Row 2: Description fully visible without ellipsis
                                     Text(
                                         text = item.description,
                                         style = MaterialTheme.typography.bodySmall,
                                         fontWeight = FontWeight.SemiBold,
-                                        fontSize = 12.sp,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
+                                        fontSize = 12.sp
                                     )
 
                                     Spacer(modifier = Modifier.height(4.dp))
@@ -909,8 +905,6 @@ fun LedgerReportView(
                                                     color = catStyle.color,
                                                     fontWeight = FontWeight.Bold,
                                                     fontSize = 9.sp,
-                                                    maxLines = 1,
-                                                    overflow = TextOverflow.Ellipsis,
                                                     modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
                                                 )
                                             }
@@ -1193,9 +1187,7 @@ fun LedgerReportView(
                             Text(
                                 text = tx.description.ifBlank { "Untitled" },
                                 style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = FontWeight.Bold,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
+                                fontWeight = FontWeight.Bold
                             )
                             Spacer(modifier = Modifier.height(4.dp))
                             Row(
