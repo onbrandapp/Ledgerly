@@ -37,6 +37,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -63,44 +64,36 @@ fun CategorySpendingTrendCard(
     customCategories: List<CustomCategory> = emptyList(),
     modifier: Modifier = Modifier
 ) {
-    // 1. Gather all unique expense categories with spending activity or custom definitions
-    val usedExpenseCategories = remember(transactions) {
-        transactions
-            .filter { it.type.uppercase() == "EXPENSE" && it.category.isNotBlank() }
-            .map { it.category.trim() }
-            .groupingBy { it }
-            .eachCount()
-            .entries
-            .sortedByDescending { it.value }
-            .map { it.key }
-    }
-
-    val allAvailableCategories = remember(usedExpenseCategories, customCategories) {
-        val list = mutableListOf<String>()
-        list.addAll(usedExpenseCategories)
-        customCategories.forEach { cc ->
-            if (!list.any { it.equals(cc.name, ignoreCase = true) }) {
-                list.add(cc.name)
+    // 1. Gather ONLY unique categories that have at least one expense transaction applied to them
+    val allAvailableCategories = remember(transactions) {
+        val expenseTxList = transactions.filter {
+            it.type.equals("EXPENSE", ignoreCase = true) && it.category.isNotBlank()
+        }
+        val categoryMap = mutableMapOf<String, Pair<String, Int>>() // lowercase -> (displayCase, count)
+        for (tx in expenseTxList) {
+            val trimmed = tx.category.trim()
+            val lower = trimmed.lowercase()
+            val current = categoryMap[lower]
+            if (current == null) {
+                categoryMap[lower] = Pair(trimmed, 1)
+            } else {
+                categoryMap[lower] = Pair(current.first, current.second + 1)
             }
         }
-        val defaultExpensePresets = CategoryConstants.PREDEFINED_ICONS
-            .filter { it.categoryType == "EXPENSE" || it.categoryType == "BOTH" }
-            .map { it.label }
-        defaultExpensePresets.forEach { label ->
-            if (!list.any { it.equals(label, ignoreCase = true) }) {
-                list.add(label)
-            }
-        }
-        if (list.isEmpty()) {
-            listOf("Food & Dining", "Transportation", "Shopping", "Housing & Rent", "Utilities & Power")
-        } else {
-            list
-        }
+        categoryMap.values
+            .sortedByDescending { it.second }
+            .map { it.first }
     }
 
-    // Default chosen category: top spent category, or first available
+    // Default chosen category: top spent category with expenses, or fallback if none
     var selectedCategory by remember(allAvailableCategories) {
-        mutableStateOf(allAvailableCategories.firstOrNull() ?: "Food & Dining")
+        mutableStateOf(allAvailableCategories.firstOrNull() ?: "")
+    }
+
+    LaunchedEffect(allAvailableCategories) {
+        if (allAvailableCategories.isNotEmpty() && !allAvailableCategories.any { it.equals(selectedCategory, ignoreCase = true) }) {
+            selectedCategory = allAvailableCategories.first()
+        }
     }
 
     val categoryStyle = remember(selectedCategory, customCategories) {
@@ -210,7 +203,11 @@ fun CategorySpendingTrendCard(
                     )
                 }
                 Text(
-                    text = "Month-over-month trajectory for $selectedCategory",
+                    text = if (selectedCategory.isNotBlank()) {
+                        "Month-over-month trajectory for $selectedCategory"
+                    } else {
+                        "Log an expense transaction to view category trends"
+                    },
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -247,7 +244,7 @@ fun CategorySpendingTrendCard(
                             modifier = Modifier.size(18.dp)
                         )
                         Text(
-                            text = "Category: $selectedCategory",
+                            text = if (selectedCategory.isNotBlank()) "Category: $selectedCategory" else "Select Category (No Expenses Logged)",
                             style = MaterialTheme.typography.labelMedium,
                             fontWeight = FontWeight.Bold,
                             color = themeColor
@@ -796,7 +793,11 @@ fun CategorySpendingTrendCard(
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
-                            text = "Choose category to view spending trend",
+                            text = if (allAvailableCategories.isNotEmpty()) {
+                                "Categories with applied expenses (${allAvailableCategories.size})"
+                            } else {
+                                "No categories with expenses recorded yet"
+                            },
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -863,7 +864,40 @@ fun CategorySpendingTrendCard(
                         .heightIn(max = 420.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    if (filteredDrawerCategories.isEmpty()) {
+                    if (allAvailableCategories.isEmpty()) {
+                        item {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 36.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.ReceiptLong,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                                        modifier = Modifier.size(36.dp)
+                                    )
+                                    Text(
+                                        text = "No categories with expenses found",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = FontWeight.Medium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                    Text(
+                                        text = "Only categories with an expense applied to them will appear here.",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                                        textAlign = TextAlign.Center
+                                    )
+                                }
+                            }
+                        }
+                    } else if (filteredDrawerCategories.isEmpty()) {
                         item {
                             Box(
                                 modifier = Modifier
@@ -938,12 +972,25 @@ fun CategorySpendingTrendCard(
                                             )
                                         }
 
-                                        Text(
-                                            text = cat,
-                                            style = MaterialTheme.typography.bodyLarge,
-                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                            color = if (isSelected) catStyleItem.color else MaterialTheme.colorScheme.onSurface
-                                        )
+                                        Column {
+                                            Text(
+                                                text = cat,
+                                                style = MaterialTheme.typography.bodyLarge,
+                                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                                color = if (isSelected) catStyleItem.color else MaterialTheme.colorScheme.onSurface
+                                            )
+                                            val expenseCount = remember(transactions, cat) {
+                                                transactions.count {
+                                                    it.type.equals("EXPENSE", ignoreCase = true) &&
+                                                    it.category.trim().equals(cat.trim(), ignoreCase = true)
+                                                }
+                                            }
+                                            Text(
+                                                text = "$expenseCount recorded expense" + if (expenseCount == 1) "" else "s",
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
+                                            )
+                                        }
                                     }
 
                                     if (isSelected) {

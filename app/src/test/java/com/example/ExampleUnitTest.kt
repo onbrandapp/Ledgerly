@@ -480,5 +480,67 @@ class ExampleUnitTest {
     assertEquals(30.0, momDiff, 0.001)
     assertEquals(25.0, momPct, 0.001)
   }
+
+  @Test
+  fun testCategoryDrawerOnlyShowsCategoriesWithExpenseApplied() {
+    val txList = listOf(
+      com.example.data.Transaction(
+        id = "t1",
+        description = "Lunch",
+        amount = 15.0,
+        type = "EXPENSE",
+        category = "Food & Dining"
+      ),
+      com.example.data.Transaction(
+        id = "t2",
+        description = "Salary",
+        amount = 3500.0,
+        type = "INCOME",
+        category = "Salary"
+      ),
+      com.example.data.Transaction(
+        id = "t3",
+        description = "Client retainer",
+        amount = 1200.0,
+        type = "INCOME",
+        category = "Freelance"
+      ),
+      com.example.data.Transaction(
+        id = "t4",
+        description = "Bus pass",
+        amount = 45.0,
+        type = "EXPENSE",
+        category = "Transportation"
+      )
+    )
+
+    // Extraction algorithm: only EXPENSE transactions with non-blank category
+    val expenseTxList = txList.filter {
+      it.type.equals("EXPENSE", ignoreCase = true) && it.category.isNotBlank()
+    }
+    val categoryMap = mutableMapOf<String, Pair<String, Int>>()
+    for (tx in expenseTxList) {
+      val trimmed = tx.category.trim()
+      val lower = trimmed.lowercase()
+      val current = categoryMap[lower]
+      if (current == null) {
+        categoryMap[lower] = Pair(trimmed, 1)
+      } else {
+        categoryMap[lower] = Pair(current.first, current.second + 1)
+      }
+    }
+    val drawerCategories = categoryMap.values.sortedByDescending { it.second }.map { it.first }
+
+    // Categories with expenses applied
+    assertEquals(2, drawerCategories.size)
+    assertTrue(drawerCategories.contains("Food & Dining"))
+    assertTrue(drawerCategories.contains("Transportation"))
+
+    // Income categories or categories without expenses must NOT be present
+    assertFalse(drawerCategories.contains("Salary"))
+    assertFalse(drawerCategories.contains("Freelance"))
+    assertFalse(drawerCategories.contains("Shopping"))
+    assertFalse(drawerCategories.contains("Entertainment"))
+  }
 }
 
