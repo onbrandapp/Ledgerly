@@ -82,7 +82,10 @@ object LedgerReportExporter {
             }
             if (includeCost && totalCost > 0) {
                 append("Total Unit Cost,,,,${String.format(Locale.US, "%.2f", totalCost)},\n")
-                val grossMargin = totalIncome - totalCost
+                val incomeWithCost = transactions
+                    .filter { it.type.uppercase() == "INCOME" && ProfitMarginHelper.parseTransaction(it).cost != null }
+                    .sumOf { it.amount }
+                val grossMargin = incomeWithCost - totalCost
                 append("Gross Margin (Income - Cost),,,,${String.format(Locale.US, "%.2f", grossMargin)},\n")
             }
             if (incomes.isNotEmpty() && expenses.isNotEmpty()) {
@@ -364,9 +367,13 @@ object LedgerReportExporter {
             canvas.drawText(costStr, 45f, yPosition, summaryItemPaint)
             yPosition += 22f
 
-            val grossMargin = totalIncome - totalCost
-            val marginPct = if (totalIncome > 0) (grossMargin / totalIncome) * 100.0 else 0.0
-            val grossStr = "Gross Margin (Income - Cost): +$${String.format(Locale.US, "%,.2f", grossMargin)}  (${String.format(Locale.US, "%.1f", marginPct)}%)"
+            val incomeWithCost = transactions
+                .filter { it.type.uppercase() == "INCOME" && ProfitMarginHelper.parseTransaction(it).cost != null }
+                .sumOf { it.amount }
+            val grossMargin = incomeWithCost - totalCost
+            val marginPct = if (incomeWithCost > 0) (grossMargin / incomeWithCost) * 100.0 else 0.0
+            val grossSign = if (grossMargin >= 0) "+" else "-"
+            val grossStr = "Gross Margin (Income - Cost): $grossSign$${String.format(Locale.US, "%,.2f", abs(grossMargin))}  (${String.format(Locale.US, "%.1f", marginPct)}%)"
             canvas.drawText(grossStr, 45f, yPosition, summaryItemPaint)
             yPosition += 22f
         }

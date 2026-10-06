@@ -626,5 +626,59 @@ class ExampleUnitTest {
     assertTrue(csv.contains("Total Unit Cost,,,,150.00,"))
     assertTrue(csv.contains("Gross Margin (Income - Cost),,,,350.00,"))
   }
+
+  @Test
+  fun testGrossMarginOnlyTotalsIncomeTransactionsWithCost() {
+    val txList = listOf(
+      // Income with cost
+      com.example.data.Transaction(
+        id = "t1",
+        description = "Fat Chris [Cost: 37.00]",
+        amount = 37.0,
+        type = "INCOME",
+        category = "Sales"
+      ),
+      com.example.data.Transaction(
+        id = "t2",
+        description = "Mark [Cost: 70.00]",
+        amount = 120.0,
+        type = "INCOME",
+        category = "Sales"
+      ),
+      // Income without cost
+      com.example.data.Transaction(
+        id = "t3",
+        description = "Bree (Recurring)",
+        amount = 155.0,
+        type = "INCOME",
+        category = "General"
+      ),
+      com.example.data.Transaction(
+        id = "t4",
+        description = "iCash (Recurring)",
+        amount = 450.0,
+        type = "INCOME",
+        category = "General"
+      )
+    )
+
+    val csv = com.example.ui.screens.reports.LedgerReportExporter.generateCsvString(
+      transactions = txList,
+      startDate = null,
+      endDate = null,
+      includeCost = true
+    )
+
+    // Total income across all 4 transactions is 762.00
+    assertTrue(csv.contains("Total Income,,,,762.00,"))
+
+    // Total cost across transactions with cost is 37.00 + 70.00 = 107.00
+    assertTrue(csv.contains("Total Unit Cost,,,,107.00,"))
+
+    // Income with cost is only 37.00 + 120.00 = 157.00
+    // Gross Margin must be: 157.00 - 107.00 = 50.00 (NOT 762.00 - 107.00 = 655.00)
+    assertTrue(csv.contains("Gross Margin (Income - Cost),,,,50.00,"))
+    assertFalse(csv.contains("Gross Margin (Income - Cost),,,,655.00,"))
+  }
 }
 
