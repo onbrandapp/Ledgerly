@@ -542,5 +542,89 @@ class ExampleUnitTest {
     assertFalse(drawerCategories.contains("Shopping"))
     assertFalse(drawerCategories.contains("Entertainment"))
   }
+
+  @Test
+  fun testLedgerCsvExportWithoutIncludeCost() {
+    val txList = listOf(
+      com.example.data.Transaction(
+        id = "t1",
+        description = "Design Client A [Cost: 150.00 | Profit: 70%]",
+        amount = 500.0,
+        type = "INCOME",
+        category = "Consulting",
+        date = 1700000000000L,
+        paid = true
+      ),
+      com.example.data.Transaction(
+        id = "t2",
+        description = "Software License",
+        amount = 50.0,
+        type = "EXPENSE",
+        category = "Software",
+        date = 1700000000000L,
+        paid = true
+      )
+    )
+
+    val csv = com.example.ui.screens.reports.LedgerReportExporter.generateCsvString(
+      transactions = txList,
+      startDate = null,
+      endDate = null,
+      includeCost = false
+    )
+
+    // Header without cost
+    assertTrue(csv.contains("Type,Date,Description,Category,Amount,Status"))
+    assertFalse(csv.contains("Type,Date,Description,Category,Amount,Cost,Status"))
+
+    // Raw description is preserved when cost is excluded
+    assertTrue(csv.contains("\"Design Client A [Cost: 150.00 | Profit: 70%]\""))
+    assertFalse(csv.contains("Total Unit Cost"))
+  }
+
+  @Test
+  fun testLedgerCsvExportWithIncludeCost() {
+    val txList = listOf(
+      com.example.data.Transaction(
+        id = "t1",
+        description = "Design Client A [Cost: 150.00 | Profit: 70%]",
+        amount = 500.0,
+        type = "INCOME",
+        category = "Consulting",
+        date = 1700000000000L,
+        paid = true
+      ),
+      com.example.data.Transaction(
+        id = "t2",
+        description = "Server Hosting",
+        amount = 100.0,
+        type = "EXPENSE",
+        category = "Infrastructure",
+        date = 1700000000000L,
+        paid = true
+      )
+    )
+
+    val csv = com.example.ui.screens.reports.LedgerReportExporter.generateCsvString(
+      transactions = txList,
+      startDate = null,
+      endDate = null,
+      includeCost = true
+    )
+
+    // Header includes Cost column
+    assertTrue(csv.contains("Type,Date,Description,Category,Amount,Cost,Status"))
+
+    // Clean description without tag
+    assertTrue(csv.contains("\"Design Client A\""))
+
+    // Cost column value is included
+    assertTrue(csv.contains("500.00,150.00,Received"))
+
+    // Summary includes cost metrics
+    assertTrue(csv.contains("Include Cost,,,,Yes,"))
+    assertTrue(csv.contains("Total Unit Cost,,,,150.00,"))
+    assertTrue(csv.contains("Gross Margin (Income - Cost),,,,350.00,"))
+  }
 }
 

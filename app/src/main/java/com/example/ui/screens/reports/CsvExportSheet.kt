@@ -88,7 +88,7 @@ fun CsvExportSheet(
     initialEndDate: Long? = null,
     initialPreset: String = "All Time",
     onDismiss: () -> Unit,
-    onConfirmExport: (filteredTransactions: List<Transaction>, suggestedFileName: String, startDate: Long?, endDate: Long?) -> Unit
+    onConfirmExport: (filteredTransactions: List<Transaction>, suggestedFileName: String, startDate: Long?, endDate: Long?, includeCost: Boolean) -> Unit
 ) {
     val context = LocalContext.current
     val scrollState = rememberScrollState()
@@ -108,6 +108,9 @@ fun CsvExportSheet(
 
     // Pre-download modal state
     var showPreDownloadModal by remember { mutableStateOf(false) }
+
+    // Export Options State: Include Cost
+    var includeCost by remember { mutableStateOf(false) }
 
     // Date Range Presets
     var selectedPreset by remember {
@@ -1385,6 +1388,75 @@ fun CsvExportSheet(
                 }
             }
 
+            // SECTION 5B: Export Options (Include Cost)
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    text = "Export Options",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+
+                Surface(
+                    shape = RoundedCornerShape(14.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("csv_export_options_card")
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 14.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(34.dp)
+                                    .background(
+                                        MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
+                                        CircleShape
+                                    ),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Calculate,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                            Column {
+                                Text(
+                                    text = "Include Cost",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = "Add unit cost column and margin calculations in CSV",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
+                                )
+                            }
+                        }
+
+                        Switch(
+                            checked = includeCost,
+                            onCheckedChange = { includeCost = it },
+                            modifier = Modifier.testTag("csv_include_cost_switch")
+                        )
+                    }
+                }
+            }
+
             // SECTION 6: Live Export Preview Summary Card
             Card(
                 shape = RoundedCornerShape(16.dp),
@@ -1674,10 +1746,11 @@ fun CsvExportSheet(
             selectedStatus = selectedStatus,
             incomeSum = incomeSum,
             expenseSum = expenseSum,
+            includeCost = includeCost,
             onDismiss = { showPreDownloadModal = false },
             onConfirmDownload = {
                 showPreDownloadModal = false
-                onConfirmExport(filteredTransactions, suggestedFileName, startDate, endDate)
+                onConfirmExport(filteredTransactions, suggestedFileName, startDate, endDate, includeCost)
             }
         )
     }
@@ -1762,6 +1835,7 @@ fun CsvPreDownloadSummaryModal(
     selectedStatus: CsvStatusFilter,
     incomeSum: Double,
     expenseSum: Double,
+    includeCost: Boolean = false,
     onDismiss: () -> Unit,
     onConfirmDownload: () -> Unit
 ) {
@@ -2080,6 +2154,22 @@ fun CsvPreDownloadSummaryModal(
                                         text = "Desc: ${selectedDescriptionQuery.trim()}",
                                         style = MaterialTheme.typography.labelSmall,
                                         color = MaterialTheme.colorScheme.secondary,
+                                        fontWeight = FontWeight.SemiBold,
+                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                    )
+                                }
+                            }
+
+                            // Include Cost Chip (if enabled)
+                            if (includeCost) {
+                                Surface(
+                                    shape = RoundedCornerShape(6.dp),
+                                    color = Color(0xFFE65100).copy(alpha = 0.15f)
+                                ) {
+                                    Text(
+                                        text = "Include Cost: Yes",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = Color(0xFFE65100),
                                         fontWeight = FontWeight.SemiBold,
                                         modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                                     )

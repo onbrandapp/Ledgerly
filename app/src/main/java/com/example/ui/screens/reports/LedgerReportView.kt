@@ -64,6 +64,9 @@ fun LedgerReportView(
     var pendingCsvExportList by remember { mutableStateOf<List<Transaction>?>(null) }
     var pendingCsvStartDate by remember { mutableStateOf<Long?>(null) }
     var pendingCsvEndDate by remember { mutableStateOf<Long?>(null) }
+    var pendingCsvIncludeCost by remember { mutableStateOf(false) }
+    var showPdfExportDialog by remember { mutableStateOf(false) }
+    var ledgerPdfIncludeCost by remember { mutableStateOf(false) }
     var selectedLedgerTab by remember { mutableStateOf("All") }
 
     // Automatic date range calculations
@@ -209,13 +212,15 @@ fun LedgerReportView(
             val listToExport = pendingCsvExportList ?: filteredTransactions
             val exportStart = pendingCsvStartDate ?: ledgerStartDate
             val exportEnd = pendingCsvEndDate ?: ledgerEndDate
+            val includeCost = pendingCsvIncludeCost
             try {
                 LedgerReportExporter.exportToCsv(
                     context = context,
                     uri = uri,
                     transactions = listToExport,
                     startDate = exportStart,
-                    endDate = exportEnd
+                    endDate = exportEnd,
+                    includeCost = includeCost
                 )
                 Toast.makeText(context, "Exported ${listToExport.size} transactions to CSV successfully", Toast.LENGTH_SHORT).show()
             } catch (e: Exception) {
@@ -224,6 +229,7 @@ fun LedgerReportView(
                 pendingCsvExportList = null
                 pendingCsvStartDate = null
                 pendingCsvEndDate = null
+                pendingCsvIncludeCost = false
             }
         }
     }
@@ -239,7 +245,8 @@ fun LedgerReportView(
                     userEmail = userEmail,
                     transactions = filteredTransactions,
                     startDate = ledgerStartDate,
-                    endDate = ledgerEndDate
+                    endDate = ledgerEndDate,
+                    includeCost = ledgerPdfIncludeCost
                 )
                 Toast.makeText(context, "Ledger exported to PDF successfully", Toast.LENGTH_SHORT).show()
             } catch (e: Exception) {
@@ -530,11 +537,12 @@ fun LedgerReportView(
             // Export PDF
             Button(
                 onClick = {
-                    pdfLauncher.launch("Finance_Ledger_${SimpleDateFormat("yyyyMMdd", Locale.getDefault()).format(Date())}.pdf")
+                    showPdfExportDialog = true
                 },
                 modifier = Modifier
                     .weight(1f)
-                    .height(38.dp),
+                    .height(38.dp)
+                    .testTag("export_pdf_button"),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = MaterialTheme.colorScheme.secondaryContainer,
                     contentColor = MaterialTheme.colorScheme.onSecondaryContainer
@@ -1138,13 +1146,187 @@ fun LedgerReportView(
             initialEndDate = ledgerEndDate,
             initialPreset = ledgerSelectedFilter,
             onDismiss = { showCsvExportSheet = false },
-            onConfirmExport = { exportList, fileName, exportStart, exportEnd ->
+            onConfirmExport = { exportList, fileName, exportStart, exportEnd, includeCost ->
                 pendingCsvExportList = exportList
                 pendingCsvStartDate = exportStart
                 pendingCsvEndDate = exportEnd
+                pendingCsvIncludeCost = includeCost
                 showCsvExportSheet = false
                 csvLauncher.launch(fileName)
             }
+        )
+    }
+
+    if (showPdfExportDialog) {
+        AlertDialog(
+            onDismissRequest = { showPdfExportDialog = false },
+            icon = {
+                Icon(
+                    imageVector = Icons.Default.PictureAsPdf,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.secondary,
+                    modifier = Modifier.size(28.dp)
+                )
+            },
+            title = {
+                Text(
+                    text = "Export Ledger to PDF",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(14.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        text = "Generate a formatted, printable PDF document containing your filtered transactions.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    // Summary info pill / card
+                    Surface(
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                        shape = RoundedCornerShape(10.dp),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(modifier = Modifier.padding(12.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "Period",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Text(
+                                    text = ledgerSelectedFilter,
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "Transactions",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Text(
+                                    text = "${filteredTransactions.size} records",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+                    }
+
+                    // Include Cost Option Card
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = if (ledgerPdfIncludeCost) {
+                            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.25f)
+                        } else {
+                            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
+                        },
+                        border = BorderStroke(
+                            1.dp,
+                            if (ledgerPdfIncludeCost) {
+                                MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
+                            } else {
+                                MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                            }
+                        ),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Surface(
+                                    shape = CircleShape,
+                                    color = if (ledgerPdfIncludeCost) Color(0xFFE65100).copy(alpha = 0.15f)
+                                    else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f),
+                                    modifier = Modifier.size(36.dp)
+                                ) {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Icon(
+                                            imageVector = Icons.Default.Sell,
+                                            contentDescription = null,
+                                            tint = if (ledgerPdfIncludeCost) Color(0xFFE65100)
+                                            else MaterialTheme.colorScheme.onSurfaceVariant,
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                    }
+                                }
+                                Column {
+                                    Text(
+                                        text = "Include Cost",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Text(
+                                        text = "Add unit cost column and margin calculations in PDF",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
+                                    )
+                                }
+                            }
+
+                            Switch(
+                                checked = ledgerPdfIncludeCost,
+                                onCheckedChange = { ledgerPdfIncludeCost = it },
+                                modifier = Modifier.testTag("pdf_include_cost_switch")
+                            )
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showPdfExportDialog = false
+                        pdfLauncher.launch("Finance_Ledger_${SimpleDateFormat("yyyyMMdd", Locale.getDefault()).format(Date())}.pdf")
+                    },
+                    modifier = Modifier.testTag("confirm_export_pdf_button")
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.FileDownload,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("Export PDF", fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { showPdfExportDialog = false },
+                    modifier = Modifier.testTag("cancel_export_pdf_button")
+                ) {
+                    Text("Cancel")
+                }
+            },
+            containerColor = MaterialTheme.colorScheme.surface,
+            shape = RoundedCornerShape(16.dp)
         )
     }
 }

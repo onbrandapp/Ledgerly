@@ -14,25 +14,39 @@ import kotlin.math.abs
 
 object LedgerReportExporter {
 
-    fun exportToCsv(
-        context: Context,
-        uri: Uri,
+    fun generateCsvString(
         transactions: List<Transaction>,
         startDate: Long?,
-        endDate: Long?
-    ) {
-        val csvContent = buildString {
-            append("Type,Date,Description,Category,Amount,Status\n")
+        endDate: Long?,
+        includeCost: Boolean = false
+    ): String {
+        return buildString {
+            if (includeCost) {
+                append("Type,Date,Description,Category,Amount,Cost,Status\n")
+            } else {
+                append("Type,Date,Description,Category,Amount,Status\n")
+            }
             val formatter = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
             transactions.forEach { tx ->
                 val dateStr = formatter.format(Date(tx.date))
-                val desc = "\"${tx.description.replace("\"", "\"\"")}\""
+                val parsed = ProfitMarginHelper.parseTransaction(tx)
+                val desc = if (includeCost) {
+                    "\"${parsed.cleanDescription.replace("\"", "\"\"")}\""
+                } else {
+                    "\"${tx.description.replace("\"", "\"\"")}\""
+                }
                 val status = if (tx.type.uppercase() == "INCOME") {
                     if (tx.paid) "Received" else "Pending"
                 } else {
                     if (tx.paid) "Paid" else "Unpaid"
                 }
-                append("${tx.type},$dateStr,$desc,${tx.category},${String.format(Locale.US, "%.2f", tx.amount)},$status\n")
+                val amountStr = String.format(Locale.US, "%.2f", tx.amount)
+                if (includeCost) {
+                    val costStr = if (parsed.cost != null) String.format(Locale.US, "%.2f", parsed.cost) else ""
+                    append("${tx.type},$dateStr,$desc,${tx.category},$amountStr,$costStr,$status\n")
+                } else {
+                    append("${tx.type},$dateStr,$desc,${tx.category},$amountStr,$status\n")
+                }
             }
 
             val incomes = transactions.filter { it.type.uppercase() == "INCOME" }
@@ -44,12 +58,16 @@ object LedgerReportExporter {
             val totalLeftToPay = expenses.filter { !it.paid }.sumOf { it.amount }
             val netBalance = totalIncome - totalExpense
             val currentBalance = cashOnHand + totalLeftToReceive - totalLeftToPay
+            val totalCost = if (includeCost) transactions.sumOf { ProfitMarginHelper.parseTransaction(it).cost ?: 0.0 } else 0.0
 
             append("\n")
             append("--- Summary ---\n")
             append("Export Records,,,,${transactions.size},\n")
             if (startDate != null && endDate != null) {
                 append("Date Range,,,,\"${formatter.format(Date(startDate))} to ${formatter.format(Date(endDate))}\",\n")
+            }
+            if (includeCost) {
+                append("Include Cost,,,,Yes,\n")
             }
             if (incomes.isNotEmpty()) {
                 append("Total Income,,,,${String.format(Locale.US, "%.2f", totalIncome)},\n")
@@ -62,11 +80,27 @@ object LedgerReportExporter {
                 append("Total Expenses,,,,${String.format(Locale.US, "%.2f", totalExpense)},\n")
                 append("Total Left to Pay,,,,${String.format(Locale.US, "%.2f", totalLeftToPay)},\n")
             }
+            if (includeCost && totalCost > 0) {
+                append("Total Unit Cost,,,,${String.format(Locale.US, "%.2f", totalCost)},\n")
+                val grossMargin = totalIncome - totalCost
+                append("Gross Margin (Income - Cost),,,,${String.format(Locale.US, "%.2f", grossMargin)},\n")
+            }
             if (incomes.isNotEmpty() && expenses.isNotEmpty()) {
                 append("Net Balance,,,,${String.format(Locale.US, "%.2f", netBalance)},\n")
                 append("Current Balance,,,,${String.format(Locale.US, "%.2f", currentBalance)},\n")
             }
         }
+    }
+
+    fun exportToCsv(
+        context: Context,
+        uri: Uri,
+        transactions: List<Transaction>,
+        startDate: Long?,
+        endDate: Long?,
+        includeCost: Boolean = false
+    ) {
+        val csvContent = generateCsvString(transactions, startDate, endDate, includeCost)
         context.contentResolver.openOutputStream(uri)?.use { os ->
             os.write(csvContent.toByteArray())
         }
@@ -78,7 +112,8 @@ object LedgerReportExporter {
         userEmail: String?,
         transactions: List<Transaction>,
         startDate: Long?,
-        endDate: Long?
+        endDate: Long?,
+        includeCost: Boolean = false
     ) {
         val pdfDocument = PdfDocument()
 
@@ -117,6 +152,10 @@ object LedgerReportExporter {
             textSize = 9f
             color = Color.parseColor("#43A047")
         }
+        val costPaint = Paint().apply {
+            textSize = 8.5f
+            color = Color.parseColor("#E65100")
+        }
         val paidPaint = Paint().apply {
             textSize = 8.5f
             isFakeBoldText = true
@@ -146,16 +185,25 @@ object LedgerReportExporter {
             }
             else -> "Range: All Time"
         }
-        canvas.drawText("Generated on: ${sdf.format(Date())} | Email: ${userEmail ?: ""} | $filterDesc", 45f, yPosition, subPaint)
+        val costDesc = if (includeCost) " | Cost Included: Yes" else ""
+        canvas.drawText("Generated on: ${sdf.format(Date())} | Email: ${userEmail ?: ""} | $filterDesc$costDesc", 45f, yPosition, subPaint)
         yPosition += 30f
 
         // Column Headers
         canvas.drawText("INCOME", 45f, yPosition, headerPaint)
         canvas.drawText("EXPENSES", 310f, yPosition, headerPaint)
         yPosition += 14f
-        canvas.drawText("DATE / ITEM", 45f, yPosition, colHeaderPaint)
-        canvas.drawText("AMOUNT", 185f, yPosition, colHeaderPaint)
-        canvas.drawText("STATUS", 250f, yPosition, colHeaderPaint)
+
+        if (includeCost) {
+            canvas.drawText("DATE / ITEM", 45f, yPosition, colHeaderPaint)
+            canvas.drawText("AMOUNT", 165f, yPosition, colHeaderPaint)
+            canvas.drawText("COST", 215f, yPosition, colHeaderPaint)
+            canvas.drawText("STATUS", 255f, yPosition, colHeaderPaint)
+        } else {
+            canvas.drawText("DATE / ITEM", 45f, yPosition, colHeaderPaint)
+            canvas.drawText("AMOUNT", 185f, yPosition, colHeaderPaint)
+            canvas.drawText("STATUS", 250f, yPosition, colHeaderPaint)
+        }
 
         canvas.drawText("DATE / ITEM", 310f, yPosition, colHeaderPaint)
         canvas.drawText("AMOUNT", 450f, yPosition, colHeaderPaint)
@@ -185,9 +233,17 @@ object LedgerReportExporter {
                 canvas.drawText("INCOME (cont.)", 45f, yPosition, headerPaint)
                 canvas.drawText("EXPENSES (cont.)", 310f, yPosition, headerPaint)
                 yPosition += 14f
-                canvas.drawText("DATE / ITEM", 45f, yPosition, colHeaderPaint)
-                canvas.drawText("AMOUNT", 185f, yPosition, colHeaderPaint)
-                canvas.drawText("STATUS", 250f, yPosition, colHeaderPaint)
+
+                if (includeCost) {
+                    canvas.drawText("DATE / ITEM", 45f, yPosition, colHeaderPaint)
+                    canvas.drawText("AMOUNT", 165f, yPosition, colHeaderPaint)
+                    canvas.drawText("COST", 215f, yPosition, colHeaderPaint)
+                    canvas.drawText("STATUS", 255f, yPosition, colHeaderPaint)
+                } else {
+                    canvas.drawText("DATE / ITEM", 45f, yPosition, colHeaderPaint)
+                    canvas.drawText("AMOUNT", 185f, yPosition, colHeaderPaint)
+                    canvas.drawText("STATUS", 250f, yPosition, colHeaderPaint)
+                }
 
                 canvas.drawText("DATE / ITEM", 310f, yPosition, colHeaderPaint)
                 canvas.drawText("AMOUNT", 450f, yPosition, colHeaderPaint)
@@ -201,11 +257,21 @@ object LedgerReportExporter {
             if (incomeIndex < incomes.size) {
                 val item = incomes[incomeIndex]
                 val dateLabel = sdfDate.format(Date(item.date))
-                val title = item.description.take(16)
+                val parsed = ProfitMarginHelper.parseTransaction(item)
+                val title = if (includeCost) parsed.cleanDescription.take(13) else item.description.take(16)
                 canvas.drawText("$dateLabel $title", 45f, yPosition, textPaint)
-                canvas.drawText("+$${String.format(Locale.US, "%.2f", item.amount)}", 185f, yPosition, incomePaint)
-                val statusText = if (item.paid) "Received" else "Pending"
-                canvas.drawText(statusText, 250f, yPosition, if (item.paid) paidPaint else unpaidPaint)
+
+                if (includeCost) {
+                    canvas.drawText("+$${String.format(Locale.US, "%.2f", item.amount)}", 165f, yPosition, incomePaint)
+                    val costStr = if (parsed.cost != null) "$${String.format(Locale.US, "%.2f", parsed.cost)}" else "-"
+                    canvas.drawText(costStr, 215f, yPosition, if (parsed.cost != null) costPaint else colHeaderPaint)
+                    val statusText = if (item.paid) "Received" else "Pending"
+                    canvas.drawText(statusText, 255f, yPosition, if (item.paid) paidPaint else unpaidPaint)
+                } else {
+                    canvas.drawText("+$${String.format(Locale.US, "%.2f", item.amount)}", 185f, yPosition, incomePaint)
+                    val statusText = if (item.paid) "Received" else "Pending"
+                    canvas.drawText(statusText, 250f, yPosition, if (item.paid) paidPaint else unpaidPaint)
+                }
                 incomeIndex++
             }
 
@@ -223,9 +289,11 @@ object LedgerReportExporter {
             yPosition += itemHeight
         }
 
+        val totalCost = if (includeCost) transactions.sumOf { ProfitMarginHelper.parseTransaction(it).cost ?: 0.0 } else 0.0
+        val summaryClearanceThreshold = if (includeCost && totalCost > 0) 550f else 600f
+
         // Summary footer on last page if space allows, or start new page
-        // Summary block with enhanced spacing requires ~180f vertical clearance
-        if (yPosition > 600f) {
+        if (yPosition > summaryClearanceThreshold) {
             drawWatermark(canvas)
             pdfDocument.finishPage(page)
             val newPageInfo = PdfDocument.PageInfo.Builder(595, 842, pdfDocument.pages.size + 1).create()
@@ -288,8 +356,22 @@ object LedgerReportExporter {
         // Total Expenses line
         val expenseStr = "Total Expenses: -$${String.format(Locale.US, "%,.2f", totalExpense)}  (Left to Pay: -$${String.format(Locale.US, "%,.2f", totalLeftToPay)})"
         canvas.drawText(expenseStr, 45f, yPosition, summaryItemPaint)
-        yPosition += 26f
+        yPosition += 22f
 
+        // Include Cost summary lines if enabled
+        if (includeCost && totalCost > 0) {
+            val costStr = "Total Unit Cost: -$${String.format(Locale.US, "%,.2f", totalCost)}"
+            canvas.drawText(costStr, 45f, yPosition, summaryItemPaint)
+            yPosition += 22f
+
+            val grossMargin = totalIncome - totalCost
+            val marginPct = if (totalIncome > 0) (grossMargin / totalIncome) * 100.0 else 0.0
+            val grossStr = "Gross Margin (Income - Cost): +$${String.format(Locale.US, "%,.2f", grossMargin)}  (${String.format(Locale.US, "%.1f", marginPct)}%)"
+            canvas.drawText(grossStr, 45f, yPosition, summaryItemPaint)
+            yPosition += 22f
+        }
+
+        yPosition += 4f
         // Subtle divider separating breakdown from balance conclusions
         canvas.drawLine(45f, yPosition, 550f, yPosition, summaryDividerPaint)
         yPosition += 24f
