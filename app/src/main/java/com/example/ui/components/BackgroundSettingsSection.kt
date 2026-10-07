@@ -142,10 +142,10 @@ fun BackgroundSettingsSection(
                                             Brush.verticalGradient(previewColors)
                                         )
                                         BackgroundType.PATTERN -> Modifier.background(
-                                            if (isDarkMode) Color(0xFF0B0F19) else Color(0xFFF8FAFC)
+                                            if (isDarkMode) Color(0xFF0F0F0F) else Color(0xFFF8FAFC)
                                         )
                                         else -> Modifier.background(
-                                            if (isDarkMode) Color(0xFF0B0F19) else Color(0xFFF8FAFC)
+                                            if (isDarkMode) Color(0xFF0F0F0F) else Color(0xFFF8FAFC)
                                         )
                                     }
                                 ),

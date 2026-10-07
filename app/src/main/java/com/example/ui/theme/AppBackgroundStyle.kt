@@ -43,10 +43,10 @@ data class BackgroundPreset(
 object AppBackgroundPresets {
     val DEFAULT = BackgroundPreset(
         id = "default",
-        name = "Default Slate",
+        name = "Default Matte",
         subtitle = "Clean minimalist canvas",
         lightColors = listOf(Color(0xFFF8FAFC), Color(0xFFF1F5F9)),
-        darkColors = listOf(Color(0xFF0B0F19), Color(0xFF131B2E)),
+        darkColors = listOf(Color(0xFF0F0F0F), Color(0xFF181818)),
         icon = Icons.Default.Landscape,
         type = BackgroundType.SOLID
     )
@@ -116,7 +116,7 @@ object AppBackgroundPresets {
         name = "Dot Matrix",
         subtitle = "Modern geometric dot grid",
         lightColors = listOf(Color(0xFFF8FAFC)),
-        darkColors = listOf(Color(0xFF0B0F19)),
+        darkColors = listOf(Color(0xFF0F0F0F)),
         icon = Icons.Default.GridOn,
         type = BackgroundType.PATTERN
     )
@@ -156,7 +156,7 @@ fun AppBackgroundContainer(
         try {
             Color(android.graphics.Color.parseColor(customBackgroundHex))
         } catch (e: Exception) {
-            if (isDarkMode) Color(0xFF0B0F19) else Color(0xFFF8FAFC)
+            if (isDarkMode) Color(0xFF0F0F0F) else Color(0xFFF8FAFC)
         }
     }
 
@@ -174,8 +174,8 @@ fun AppBackgroundContainer(
                 )
             }
             preset.type == BackgroundType.PATTERN -> {
-                val baseColor = if (isDarkMode) Color(0xFF0B0F19) else Color(0xFFF8FAFC)
-                val dotColor = if (isDarkMode) Color(0xFF94A3B8).copy(alpha = 0.18f) else Color(0xFF475569).copy(alpha = 0.12f)
+                val baseColor = if (isDarkMode) Color(0xFF0F0F0F) else Color(0xFFF8FAFC)
+                val dotColor = if (isDarkMode) Color(0xFFA3A3A3).copy(alpha = 0.18f) else Color(0xFF475569).copy(alpha = 0.12f)
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -218,7 +218,7 @@ fun AppBackgroundContainer(
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(if (isDarkMode) Color(0xFF0B0F19) else Color(0xFFF8FAFC))
+                        .background(if (isDarkMode) Color(0xFF0F0F0F) else Color(0xFFF8FAFC))
                 )
             }
         }

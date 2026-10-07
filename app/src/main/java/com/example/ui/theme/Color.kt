@@ -21,6 +21,15 @@ val SlateTextPrimary = Color(0xFF0F172A)
 val SlateTextSecondary = Color(0xFF475569)
 val SlateTextMuted = Color(0xFF64748B)
 
+// Matte Black Dark Theme Palette
+val MatteBlackCanvasBackground = Color(0xFF0F0F0F)
+val MatteBlackCardSurface = Color(0xFF181818)
+val MatteBlackSurfaceVariant = Color(0xFF242424)
+val MatteBlackBorder = Color(0xFF383838)
+val MatteBlackBorderSubtle = Color(0xFF262626)
+val MatteBlackTextPrimary = Color(0xFFEDEDED)
+val MatteBlackTextSecondary = Color(0xFFA3A3A3)
+
 // Curated App Accent Colors for single-accent theme selection
 data class AccentPreset(
     val id: String,

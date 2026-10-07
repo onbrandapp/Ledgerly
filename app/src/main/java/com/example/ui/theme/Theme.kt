@@ -81,35 +81,35 @@ fun MyApplicationTheme(
     onErrorContainer = Color(0xFF991B1B)
   )
 
-  // Polished Dark Theme mirroring light theme tokens with high-contrast, modern dark slate/neutral aesthetics
+  // Polished Dark Theme using Matte Black as the base palette
   val darkColors = darkColorScheme(
     primary = customAccent,
     onPrimary = onAccentColor,
     primaryContainer = customAccent.copy(alpha = 0.25f),
-    onPrimaryContainer = Color(0xFFF1F5F9),
+    onPrimaryContainer = Color(0xFFEDEDED),
 
     secondary = customAccent,
     onSecondary = onAccentColor,
     secondaryContainer = customAccent.copy(alpha = 0.20f),
-    onSecondaryContainer = Color(0xFFF1F5F9),
+    onSecondaryContainer = Color(0xFFEDEDED),
 
     tertiary = customAccent,
     onTertiary = onAccentColor,
     tertiaryContainer = customAccent.copy(alpha = 0.28f),
-    onTertiaryContainer = Color(0xFFF1F5F9),
+    onTertiaryContainer = Color(0xFFEDEDED),
 
-    // Modern Dark Slate Canvas (slate-950 / slate-900 / slate-800)
-    background = Color(0xFF0B0F19),       // Rich deep canvas (slate-950)
-    onBackground = Color(0xFFF8FAFC),     // Crisp bright off-white text
+    // Matte Black Canvas & Surfaces (Zero blue tint, clean luxury dark)
+    background = Color(0xFF0F0F0F),       // Deep matte black canvas
+    onBackground = Color(0xFFEDEDED),     // Crisp bright off-white text
 
-    surface = Color(0xFF131B2E),          // Distinct elevated card surfaces (slate-900)
-    onSurface = Color(0xFFF8FAFC),        // Crisp bright off-white text on surfaces
+    surface = Color(0xFF181818),          // Distinct elevated matte black card surfaces
+    onSurface = Color(0xFFEDEDED),        // Crisp bright off-white text on surfaces
 
-    surfaceVariant = Color(0xFF1E293B),   // Dark slate container / chip / input surface (slate-800)
-    onSurfaceVariant = Color(0xFF94A3B8), // Soft slate for subtitles & secondary labels (slate-400)
+    surfaceVariant = Color(0xFF242424),   // Matte dark graphite container / chip / input surface
+    onSurfaceVariant = Color(0xFFA3A3A3), // Clean neutral muted gray for subtitles & secondary labels
 
-    outline = Color(0xFF334155),          // Slate border / dividers (slate-700)
-    outlineVariant = Color(0xFF1E293B),   // Subtle dark separator
+    outline = Color(0xFF383838),          // Neutral dark border / dividers
+    outlineVariant = Color(0xFF262626),   // Subtle dark separator
 
     error = Color(0xFFF87171),
     onError = Color(0xFF450A0A),
