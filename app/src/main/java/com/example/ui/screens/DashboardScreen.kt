@@ -91,6 +91,8 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.Image
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.layout.ContentScale
+import com.example.ui.components.MonthlyBudgetActionsSheet
+import com.example.ui.screens.reports.LedgerReportExporter
 import com.example.ui.screens.reports.ReportCategory
 import com.example.ui.screens.reports.ReportsScreen
 
@@ -100,6 +102,7 @@ fun DashboardScreen(
     viewModel: ExpenseViewModel,
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
     val currentUserEmail by viewModel.currentUserEmail.collectAsState()
     val transactions by viewModel.transactions.collectAsState()
     val monthlySummary by viewModel.monthlySummary.collectAsState()
@@ -111,6 +114,47 @@ fun DashboardScreen(
     var showBulkCategoryDialog by remember { mutableStateOf(false) }
     var showCostProfitCategoriesDialog by remember { mutableStateOf(false) }
     val costProfitCategories by viewModel.costProfitCategories.collectAsState()
+
+    var showMonthlyBudgetActionsSheet by remember { mutableStateOf(false) }
+    var showBudgetPdfExportDialog by remember { mutableStateOf(false) }
+    var budgetPdfIncludeCost by remember { mutableStateOf(false) }
+
+    val budgetPdfLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("application/pdf")
+    ) { uri ->
+        if (uri != null) {
+            try {
+                val cal = Calendar.getInstance()
+                cal.set(Calendar.DAY_OF_MONTH, 1)
+                cal.set(Calendar.HOUR_OF_DAY, 0)
+                cal.set(Calendar.MINUTE, 0)
+                cal.set(Calendar.SECOND, 0)
+                cal.set(Calendar.MILLISECOND, 0)
+                val monthStart = cal.timeInMillis
+
+                val endCal = Calendar.getInstance()
+                endCal.set(Calendar.DAY_OF_MONTH, endCal.getActualMaximum(Calendar.DAY_OF_MONTH))
+                endCal.set(Calendar.HOUR_OF_DAY, 23)
+                endCal.set(Calendar.MINUTE, 59)
+                endCal.set(Calendar.SECOND, 59)
+                endCal.set(Calendar.MILLISECOND, 999)
+                val monthEnd = endCal.timeInMillis
+
+                LedgerReportExporter.exportToPdf(
+                    context = context,
+                    uri = uri,
+                    userEmail = currentUserEmail,
+                    transactions = monthlySummary.currentMonthList,
+                    startDate = monthStart,
+                    endDate = monthEnd,
+                    includeCost = budgetPdfIncludeCost
+                )
+                Toast.makeText(context, "Ledger exported to PDF successfully", Toast.LENGTH_SHORT).show()
+            } catch (e: Exception) {
+                Toast.makeText(context, "Failed to export PDF: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
+            }
+        }
+    }
 
     val primaryColorHex by viewModel.primaryColor.collectAsState()
     val secondaryColorHex by viewModel.secondaryColor.collectAsState()
@@ -158,6 +202,7 @@ fun DashboardScreen(
 
     var currentMainSection by remember { mutableStateOf(0) } // 0 = Overview, 1 = Reports
     var selectedReportCategory by remember { mutableStateOf(ReportCategory.ANALYTICS) }
+    var selectedLedgerFilter by remember { mutableStateOf("All Time") }
 
     val focusManager = LocalFocusManager.current
 
@@ -320,6 +365,7 @@ fun DashboardScreen(
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = if (backgroundStyle.equals("default", ignoreCase = true)) MaterialTheme.colorScheme.background else Color.Transparent,
+                    scrolledContainerColor = if (backgroundStyle.equals("default", ignoreCase = true)) MaterialTheme.colorScheme.background else Color.Transparent,
                     titleContentColor = MaterialTheme.colorScheme.onBackground
                 )
             )
@@ -743,6 +789,7 @@ fun DashboardScreen(
                 // Bento Card 1: Remaining Budget Panel (Span 2)
                 if (visibleOverviewCards.contains(ExpenseViewModel.CARD_BUDGET)) {
                 Card(
+                    onClick = { showMonthlyBudgetActionsSheet = true },
                     colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.surface
                     ),
@@ -756,6 +803,7 @@ fun DashboardScreen(
                             alpha = budgetCardAlpha.value
                             translationY = budgetCardSlideY.value
                         }
+                        .testTag("monthly_budget_card")
                 ) {
                     Box(
                         modifier = Modifier
@@ -893,6 +941,7 @@ fun DashboardScreen(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
+                        .height(IntrinsicSize.Min)
                         .padding(top = 8.dp, bottom = 0.dp),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
@@ -900,6 +949,7 @@ fun DashboardScreen(
                     Card(
                         modifier = Modifier
                             .weight(1f)
+                            .fillMaxHeight()
                             .graphicsLayer {
                                 alpha = expensesCardAlpha.value
                                 translationY = expensesCardSlideY.value
@@ -912,7 +962,7 @@ fun DashboardScreen(
                     ) {
                         Column(
                             modifier = Modifier
-                                .fillMaxWidth()
+                                .fillMaxSize()
                                 .padding(16.dp)
                         ) {
                             // Icon Container
@@ -954,6 +1004,7 @@ fun DashboardScreen(
                     Card(
                         modifier = Modifier
                             .weight(1f)
+                            .fillMaxHeight()
                             .graphicsLayer {
                                 alpha = incomeCardAlpha.value
                                 translationY = incomeCardSlideY.value
@@ -966,7 +1017,7 @@ fun DashboardScreen(
                     ) {
                         Column(
                             modifier = Modifier
-                                .fillMaxWidth()
+                                .fillMaxSize()
                                 .padding(16.dp)
                         ) {
                             // Icon Container
@@ -1001,10 +1052,16 @@ fun DashboardScreen(
                                     color = MaterialTheme.colorScheme.onSurface
                                 )
                                 if (monthlySummary.cashOnHand > 0) {
-                                    Spacer(modifier = Modifier.height(2.dp))
+                                    Spacer(modifier = Modifier.height(4.dp))
                                     Text(
-                                        text = "Cash on Hand: +$${String.format(Locale.US, "%,.2f", monthlySummary.cashOnHand)}",
-                                        style = MaterialTheme.typography.labelSmall,
+                                        text = "Cash on Hand:",
+                                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                    Text(
+                                        text = "+$${String.format(Locale.US, "%,.2f", monthlySummary.cashOnHand)}",
+                                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
                                         fontWeight = FontWeight.Bold,
                                         color = MaterialTheme.colorScheme.tertiary
                                     )
@@ -1117,10 +1174,16 @@ fun DashboardScreen(
                                     color = MaterialTheme.colorScheme.onSurface
                                 )
                                 if (monthlySummary.cashOnHand > 0) {
-                                    Spacer(modifier = Modifier.height(2.dp))
+                                    Spacer(modifier = Modifier.height(4.dp))
                                     Text(
-                                        text = "Cash on Hand: +$${String.format(Locale.US, "%,.2f", monthlySummary.cashOnHand)}",
-                                        style = MaterialTheme.typography.labelSmall,
+                                        text = "Cash on Hand:",
+                                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                    Text(
+                                        text = "+$${String.format(Locale.US, "%,.2f", monthlySummary.cashOnHand)}",
+                                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
                                         fontWeight = FontWeight.Bold,
                                         color = MaterialTheme.colorScheme.tertiary
                                     )
@@ -1668,6 +1731,7 @@ fun DashboardScreen(
             ReportsScreen(
                 viewModel = viewModel,
                 initialCategory = selectedReportCategory,
+                initialLedgerFilter = selectedLedgerFilter,
                 onBackToOverview = { currentMainSection = 0 },
                 onEditTransaction = { item ->
                     if (item.recurringId.isNotEmpty()) {
@@ -1817,6 +1881,197 @@ fun DashboardScreen(
         onDismiss = { showCustomizeOverviewCardsDialog = false },
         viewModel = viewModel
     )
+
+    // --- MONTHLY BUDGET ACTIONS BOTTOM DRAWER ---
+    if (showMonthlyBudgetActionsSheet) {
+        val totalBudget = monthlyBudget + monthlySummary.totalIncome
+        val remainingBudget = totalBudget - monthlySummary.totalExpense
+        MonthlyBudgetActionsSheet(
+            remainingBudget = remainingBudget,
+            totalBudget = totalBudget,
+            totalExpense = monthlySummary.totalExpense,
+            totalIncome = monthlySummary.totalIncome,
+            onDismiss = { showMonthlyBudgetActionsSheet = false },
+            onViewDetails = {
+                showMonthlyBudgetActionsSheet = false
+                selectedReportCategory = ReportCategory.LEDGER
+                selectedLedgerFilter = "Current Month"
+                currentMainSection = 1
+            },
+            onGeneratePdf = {
+                showMonthlyBudgetActionsSheet = false
+                selectedReportCategory = ReportCategory.LEDGER
+                selectedLedgerFilter = "Current Month"
+                showBudgetPdfExportDialog = true
+            }
+        )
+    }
+
+    // --- MONTHLY BUDGET LEDGER PDF EXPORT DIALOG ---
+    if (showBudgetPdfExportDialog) {
+        AlertDialog(
+            onDismissRequest = { showBudgetPdfExportDialog = false },
+            title = {
+                Text(
+                    text = "Export Ledger to PDF",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(14.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        text = "Generate a formatted, printable PDF document containing your filtered transactions.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    // Summary info pill / card
+                    Surface(
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                        shape = RoundedCornerShape(10.dp),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(modifier = Modifier.padding(12.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "Period",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Text(
+                                    text = "Current Month",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "Transactions",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Text(
+                                    text = "${monthlySummary.currentMonthList.size} records",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+                    }
+
+                    // Include Cost Option Card
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = if (budgetPdfIncludeCost) {
+                            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.25f)
+                        } else {
+                            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
+                        },
+                        border = BorderStroke(
+                            1.dp,
+                            if (budgetPdfIncludeCost) {
+                                MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
+                            } else {
+                                MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                            }
+                        ),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Surface(
+                                    shape = CircleShape,
+                                    color = if (budgetPdfIncludeCost) Color(0xFFE65100).copy(alpha = 0.15f)
+                                    else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f),
+                                    modifier = Modifier.size(36.dp)
+                                ) {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Icon(
+                                            imageVector = Icons.Default.Sell,
+                                            contentDescription = null,
+                                            tint = if (budgetPdfIncludeCost) Color(0xFFE65100)
+                                            else MaterialTheme.colorScheme.onSurfaceVariant,
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                    }
+                                }
+                                Column {
+                                    Text(
+                                        text = "Include Cost",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Text(
+                                        text = "Add unit cost column and margin calculations in PDF",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
+                                    )
+                                }
+                            }
+
+                            Switch(
+                                checked = budgetPdfIncludeCost,
+                                onCheckedChange = { budgetPdfIncludeCost = it },
+                                modifier = Modifier.testTag("pdf_include_cost_switch")
+                            )
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showBudgetPdfExportDialog = false
+                        budgetPdfLauncher.launch("Finance_Ledger_${SimpleDateFormat("yyyyMMdd", Locale.getDefault()).format(Date())}.pdf")
+                    },
+                    modifier = Modifier.testTag("confirm_export_pdf_button")
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.FileDownload,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("Export PDF", fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { showBudgetPdfExportDialog = false },
+                    modifier = Modifier.testTag("cancel_export_pdf_button")
+                ) {
+                    Text("Cancel")
+                }
+            },
+            containerColor = MaterialTheme.colorScheme.surface,
+            shape = RoundedCornerShape(16.dp)
+        )
+    }
 
     // --- SETTINGS & BUDGET CONFIGURATION BOTTOM DRAWER ---
     if (showBudgetDialog) {

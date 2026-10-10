@@ -74,6 +74,7 @@ fun MyApplicationTheme(
 
     outline = Color(0xFFE2E8F0),          // Clean light divider border (slate-200)
     outlineVariant = Color(0xFFEDF2F7),   // Subtle secondary divider
+    surfaceTint = Color.Transparent,
     
     error = Color(0xFFEF4444),
     onError = Color.White,
@@ -110,6 +111,7 @@ fun MyApplicationTheme(
 
     outline = Color(0xFF383838),          // Neutral dark border / dividers
     outlineVariant = Color(0xFF262626),   // Subtle dark separator
+    surfaceTint = Color.Transparent,
 
     error = Color(0xFFF87171),
     onError = Color(0xFF450A0A),

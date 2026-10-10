@@ -34,6 +34,7 @@ import com.example.ui.viewmodel.ExpenseViewModel
 fun ReportsScreen(
     viewModel: ExpenseViewModel,
     initialCategory: ReportCategory = ReportCategory.ANALYTICS,
+    initialLedgerFilter: String = "All Time",
     onBackToOverview: () -> Unit = {},
     onEditTransaction: (Transaction) -> Unit = {},
     onDeleteTransaction: (Transaction) -> Unit = {},
@@ -52,16 +53,15 @@ fun ReportsScreen(
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
     ) {
-        // Top Header
+        // Top Header (Sticky portion)
         Surface(
-            color = MaterialTheme.colorScheme.surface,
-            tonalElevation = 2.dp,
+            color = MaterialTheme.colorScheme.background,
+            tonalElevation = 0.dp,
             modifier = Modifier.fillMaxWidth()
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .statusBarsPadding()
                     .padding(horizontal = 14.dp, vertical = 6.dp)
             ) {
                 Row(
@@ -192,6 +192,7 @@ fun ReportsScreen(
                         transactions = transactions,
                         userEmail = currentUserEmail,
                         customCategories = customCategories,
+                        initialPeriodFilter = initialLedgerFilter,
                         onTogglePaid = { txId -> viewModel.toggleTransactionPaid(txId) },
                         onEditTransaction = onEditTransaction,
                         onDeleteTransaction = onDeleteTransaction,

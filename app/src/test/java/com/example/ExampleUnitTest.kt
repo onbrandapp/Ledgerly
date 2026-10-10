@@ -680,5 +680,48 @@ class ExampleUnitTest {
     assertTrue(csv.contains("Gross Margin (Income - Cost),,,,50.00,"))
     assertFalse(csv.contains("Gross Margin (Income - Cost),,,,655.00,"))
   }
+
+  @Test
+  fun testMonthlyBudgetCurrentMonthDateRangeAndFiltering() {
+    val cal = java.util.Calendar.getInstance()
+    cal.set(java.util.Calendar.DAY_OF_MONTH, 1)
+    cal.set(java.util.Calendar.HOUR_OF_DAY, 0)
+    cal.set(java.util.Calendar.MINUTE, 0)
+    cal.set(java.util.Calendar.SECOND, 0)
+    cal.set(java.util.Calendar.MILLISECOND, 0)
+    val monthStart = cal.timeInMillis
+
+    val endCal = java.util.Calendar.getInstance()
+    endCal.set(java.util.Calendar.DAY_OF_MONTH, endCal.getActualMaximum(java.util.Calendar.DAY_OF_MONTH))
+    endCal.set(java.util.Calendar.HOUR_OF_DAY, 23)
+    endCal.set(java.util.Calendar.MINUTE, 59)
+    endCal.set(java.util.Calendar.SECOND, 59)
+    endCal.set(java.util.Calendar.MILLISECOND, 999)
+    val monthEnd = endCal.timeInMillis
+
+    val midMonthTx = com.example.data.Transaction(
+      id = "tx_current",
+      description = "Mid-month grocery",
+      amount = 120.0,
+      type = "EXPENSE",
+      category = "Groceries",
+      date = (monthStart + monthEnd) / 2
+    )
+
+    val lastYearTx = com.example.data.Transaction(
+      id = "tx_old",
+      description = "Last year expense",
+      amount = 80.0,
+      type = "EXPENSE",
+      category = "Groceries",
+      date = monthStart - 365L * 24 * 3600 * 1000
+    )
+
+    val list = listOf(midMonthTx, lastYearTx)
+    val filtered = list.filter { it.date in monthStart..monthEnd }
+    assertEquals(1, filtered.size)
+    assertEquals("tx_current", filtered[0].id)
+  }
 }
+
 

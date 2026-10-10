@@ -48,6 +48,7 @@ fun LedgerReportView(
     transactions: List<Transaction>,
     userEmail: String?,
     customCategories: List<CustomCategory> = emptyList(),
+    initialPeriodFilter: String = "All Time",
     onTogglePaid: (String) -> Unit,
     onEditTransaction: (Transaction) -> Unit,
     onDeleteTransaction: (Transaction) -> Unit,
@@ -55,7 +56,7 @@ fun LedgerReportView(
 ) {
     val context = LocalContext.current
 
-    var ledgerSelectedFilter by remember { mutableStateOf("All Time") }
+    var ledgerSelectedFilter by remember(initialPeriodFilter) { mutableStateOf(initialPeriodFilter) }
     var ledgerStartDate by remember { mutableStateOf<Long?>(null) }
     var ledgerEndDate by remember { mutableStateOf<Long?>(null) }
     var hidePaidExpenses by remember { mutableStateOf(false) }
